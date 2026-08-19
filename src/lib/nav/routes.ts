@@ -29,6 +29,7 @@ import type { PermissionKey } from "@/lib/rbac/matrix";
 export const ROUTE_GROUPS = [
   "Command Centre",
   "Sales",
+  "Customer",
   "Marketing Coordination",
   "Merchandise",
   "Sources",
@@ -63,11 +64,12 @@ export const ROUTES: RouteDef[] = [
   // Sales
   { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Sales", status: "live", permission: "sales.read" },
   { key: "pipeline", label: "Pipeline", path: "/sales/pipeline", icon: KanbanSquare, group: "Sales", status: "live", permission: "sales.read" },
-  { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Sales", status: "live", permission: "sales.read" },
   { key: "projects", label: "Projects", path: "/sales/projects", icon: FolderKanban, group: "Sales", status: "live", permission: "sales.read" },
   { key: "walkins", label: "Walk-ins & Purchases", path: "/sales/walk-ins", icon: Store, group: "Sales", status: "live", permission: "sales.read" },
   { key: "tasks", label: "Tasks", path: "/sales/tasks", icon: ListTodo, group: "Sales", status: "live", permission: "sales.read" },
-  { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Sales", status: "live", permission: "sales.read" },
+  // Customer — the resolved identity records behind the sales work
+  { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
+  { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Customer", status: "live", permission: "sales.read" },
   // Marketing
   {
     key: "content-opps",
