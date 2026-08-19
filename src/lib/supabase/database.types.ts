@@ -1,0 +1,5579 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  api: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      account_aliases: {
+        Row: {
+          account_id: string | null
+          alias: string | null
+          created_at: string | null
+          id: string | null
+          normalized_alias: string | null
+          source: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          alias?: string | null
+          created_at?: string | null
+          id?: string | null
+          normalized_alias?: string | null
+          source?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          alias?: string | null
+          created_at?: string | null
+          id?: string | null
+          normalized_alias?: string | null
+          source?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_aliases_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_aliases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_contact_relationships: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          ended_at: string | null
+          id: string | null
+          is_primary: boolean | null
+          role: string | null
+          started_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          role?: string | null
+          started_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          ended_at?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          role?: string | null
+          started_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_contact_relationships_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_contact_relationships_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_contact_relationships_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          account_type: string | null
+          address: Json | null
+          archived_at: string | null
+          created_at: string | null
+          created_by: string | null
+          domain: string | null
+          id: string | null
+          lifecycle_state: string | null
+          merged_into_account_id: string | null
+          name: string | null
+          normalized_name: string | null
+          notes: string | null
+          original_acquisition_at: string | null
+          original_acquisition_source: string | null
+          owner_id: string | null
+          registration_number: string | null
+          registration_number_key: string | null
+          updated_at: string | null
+          updated_by: string | null
+          version: number | null
+          website: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_type?: string | null
+          address?: Json | null
+          archived_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          domain?: string | null
+          id?: string | null
+          lifecycle_state?: string | null
+          merged_into_account_id?: string | null
+          name?: string | null
+          normalized_name?: string | null
+          notes?: string | null
+          original_acquisition_at?: string | null
+          original_acquisition_source?: string | null
+          owner_id?: string | null
+          registration_number?: string | null
+          registration_number_key?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_type?: string | null
+          address?: Json | null
+          archived_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          domain?: string | null
+          id?: string | null
+          lifecycle_state?: string | null
+          merged_into_account_id?: string | null
+          name?: string | null
+          normalized_name?: string | null
+          notes?: string | null
+          original_acquisition_at?: string | null
+          original_acquisition_source?: string | null
+          owner_id?: string | null
+          registration_number?: string | null
+          registration_number_key?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_merged_into_account_id_fkey"
+            columns: ["merged_into_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activities: {
+        Row: {
+          account_id: string | null
+          actor_id: string | null
+          body: string | null
+          channel: string | null
+          contact_id: string | null
+          created_at: string | null
+          id: string | null
+          kind: string | null
+          lead_id: string | null
+          metadata: Json | null
+          occurred_at: string | null
+          opportunity_id: string | null
+          project_id: string | null
+          purchase_id: string | null
+          subject: string | null
+          visit_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          actor_id?: string | null
+          body?: string | null
+          channel?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          project_id?: string | null
+          purchase_id?: string | null
+          subject?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          actor_id?: string | null
+          body?: string | null
+          channel?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          project_id?: string | null
+          purchase_id?: string | null
+          subject?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_purchase_fk"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attribute_definitions: {
+        Row: {
+          data_type: string | null
+          description: string | null
+          id: string | null
+          key: string | null
+          label: string | null
+          options: Json | null
+          unit: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          data_type?: string | null
+          description?: string | null
+          id?: string | null
+          key?: string | null
+          label?: string | null
+          options?: Json | null
+          unit?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          data_type?: string | null
+          description?: string | null
+          id?: string | null
+          key?: string | null
+          label?: string | null
+          options?: Json | null
+          unit?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attribute_definitions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_events: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          correlation_id: string | null
+          id: string | null
+          metadata: Json | null
+          object_id: string | null
+          object_schema: string | null
+          object_table: string | null
+          occurred_at: string | null
+          reason: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          correlation_id?: string | null
+          id?: string | null
+          metadata?: Json | null
+          object_id?: string | null
+          object_schema?: string | null
+          object_table?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          correlation_id?: string | null
+          id?: string | null
+          metadata?: Json | null
+          object_id?: string | null
+          object_schema?: string | null
+          object_table?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      brands: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          is_house_brand: boolean | null
+          name: string | null
+          normalized_name: string | null
+          supplier_id: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          is_house_brand?: boolean | null
+          name?: string | null
+          normalized_name?: string | null
+          supplier_id?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          is_house_brand?: boolean | null
+          name?: string | null
+          normalized_name?: string | null
+          supplier_id?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brands_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brands_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_locations: {
+        Row: {
+          address: Json | null
+          code: string | null
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          kind: string | null
+          name: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          address?: Json | null
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          kind?: string | null
+          name?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          address?: Json | null
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          kind?: string | null
+          name?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_locations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_entries: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          page_ref: string | null
+          product_id: string | null
+          region: Json | null
+          snippet: string | null
+          source_asset_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          page_ref?: string | null
+          product_id?: string | null
+          region?: Json | null
+          snippet?: string | null
+          source_asset_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          page_ref?: string | null
+          product_id?: string | null
+          region?: Json | null
+          snippet?: string | null
+          source_asset_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_entries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_attribute_rules: {
+        Row: {
+          attribute_definition_id: string | null
+          category_id: string | null
+          id: string | null
+          is_required: boolean | null
+          position: number | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          attribute_definition_id?: string | null
+          category_id?: string | null
+          id?: string | null
+          is_required?: boolean | null
+          position?: number | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          attribute_definition_id?: string | null
+          category_id?: string | null
+          id?: string | null
+          is_required?: boolean | null
+          position?: number | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_attribute_rules_attribute_definition_id_fkey"
+            columns: ["attribute_definition_id"]
+            isOneToOne: false
+            referencedRelation: "attribute_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_attribute_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_attribute_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_checkpoints: {
+        Row: {
+          connection_id: string | null
+          cursor: string | null
+          id: string | null
+          stream: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          connection_id?: string | null
+          cursor?: string | null
+          id?: string | null
+          stream?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          connection_id?: string | null
+          cursor?: string | null
+          id?: string | null
+          stream?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_checkpoints_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consent_records: {
+        Row: {
+          channel: string | null
+          contact_id: string | null
+          evidence: string | null
+          id: string | null
+          notice_version: string | null
+          purpose: string | null
+          recorded_at: string | null
+          recorded_by: string | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          channel?: string | null
+          contact_id?: string | null
+          evidence?: string | null
+          id?: string | null
+          notice_version?: string | null
+          purpose?: string | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          channel?: string | null
+          contact_id?: string | null
+          evidence?: string | null
+          id?: string | null
+          notice_version?: string | null
+          purpose?: string | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_records_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consent_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_points: {
+        Row: {
+          contact_id: string | null
+          created_at: string | null
+          hash_key: string | null
+          id: string | null
+          is_primary: boolean | null
+          is_shared: boolean | null
+          kind: string | null
+          label: string | null
+          normalized_value: string | null
+          raw_value: string | null
+          source: string | null
+          updated_at: string | null
+          verified_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string | null
+          hash_key?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          is_shared?: boolean | null
+          kind?: string | null
+          label?: string | null
+          normalized_value?: string | null
+          raw_value?: string | null
+          source?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string | null
+          hash_key?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          is_shared?: boolean | null
+          kind?: string | null
+          label?: string | null
+          normalized_value?: string | null
+          raw_value?: string | null
+          source?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_points_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_points_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          archived_at: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_type: string | null
+          display_name: string | null
+          family_name: string | null
+          given_name: string | null
+          id: string | null
+          is_provisional: boolean | null
+          lifecycle_state: string | null
+          merged_into_contact_id: string | null
+          normalized_name: string | null
+          notes: string | null
+          original_acquisition_at: string | null
+          original_acquisition_source: string | null
+          preferred_language: string | null
+          salutation: string | null
+          updated_at: string | null
+          updated_by: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_type?: string | null
+          display_name?: string | null
+          family_name?: string | null
+          given_name?: string | null
+          id?: string | null
+          is_provisional?: boolean | null
+          lifecycle_state?: string | null
+          merged_into_contact_id?: string | null
+          normalized_name?: string | null
+          notes?: string | null
+          original_acquisition_at?: string | null
+          original_acquisition_source?: string | null
+          preferred_language?: string | null
+          salutation?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_type?: string | null
+          display_name?: string | null
+          family_name?: string | null
+          given_name?: string | null
+          id?: string | null
+          is_provisional?: boolean | null
+          lifecycle_state?: string | null
+          merged_into_contact_id?: string | null
+          normalized_name?: string | null
+          notes?: string | null
+          original_acquisition_at?: string | null
+          original_acquisition_source?: string | null
+          preferred_language?: string | null
+          salutation?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_merged_into_contact_id_fkey"
+            columns: ["merged_into_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_asset_reviews: {
+        Row: {
+          decision: string | null
+          id: string | null
+          reason: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          shoot_output_id: string | null
+        }
+        Insert: {
+          decision?: string | null
+          id?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          shoot_output_id?: string | null
+        }
+        Update: {
+          decision?: string | null
+          id?: string | null
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          shoot_output_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_asset_reviews_shoot_output_id_fkey"
+            columns: ["shoot_output_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_outputs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_opportunities: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          content_types: string[] | null
+          created_at: string | null
+          customer_owner_id: string | null
+          id: string | null
+          marketing_owner_id: string | null
+          nominated_by: string | null
+          nomination_reason: string | null
+          opportunity_id: string | null
+          priority: string | null
+          products_used: string[] | null
+          project_id: string | null
+          purchase_id: string | null
+          readiness_state: string | null
+          special_requirements: string | null
+          status: string | null
+          story_angle: string | null
+          target_window_end: string | null
+          target_window_start: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_id?: string | null
+          content_types?: string[] | null
+          created_at?: string | null
+          customer_owner_id?: string | null
+          id?: string | null
+          marketing_owner_id?: string | null
+          nominated_by?: string | null
+          nomination_reason?: string | null
+          opportunity_id?: string | null
+          priority?: string | null
+          products_used?: string[] | null
+          project_id?: string | null
+          purchase_id?: string | null
+          readiness_state?: string | null
+          special_requirements?: string | null
+          status?: string | null
+          story_angle?: string | null
+          target_window_end?: string | null
+          target_window_start?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_id?: string | null
+          content_types?: string[] | null
+          created_at?: string | null
+          customer_owner_id?: string | null
+          id?: string | null
+          marketing_owner_id?: string | null
+          nominated_by?: string | null
+          nomination_reason?: string | null
+          opportunity_id?: string | null
+          priority?: string | null
+          products_used?: string[] | null
+          project_id?: string | null
+          purchase_id?: string | null
+          readiness_state?: string | null
+          special_requirements?: string | null
+          status?: string | null
+          story_angle?: string | null
+          target_window_end?: string | null
+          target_window_start?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_opportunities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_opportunity_status_events: {
+        Row: {
+          actor_id: string | null
+          content_opportunity_id: string | null
+          from_status: string | null
+          id: string | null
+          occurred_at: string | null
+          reason: string | null
+          to_status: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          content_opportunity_id?: string | null
+          from_status?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          content_opportunity_id?: string | null
+          from_status?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_opportunity_status_events_content_opportunity_id_fkey"
+            columns: ["content_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      current_variant_prices: {
+        Row: {
+          amount: number | null
+          approved_at: string | null
+          approved_by: string | null
+          currency: string | null
+          id: string | null
+          min_quantity: number | null
+          price_list_id: string | null
+          price_list_name: string | null
+          price_type: string | null
+          product_id: string | null
+          review_state: string | null
+          source_ref: string | null
+          state: string | null
+          unit_code: string | null
+          unit_label: string | null
+          valid_from: string | null
+          valid_to: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_quality_issues: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          details: Json | null
+          id: string | null
+          issue_type: string | null
+          object_id: string | null
+          object_type: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          status: string | null
+          summary: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string | null
+          issue_type?: string | null
+          object_id?: string | null
+          object_type?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          status?: string | null
+          summary?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string | null
+          issue_type?: string | null
+          object_id?: string | null
+          object_type?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          status?: string | null
+          summary?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_quality_issues_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_calendar_links: {
+        Row: {
+          calendar_id: string | null
+          conflict_state: string | null
+          created_at: string | null
+          event_id: string | null
+          id: string | null
+          last_synced_at: string | null
+          provider: string | null
+          shoot_booking_id: string | null
+          sync_direction: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          calendar_id?: string | null
+          conflict_state?: string | null
+          created_at?: string | null
+          event_id?: string | null
+          id?: string | null
+          last_synced_at?: string | null
+          provider?: string | null
+          shoot_booking_id?: string | null
+          sync_direction?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          calendar_id?: string | null
+          conflict_state?: string | null
+          created_at?: string | null
+          event_id?: string | null
+          id?: string | null
+          last_synced_at?: string | null
+          provider?: string | null
+          shoot_booking_id?: string | null
+          sync_direction?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_calendar_links_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_calendar_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_document_links: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          document_number: string | null
+          document_type: string | null
+          id: string | null
+          metadata: Json | null
+          object_id: string | null
+          object_type: string | null
+          system: string | null
+          url: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          object_id?: string | null
+          object_type?: string | null
+          system?: string | null
+          url?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+          object_id?: string | null
+          object_type?: string | null
+          system?: string | null
+          url?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_document_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_identities: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          external_id: string | null
+          first_seen_at: string | null
+          id: string | null
+          last_seen_at: string | null
+          provider: string | null
+          raw: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_id?: string | null
+          external_id?: string | null
+          first_seen_at?: string | null
+          id?: string | null
+          last_seen_at?: string | null
+          provider?: string | null
+          raw?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_id?: string | null
+          external_id?: string | null
+          first_seen_at?: string | null
+          id?: string | null
+          last_seen_at?: string | null
+          provider?: string | null
+          raw?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_identities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_identities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_identities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extracted_fields: {
+        Row: {
+          confidence: number | null
+          field_key: string | null
+          id: string | null
+          record_id: string | null
+          region: Json | null
+          source_text: string | null
+          value: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          field_key?: string | null
+          id?: string | null
+          record_id?: string | null
+          region?: Json | null
+          source_text?: string | null
+          value?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          field_key?: string | null
+          id?: string | null
+          record_id?: string | null
+          region?: Json | null
+          source_text?: string | null
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_fields_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_flags: {
+        Row: {
+          enabled: boolean | null
+          key: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          enabled?: boolean | null
+          key?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          enabled?: boolean | null
+          key?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_flags_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      identity_match_candidates: {
+        Row: {
+          candidate_id: string | null
+          confidence: string | null
+          created_at: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string | null
+          reasons: Json | null
+          score: number | null
+          status: string | null
+          subject_id: string | null
+          subject_type: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          confidence?: string | null
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string | null
+          reasons?: Json | null
+          score?: number | null
+          status?: string | null
+          subject_id?: string | null
+          subject_type?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          confidence?: string | null
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string | null
+          reasons?: Json | null
+          score?: number | null
+          status?: string | null
+          subject_id?: string | null
+          subject_type?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identity_match_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      identity_merge_events: {
+        Row: {
+          actor_id: string | null
+          before_snapshot: Json | null
+          entity_type: string | null
+          id: string | null
+          merged_id: string | null
+          occurred_at: string | null
+          reason: string | null
+          relinked: Json | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          survivor_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          before_snapshot?: Json | null
+          entity_type?: string | null
+          id?: string | null
+          merged_id?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          relinked?: Json | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          survivor_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          before_snapshot?: Json | null
+          entity_type?: string | null
+          id?: string | null
+          merged_id?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          relinked?: Json | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          survivor_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identity_merge_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingestion_jobs: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          created_by: string | null
+          error: string | null
+          finished_at: string | null
+          id: string | null
+          job_type: string | null
+          parser_version: string | null
+          source_asset_id: string | null
+          started_at: string | null
+          stats: Json | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string | null
+          job_type?: string | null
+          parser_version?: string | null
+          source_asset_id?: string | null
+          started_at?: string | null
+          stats?: Json | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string | null
+          job_type?: string | null
+          parser_version?: string | null
+          source_asset_id?: string | null
+          started_at?: string | null
+          stats?: Json | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingestion_records: {
+        Row: {
+          confidence: number | null
+          id: string | null
+          issues: Json | null
+          job_id: string | null
+          normalized: Json | null
+          page_no: number | null
+          raw: Json | null
+          row_no: number | null
+          status: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          id?: string | null
+          issues?: Json | null
+          job_id?: string | null
+          normalized?: Json | null
+          page_no?: number | null
+          raw?: Json | null
+          row_no?: number | null
+          status?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          id?: string | null
+          issues?: Json | null
+          job_id?: string | null
+          normalized?: Json | null
+          page_no?: number | null
+          raw?: Json | null
+          row_no?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_records_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_events: {
+        Row: {
+          created_by: string | null
+          external_id: string | null
+          id: string | null
+          idempotency_key: string | null
+          lead_id: string | null
+          occurred_at: string | null
+          payload: Json | null
+          provider: string | null
+          raw_text: string | null
+          received_at: string | null
+          source_channel: string | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_by?: string | null
+          external_id?: string | null
+          id?: string | null
+          idempotency_key?: string | null
+          lead_id?: string | null
+          occurred_at?: string | null
+          payload?: Json | null
+          provider?: string | null
+          raw_text?: string | null
+          received_at?: string | null
+          source_channel?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_by?: string | null
+          external_id?: string | null
+          id?: string | null
+          idempotency_key?: string | null
+          lead_id?: string | null
+          occurred_at?: string | null
+          payload?: Json | null
+          provider?: string | null
+          raw_text?: string | null
+          received_at?: string | null
+          source_channel?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_events_lead_fk"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_connections: {
+        Row: {
+          business_purpose: string | null
+          config: Json | null
+          created_at: string | null
+          credential_ref: string | null
+          direction: string | null
+          environment: string | null
+          id: string | null
+          last_attempt_at: string | null
+          last_error: string | null
+          last_success_at: string | null
+          name: string | null
+          owner_id: string | null
+          provider: string | null
+          scopes: string[] | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          business_purpose?: string | null
+          config?: Json | null
+          created_at?: string | null
+          credential_ref?: string | null
+          direction?: string | null
+          environment?: string | null
+          id?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_success_at?: string | null
+          name?: string | null
+          owner_id?: string | null
+          provider?: string | null
+          scopes?: string[] | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          business_purpose?: string | null
+          config?: Json | null
+          created_at?: string | null
+          credential_ref?: string | null
+          direction?: string | null
+          environment?: string | null
+          id?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_success_at?: string | null
+          name?: string | null
+          owner_id?: string | null
+          provider?: string | null
+          scopes?: string[] | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_item_mappings: {
+        Row: {
+          created_at: string | null
+          external_item_code: string | null
+          id: string | null
+          source_id: string | null
+          status: string | null
+          unit_id: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_item_code?: string | null
+          id?: string | null
+          source_id?: string | null
+          status?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_item_code?: string | null
+          id?: string | null
+          source_id?: string | null
+          status?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_item_mappings_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_item_mappings_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_item_mappings_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_item_mappings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_locations: {
+        Row: {
+          business_location_id: string | null
+          created_at: string | null
+          external_code: string | null
+          id: string | null
+          name: string | null
+          source_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          business_location_id?: string | null
+          created_at?: string | null
+          external_code?: string | null
+          id?: string | null
+          name?: string | null
+          source_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          business_location_id?: string | null
+          created_at?: string | null
+          external_code?: string | null
+          id?: string | null
+          name?: string | null
+          source_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_locations_business_location_id_fkey"
+            columns: ["business_location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_locations_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_locations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          id: string | null
+          location_id: string | null
+          movement_type: string | null
+          occurred_at: string | null
+          quantity: number | null
+          recorded_by: string | null
+          reference: string | null
+          source_id: string | null
+          unit_id: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          location_id?: string | null
+          movement_type?: string | null
+          occurred_at?: string | null
+          quantity?: number | null
+          recorded_by?: string | null
+          reference?: string | null
+          source_id?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          location_id?: string | null
+          movement_type?: string | null
+          occurred_at?: string | null
+          quantity?: number | null
+          recorded_by?: string | null
+          reference?: string | null
+          source_id?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_snapshots: {
+        Row: {
+          allocated: number | null
+          available: number | null
+          captured_at: string | null
+          checkpoint: string | null
+          external_item_code: string | null
+          id: string | null
+          location_id: string | null
+          on_hand: number | null
+          source_id: string | null
+          source_timestamp: string | null
+          unit_id: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          allocated?: number | null
+          available?: number | null
+          captured_at?: string | null
+          checkpoint?: string | null
+          external_item_code?: string | null
+          id?: string | null
+          location_id?: string | null
+          on_hand?: number | null
+          source_id?: string | null
+          source_timestamp?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          allocated?: number | null
+          available?: number | null
+          captured_at?: string | null
+          checkpoint?: string | null
+          external_item_code?: string | null
+          id?: string | null
+          location_id?: string | null
+          on_hand?: number | null
+          source_id?: string | null
+          source_timestamp?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_snapshots_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_snapshots_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_snapshots_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_snapshots_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_sources: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          freshness_sla_minutes: number | null
+          id: string | null
+          is_authoritative: boolean | null
+          key: string | null
+          kind: string | null
+          name: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          freshness_sla_minutes?: number | null
+          id?: string | null
+          is_authoritative?: boolean | null
+          key?: string | null
+          kind?: string | null
+          name?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          freshness_sla_minutes?: number | null
+          id?: string | null
+          is_authoritative?: boolean | null
+          key?: string | null
+          kind?: string | null
+          name?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_sources_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_intake_links: {
+        Row: {
+          intake_event_id: string | null
+          lead_id: string | null
+        }
+        Insert: {
+          intake_event_id?: string | null
+          lead_id?: string | null
+        }
+        Update: {
+          intake_event_id?: string | null
+          lead_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_intake_links_intake_event_id_fkey"
+            columns: ["intake_event_id"]
+            isOneToOne: false
+            referencedRelation: "intake_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_intake_links_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          account_id: string | null
+          assigned_at: string | null
+          contact_attempts: number | null
+          contact_id: string | null
+          converted_opportunity_id: string | null
+          created_at: string | null
+          created_by: string | null
+          disqualified_reason: string | null
+          duplicate_of_lead_id: string | null
+          first_response_at: string | null
+          first_response_due_at: string | null
+          id: string | null
+          interest: string | null
+          location_id: string | null
+          notes: string | null
+          owner_id: string | null
+          product_interest: string[] | null
+          qualified_at: string | null
+          raw_company: string | null
+          raw_email: string | null
+          raw_name: string | null
+          raw_phone: string | null
+          raw_phone_normalized: string | null
+          source_channel: string | null
+          source_detail: string | null
+          status: string | null
+          updated_at: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          assigned_at?: string | null
+          contact_attempts?: number | null
+          contact_id?: string | null
+          converted_opportunity_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          disqualified_reason?: string | null
+          duplicate_of_lead_id?: string | null
+          first_response_at?: string | null
+          first_response_due_at?: string | null
+          id?: string | null
+          interest?: string | null
+          location_id?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          product_interest?: string[] | null
+          qualified_at?: string | null
+          raw_company?: string | null
+          raw_email?: string | null
+          raw_name?: string | null
+          raw_phone?: string | null
+          raw_phone_normalized?: string | null
+          source_channel?: string | null
+          source_detail?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          assigned_at?: string | null
+          contact_attempts?: number | null
+          contact_id?: string | null
+          converted_opportunity_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          disqualified_reason?: string | null
+          duplicate_of_lead_id?: string | null
+          first_response_at?: string | null
+          first_response_due_at?: string | null
+          id?: string | null
+          interest?: string | null
+          location_id?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          product_interest?: string[] | null
+          qualified_at?: string | null
+          raw_company?: string | null
+          raw_email?: string | null
+          raw_name?: string | null
+          raw_phone?: string | null
+          raw_phone_normalized?: string | null
+          source_channel?: string | null
+          source_detail?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_opportunity_fk"
+            columns: ["converted_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_permission_records: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          content_opportunity_id: string | null
+          created_at: string | null
+          evidence_storage_path: string | null
+          expires_at: string | null
+          granted_at: string | null
+          granted_by_name: string | null
+          id: string | null
+          permitted_capture: string[] | null
+          permitted_uses: string[] | null
+          recorded_by: string | null
+          restrictions: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_id?: string | null
+          content_opportunity_id?: string | null
+          created_at?: string | null
+          evidence_storage_path?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by_name?: string | null
+          id?: string | null
+          permitted_capture?: string[] | null
+          permitted_uses?: string[] | null
+          recorded_by?: string | null
+          restrictions?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_id?: string | null
+          content_opportunity_id?: string | null
+          created_at?: string | null
+          evidence_storage_path?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by_name?: string | null
+          id?: string | null
+          permitted_capture?: string[] | null
+          permitted_uses?: string[] | null
+          recorded_by?: string | null
+          restrictions?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_permission_records_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_permission_records_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_permission_records_content_opportunity_id_fkey"
+            columns: ["content_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_permission_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          default_location_id: string | null
+          email: string | null
+          id: string | null
+          invited_by: string | null
+          role_key: string | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          default_location_id?: string | null
+          email?: string | null
+          id?: string | null
+          invited_by?: string | null
+          role_key?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          default_location_id?: string | null
+          email?: string | null
+          id?: string | null
+          invited_by?: string | null
+          role_key?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_invites_default_location_id_fkey"
+            columns: ["default_location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_invites_role_key_fkey"
+            columns: ["role_key"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "membership_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_scopes: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          membership_id: string | null
+          scope_id: string | null
+          scope_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          membership_id?: string | null
+          scope_id?: string | null
+          scope_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          membership_id?: string | null
+          scope_id?: string | null
+          scope_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_scopes_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memberships: {
+        Row: {
+          created_at: string | null
+          default_location_id: string | null
+          id: string | null
+          role_key: string | null
+          status: string | null
+          team_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_location_id?: string | null
+          id?: string | null
+          role_key?: string | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_location_id?: string | null
+          id?: string | null
+          role_key?: string | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memberships_default_location_id_fkey"
+            columns: ["default_location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_role_key_fkey"
+            columns: ["role_key"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "memberships_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunities: {
+        Row: {
+          account_id: string | null
+          competitor: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          deferred_until: string | null
+          estimated_value: number | null
+          expected_close_date: string | null
+          id: string | null
+          lead_id: string | null
+          lost_at: string | null
+          name: string | null
+          next_action: string | null
+          next_action_due_at: string | null
+          notes: string | null
+          outcome_reason: string | null
+          owner_id: string | null
+          probability_band: string | null
+          product_interest: string[] | null
+          project_id: string | null
+          source_channel: string | null
+          stage_key: string | null
+          status: string | null
+          updated_at: string | null
+          version: number | null
+          won_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          competitor?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          deferred_until?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string | null
+          lead_id?: string | null
+          lost_at?: string | null
+          name?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          notes?: string | null
+          outcome_reason?: string | null
+          owner_id?: string | null
+          probability_band?: string | null
+          product_interest?: string[] | null
+          project_id?: string | null
+          source_channel?: string | null
+          stage_key?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          won_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          competitor?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          deferred_until?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string | null
+          lead_id?: string | null
+          lost_at?: string | null
+          name?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          notes?: string | null
+          outcome_reason?: string | null
+          owner_id?: string | null
+          probability_band?: string | null
+          product_interest?: string[] | null
+          project_id?: string | null
+          source_channel?: string | null
+          stage_key?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          won_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_stage_events: {
+        Row: {
+          actor_id: string | null
+          from_stage_key: string | null
+          id: string | null
+          is_backward: boolean | null
+          occurred_at: string | null
+          opportunity_id: string | null
+          reason: string | null
+          to_stage_key: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          from_stage_key?: string | null
+          id?: string | null
+          is_backward?: boolean | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          reason?: string | null
+          to_stage_key?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          from_stage_key?: string | null
+          id?: string | null
+          is_backward?: boolean | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          reason?: string | null
+          to_stage_key?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_stage_events_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_stage_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_stages: {
+        Row: {
+          id: string | null
+          is_active: boolean | null
+          key: string | null
+          label: string | null
+          position: number | null
+          reporting_group: string | null
+          requires_next_action: boolean | null
+          requires_reason: boolean | null
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          is_active?: boolean | null
+          key?: string | null
+          label?: string | null
+          position?: number | null
+          reporting_group?: string | null
+          requires_next_action?: boolean | null
+          requires_reason?: boolean | null
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          is_active?: boolean | null
+          key?: string | null
+          label?: string | null
+          position?: number | null
+          reporting_group?: string | null
+          requires_next_action?: boolean | null
+          requires_reason?: boolean | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_stages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packaging_configurations: {
+        Row: {
+          coverage_per_pack: number | null
+          coverage_unit_id: string | null
+          created_at: string | null
+          id: string | null
+          inner_unit_id: string | null
+          moq: number | null
+          order_increment: number | null
+          pack_label: string | null
+          pack_unit_id: string | null
+          quantity_per_pack: number | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          coverage_per_pack?: number | null
+          coverage_unit_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          inner_unit_id?: string | null
+          moq?: number | null
+          order_increment?: number | null
+          pack_label?: string | null
+          pack_unit_id?: string | null
+          quantity_per_pack?: number | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          coverage_per_pack?: number | null
+          coverage_unit_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          inner_unit_id?: string | null
+          moq?: number | null
+          order_increment?: number | null
+          pack_label?: string | null
+          pack_unit_id?: string | null
+          quantity_per_pack?: number | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packaging_configurations_coverage_unit_id_fkey"
+            columns: ["coverage_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packaging_configurations_inner_unit_id_fkey"
+            columns: ["inner_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packaging_configurations_pack_unit_id_fkey"
+            columns: ["pack_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packaging_configurations_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packaging_configurations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_approval_events: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          id: string | null
+          occurred_at: string | null
+          reason: string | null
+          variant_price_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_id?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          variant_price_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_id?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          reason?: string | null
+          variant_price_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_approval_events_variant_price_id_fkey"
+            columns: ["variant_price_id"]
+            isOneToOne: false
+            referencedRelation: "current_variant_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_approval_events_variant_price_id_fkey"
+            columns: ["variant_price_id"]
+            isOneToOne: false
+            referencedRelation: "variant_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_approval_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_lists: {
+        Row: {
+          brand_id: string | null
+          category_id: string | null
+          created_at: string | null
+          currency: string | null
+          id: string | null
+          market: string | null
+          name: string | null
+          notes: string | null
+          owner_id: string | null
+          price_type: string | null
+          source_ref: string | null
+          status: string | null
+          supplier_id: string | null
+          tax_inclusive: boolean | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string | null
+          market?: string | null
+          name?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          price_type?: string | null
+          source_ref?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          tax_inclusive?: boolean | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string | null
+          market?: string | null
+          name?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          price_type?: string | null
+          source_ref?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          tax_inclusive?: boolean | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_lists_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_lists_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_lists_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_lists_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_aliases: {
+        Row: {
+          alias: string | null
+          alias_key: string | null
+          created_at: string | null
+          id: string | null
+          normalized_alias: string | null
+          product_id: string | null
+          source: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          alias?: string | null
+          alias_key?: string | null
+          created_at?: string | null
+          id?: string | null
+          normalized_alias?: string | null
+          product_id?: string | null
+          source?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          alias?: string | null
+          alias_key?: string | null
+          created_at?: string | null
+          id?: string | null
+          normalized_alias?: string | null
+          product_id?: string | null
+          source?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_aliases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_aliases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_attribute_values: {
+        Row: {
+          attribute_definition_id: string | null
+          confidence: number | null
+          created_at: string | null
+          id: string | null
+          product_id: string | null
+          source_ref: string | null
+          value: Json | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          attribute_definition_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          id?: string | null
+          product_id?: string | null
+          source_ref?: string | null
+          value?: Json | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          attribute_definition_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          id?: string | null
+          product_id?: string | null
+          source_ref?: string | null
+          value?: Json | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_attribute_values_attribute_definition_id_fkey"
+            columns: ["attribute_definition_id"]
+            isOneToOne: false
+            referencedRelation: "attribute_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_categories: {
+        Row: {
+          id: string | null
+          is_active: boolean | null
+          key: string | null
+          label: string | null
+          parent_id: string | null
+          position: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          is_active?: boolean | null
+          key?: string | null
+          label?: string | null
+          parent_id?: string | null
+          position?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          is_active?: boolean | null
+          key?: string | null
+          label?: string | null
+          parent_id?: string | null
+          position?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_media: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          id: string | null
+          is_primary: boolean | null
+          kind: string | null
+          product_id: string | null
+          source_ref: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          kind?: string | null
+          product_id?: string | null
+          source_ref?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          kind?: string | null
+          product_id?: string | null
+          source_ref?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_media_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_media_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          created_at: string | null
+          dimensions: Json | null
+          id: string | null
+          is_default: boolean | null
+          name: string | null
+          product_id: string | null
+          purchase_unit_id: string | null
+          selling_unit_id: string | null
+          sku: string | null
+          sku_key: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dimensions?: Json | null
+          id?: string | null
+          is_default?: boolean | null
+          name?: string | null
+          product_id?: string | null
+          purchase_unit_id?: string | null
+          selling_unit_id?: string | null
+          sku?: string | null
+          sku_key?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dimensions?: Json | null
+          id?: string | null
+          is_default?: boolean | null
+          name?: string | null
+          product_id?: string | null
+          purchase_unit_id?: string | null
+          selling_unit_id?: string | null
+          sku?: string | null
+          sku_key?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_purchase_unit_id_fkey"
+            columns: ["purchase_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_selling_unit_id_fkey"
+            columns: ["selling_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          applicable_use: string | null
+          brand_id: string | null
+          category_id: string | null
+          code: string | null
+          code_key: string | null
+          color: string | null
+          confidence: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          family: string | null
+          finish: string | null
+          id: string | null
+          material: string | null
+          name: string | null
+          normalized_name: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          search_keywords: string[] | null
+          source_asset_id: string | null
+          source_ref: string | null
+          status: string | null
+          style: string | null
+          supplier_id: string | null
+          updated_at: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          applicable_use?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          code?: string | null
+          code_key?: string | null
+          color?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          family?: string | null
+          finish?: string | null
+          id?: string | null
+          material?: string | null
+          name?: string | null
+          normalized_name?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          search_keywords?: string[] | null
+          source_asset_id?: string | null
+          source_ref?: string | null
+          status?: string | null
+          style?: string | null
+          supplier_id?: string | null
+          updated_at?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          applicable_use?: string | null
+          brand_id?: string | null
+          category_id?: string | null
+          code?: string | null
+          code_key?: string | null
+          color?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          family?: string | null
+          finish?: string | null
+          id?: string | null
+          material?: string | null
+          name?: string | null
+          normalized_name?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          search_keywords?: string[] | null
+          source_asset_id?: string | null
+          source_ref?: string | null
+          status?: string | null
+          style?: string | null
+          supplier_id?: string | null
+          updated_at?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      project_sites: {
+        Row: {
+          access_notes: string | null
+          address: Json | null
+          created_at: string | null
+          id: string | null
+          label: string | null
+          project_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          access_notes?: string | null
+          address?: Json | null
+          created_at?: string | null
+          id?: string | null
+          label?: string | null
+          project_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          access_notes?: string | null
+          address?: Json | null
+          created_at?: string | null
+          id?: string | null
+          label?: string | null
+          project_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_sites_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          account_id: string | null
+          area: string | null
+          created_at: string | null
+          created_by: string | null
+          expected_completion: string | null
+          expected_start: string | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          owner_id: string | null
+          primary_contact_id: string | null
+          project_type: string | null
+          status: string | null
+          updated_at: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          area?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expected_completion?: string | null
+          expected_start?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          primary_contact_id?: string | null
+          project_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          area?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expected_completion?: string | null
+          expected_start?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          primary_contact_id?: string | null
+          project_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_items: {
+        Row: {
+          description: string | null
+          id: string | null
+          line_total: number | null
+          position: number | null
+          price_snapshot: Json | null
+          product_variant_id: string | null
+          purchase_id: string | null
+          quantity: number | null
+          unit: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string | null
+          line_total?: number | null
+          position?: number | null
+          price_snapshot?: Json | null
+          product_variant_id?: string | null
+          purchase_id?: string | null
+          quantity?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          description?: string | null
+          id?: string | null
+          line_total?: number | null
+          position?: number | null
+          price_snapshot?: Json | null
+          product_variant_id?: string | null
+          purchase_id?: string | null
+          quantity?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_payments: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          currency: string | null
+          id: string | null
+          method: string | null
+          paid_at: string | null
+          purchase_id: string | null
+          reference: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string | null
+          method?: string | null
+          paid_at?: string | null
+          purchase_id?: string | null
+          reference?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string | null
+          method?: string | null
+          paid_at?: string | null
+          purchase_id?: string | null
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_payments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          contact_id: string | null
+          created_at: string | null
+          currency: string | null
+          external_ref: string | null
+          id: string | null
+          is_repeat: boolean | null
+          location_id: string | null
+          notes: string | null
+          opportunity_id: string | null
+          project_id: string | null
+          purchase_source: string | null
+          purchased_at: string | null
+          recorded_by: string | null
+          salesperson_id: string | null
+          status: string | null
+          updated_at: string | null
+          version: number | null
+          visit_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          external_ref?: string | null
+          id?: string | null
+          is_repeat?: boolean | null
+          location_id?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          project_id?: string | null
+          purchase_source?: string | null
+          purchased_at?: string | null
+          recorded_by?: string | null
+          salesperson_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          external_ref?: string | null
+          id?: string | null
+          is_repeat?: boolean | null
+          location_id?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          project_id?: string | null
+          purchase_source?: string | null
+          purchased_at?: string | null
+          recorded_by?: string | null
+          salesperson_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version?: number | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_items: {
+        Row: {
+          currency: string | null
+          description: string | null
+          id: string | null
+          line_total: number | null
+          position: number | null
+          price_snapshot: Json | null
+          product_variant_id: string | null
+          quantity: number | null
+          quote_version_id: string | null
+          unit: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          currency?: string | null
+          description?: string | null
+          id?: string | null
+          line_total?: number | null
+          position?: number | null
+          price_snapshot?: Json | null
+          product_variant_id?: string | null
+          quantity?: number | null
+          quote_version_id?: string | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          currency?: string | null
+          description?: string | null
+          id?: string | null
+          line_total?: number | null
+          position?: number | null
+          price_snapshot?: Json | null
+          product_variant_id?: string | null
+          quantity?: number | null
+          quote_version_id?: string | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_versions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          external_ref: string | null
+          id: string | null
+          issued_at: string | null
+          notes: string | null
+          quote_id: string | null
+          total_amount: number | null
+          valid_until: string | null
+          version_no: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          external_ref?: string | null
+          id?: string | null
+          issued_at?: string | null
+          notes?: string | null
+          quote_id?: string | null
+          total_amount?: number | null
+          valid_until?: string | null
+          version_no?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          external_ref?: string | null
+          id?: string | null
+          issued_at?: string | null
+          notes?: string | null
+          quote_id?: string | null
+          total_amount?: number | null
+          valid_until?: string | null
+          version_no?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_versions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          current_version_no: number | null
+          id: string | null
+          opportunity_id: string | null
+          quote_number: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          current_version_no?: number | null
+          id?: string | null
+          opportunity_id?: string | null
+          quote_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          current_version_no?: number | null
+          id?: string | null
+          opportunity_id?: string | null
+          quote_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_items: {
+        Row: {
+          conflicts: Json | null
+          created_at: string | null
+          decision_note: string | null
+          id: string | null
+          item_type: string | null
+          job_id: string | null
+          proposed: Json | null
+          record_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          conflicts?: Json | null
+          created_at?: string | null
+          decision_note?: string | null
+          id?: string | null
+          item_type?: string | null
+          job_id?: string | null
+          proposed?: Json | null
+          record_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          conflicts?: Json | null
+          created_at?: string | null
+          decision_note?: string | null
+          id?: string | null
+          item_type?: string | null
+          job_id?: string | null
+          proposed?: Json | null
+          record_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_items_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          permission: string | null
+          role_key: string | null
+        }
+        Insert: {
+          permission?: string | null
+          role_key?: string | null
+        }
+        Update: {
+          permission?: string | null
+          role_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_key_fkey"
+            columns: ["role_key"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          description: string | null
+          key: string | null
+          label: string | null
+          rank: number | null
+        }
+        Insert: {
+          description?: string | null
+          key?: string | null
+          label?: string | null
+          rank?: number | null
+        }
+        Update: {
+          description?: string | null
+          key?: string | null
+          label?: string | null
+          rank?: number | null
+        }
+        Relationships: []
+      }
+      saved_views: {
+        Row: {
+          columns: Json | null
+          created_at: string | null
+          filters: Json | null
+          id: string | null
+          is_default: boolean | null
+          name: string | null
+          position: number | null
+          sort: Json | null
+          surface: string | null
+          updated_at: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          columns?: Json | null
+          created_at?: string | null
+          filters?: Json | null
+          id?: string | null
+          is_default?: boolean | null
+          name?: string | null
+          position?: number | null
+          sort?: Json | null
+          surface?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          columns?: Json | null
+          created_at?: string | null
+          filters?: Json | null
+          id?: string | null
+          is_default?: boolean | null
+          name?: string | null
+          position?: number | null
+          sort?: Json | null
+          surface?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_booking_status_events: {
+        Row: {
+          actor_id: string | null
+          from_status: string | null
+          id: string | null
+          occurred_at: string | null
+          previous_ends_at: string | null
+          previous_starts_at: string | null
+          reason: string | null
+          shoot_booking_id: string | null
+          to_status: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          from_status?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          previous_ends_at?: string | null
+          previous_starts_at?: string | null
+          reason?: string | null
+          shoot_booking_id?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          from_status?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          previous_ends_at?: string | null
+          previous_starts_at?: string | null
+          reason?: string | null
+          shoot_booking_id?: string | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoot_booking_status_events_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_bookings: {
+        Row: {
+          all_day: boolean | null
+          content_opportunity_id: string | null
+          coordinator_id: string | null
+          created_at: string | null
+          created_by: string | null
+          ends_at: string | null
+          id: string | null
+          notes: string | null
+          outcome: string | null
+          outcome_reason: string | null
+          starts_at: string | null
+          status: string | null
+          timezone: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          all_day?: boolean | null
+          content_opportunity_id?: string | null
+          coordinator_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string | null
+          notes?: string | null
+          outcome?: string | null
+          outcome_reason?: string | null
+          starts_at?: string | null
+          status?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          all_day?: boolean | null
+          content_opportunity_id?: string | null
+          coordinator_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string | null
+          notes?: string | null
+          outcome?: string | null
+          outcome_reason?: string | null
+          starts_at?: string | null
+          status?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoot_bookings_content_opportunity_id_fkey"
+            columns: ["content_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_bookings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_checklists: {
+        Row: {
+          done_at: string | null
+          done_by: string | null
+          id: string | null
+          is_done: boolean | null
+          item: string | null
+          shoot_booking_id: string | null
+        }
+        Insert: {
+          done_at?: string | null
+          done_by?: string | null
+          id?: string | null
+          is_done?: boolean | null
+          item?: string | null
+          shoot_booking_id?: string | null
+        }
+        Update: {
+          done_at?: string | null
+          done_by?: string | null
+          id?: string | null
+          is_done?: boolean | null
+          item?: string | null
+          shoot_booking_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoot_checklists_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_locations: {
+        Row: {
+          address: Json | null
+          id: string | null
+          notes: string | null
+          project_site_id: string | null
+          sequence: number | null
+          shoot_booking_id: string | null
+          travel_buffer_minutes: number | null
+        }
+        Insert: {
+          address?: Json | null
+          id?: string | null
+          notes?: string | null
+          project_site_id?: string | null
+          sequence?: number | null
+          shoot_booking_id?: string | null
+          travel_buffer_minutes?: number | null
+        }
+        Update: {
+          address?: Json | null
+          id?: string | null
+          notes?: string | null
+          project_site_id?: string | null
+          sequence?: number | null
+          shoot_booking_id?: string | null
+          travel_buffer_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoot_locations_project_site_id_fkey"
+            columns: ["project_site_id"]
+            isOneToOne: false
+            referencedRelation: "project_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_locations_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_outputs: {
+        Row: {
+          captured_at: string | null
+          content_opportunity_id: string | null
+          created_at: string | null
+          id: string | null
+          kind: string | null
+          shoot_booking_id: string | null
+          state: string | null
+          storage_path: string | null
+          uploaded_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          captured_at?: string | null
+          content_opportunity_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          shoot_booking_id?: string | null
+          state?: string | null
+          storage_path?: string | null
+          uploaded_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          captured_at?: string | null
+          content_opportunity_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          shoot_booking_id?: string | null
+          state?: string | null
+          storage_path?: string | null
+          uploaded_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoot_outputs_content_opportunity_id_fkey"
+            columns: ["content_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_outputs_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_outputs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_participants: {
+        Row: {
+          created_at: string | null
+          external_name: string | null
+          id: string | null
+          role: string | null
+          shoot_booking_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_name?: string | null
+          id?: string | null
+          role?: string | null
+          shoot_booking_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_name?: string | null
+          id?: string | null
+          role?: string | null
+          shoot_booking_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoot_participants_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_requests: {
+        Row: {
+          content_opportunity_id: string | null
+          created_at: string | null
+          id: string | null
+          proposed_windows: Json | null
+          requested_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          content_opportunity_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          proposed_windows?: Json | null
+          requested_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          content_opportunity_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          proposed_windows?: Json | null
+          requested_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoot_requests_content_opportunity_id_fkey"
+            columns: ["content_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_asset_versions: {
+        Row: {
+          checksum: string | null
+          created_at: string | null
+          id: string | null
+          source_asset_id: string | null
+          storage_path: string | null
+          version_no: number | null
+        }
+        Insert: {
+          checksum?: string | null
+          created_at?: string | null
+          id?: string | null
+          source_asset_id?: string | null
+          storage_path?: string | null
+          version_no?: number | null
+        }
+        Update: {
+          checksum?: string | null
+          created_at?: string | null
+          id?: string | null
+          source_asset_id?: string | null
+          storage_path?: string | null
+          version_no?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_asset_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_assets: {
+        Row: {
+          brand_id: string | null
+          checksum: string | null
+          created_at: string | null
+          id: string | null
+          kind: string | null
+          mime_type: string | null
+          name: string | null
+          page_count: number | null
+          received_at: string | null
+          size_bytes: number | null
+          status: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          supplier_id: string | null
+          uploaded_by: string | null
+          url: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          checksum?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          mime_type?: string | null
+          name?: string | null
+          page_count?: number | null
+          received_at?: string | null
+          size_bytes?: number | null
+          status?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          supplier_id?: string | null
+          uploaded_by?: string | null
+          url?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          checksum?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          mime_type?: string | null
+          name?: string | null
+          page_count?: number | null
+          received_at?: string | null
+          size_bytes?: number | null
+          status?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          supplier_id?: string | null
+          uploaded_by?: string | null
+          url?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_assets_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_assets_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_freshness_policies: {
+        Row: {
+          aging_hours: number | null
+          created_at: string | null
+          fresh_hours: number | null
+          id: string | null
+          source_id: string | null
+          supplier_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          aging_hours?: number | null
+          created_at?: string | null
+          fresh_hours?: number | null
+          id?: string | null
+          source_id?: string | null
+          supplier_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          aging_hours?: number | null
+          created_at?: string | null
+          fresh_hours?: number | null
+          id?: string | null
+          source_id?: string | null
+          supplier_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_freshness_policies_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_freshness_policies_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_freshness_policies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_reconciliation_cases: {
+        Row: {
+          expected: number | null
+          id: string | null
+          notes: string | null
+          observed: number | null
+          opened_at: string | null
+          resolved_at: string | null
+          source_id: string | null
+          status: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          expected?: number | null
+          id?: string | null
+          notes?: string | null
+          observed?: number | null
+          opened_at?: string | null
+          resolved_at?: string | null
+          source_id?: string | null
+          status?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          expected?: number | null
+          id?: string | null
+          notes?: string | null
+          observed?: number | null
+          opened_at?: string | null
+          resolved_at?: string | null
+          source_id?: string | null
+          status?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reconciliation_cases_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_cases_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_cases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_availability_snapshots: {
+        Row: {
+          availability: string | null
+          captured_at: string | null
+          evidence_storage_path: string | null
+          expected_replenishment: string | null
+          id: string | null
+          notes: string | null
+          product_id: string | null
+          quantity: number | null
+          source_channel: string | null
+          submitted_by: string | null
+          supplier_id: string | null
+          unit_id: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          availability?: string | null
+          captured_at?: string | null
+          evidence_storage_path?: string | null
+          expected_replenishment?: string | null
+          id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          source_channel?: string | null
+          submitted_by?: string | null
+          supplier_id?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          availability?: string | null
+          captured_at?: string | null
+          evidence_storage_path?: string | null
+          expected_replenishment?: string | null
+          id?: string | null
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          source_channel?: string | null
+          submitted_by?: string | null
+          supplier_id?: string | null
+          unit_id?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_availability_snapshots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          contact: Json | null
+          created_at: string | null
+          id: string | null
+          name: string | null
+          normalized_name: string | null
+          notes: string | null
+          status: string | null
+          updated_at: string | null
+          website: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          contact?: Json | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          normalized_name?: string | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          contact?: Json | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          normalized_name?: string | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_runs: {
+        Row: {
+          connection_id: string | null
+          error: string | null
+          finished_at: string | null
+          id: string | null
+          records_created: number | null
+          records_read: number | null
+          records_rejected: number | null
+          records_updated: number | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          connection_id?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string | null
+          records_created?: number | null
+          records_read?: number | null
+          records_rejected?: number | null
+          records_updated?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          connection_id?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string | null
+          records_created?: number | null
+          records_read?: number | null
+          records_rejected?: number | null
+          records_updated?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_runs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          account_id: string | null
+          assignee_id: string | null
+          completed_at: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string | null
+          lead_id: string | null
+          opportunity_id: string | null
+          outcome: string | null
+          priority: string | null
+          project_id: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          assignee_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string | null
+          lead_id?: string | null
+          opportunity_id?: string | null
+          outcome?: string | null
+          priority?: string | null
+          project_id?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          assignee_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string | null
+          lead_id?: string | null
+          opportunity_id?: string | null
+          outcome?: string | null
+          priority?: string | null
+          project_id?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          name: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_conversions: {
+        Row: {
+          context_variant_id: string | null
+          created_at: string | null
+          effective_from: string | null
+          factor: number | null
+          from_unit_id: string | null
+          id: string | null
+          to_unit_id: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          context_variant_id?: string | null
+          created_at?: string | null
+          effective_from?: string | null
+          factor?: number | null
+          from_unit_id?: string | null
+          id?: string | null
+          to_unit_id?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          context_variant_id?: string | null
+          created_at?: string | null
+          effective_from?: string | null
+          factor?: number | null
+          from_unit_id?: string | null
+          id?: string | null
+          to_unit_id?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_conversions_from_unit_id_fkey"
+            columns: ["from_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_conversions_to_unit_id_fkey"
+            columns: ["to_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_conversions_variant_fk"
+            columns: ["context_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_conversions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units_of_measure: {
+        Row: {
+          code: string | null
+          id: string | null
+          kind: string | null
+          label: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          code?: string | null
+          id?: string | null
+          kind?: string | null
+          label?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          code?: string | null
+          id?: string | null
+          kind?: string | null
+          label?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_of_measure_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      variant_prices: {
+        Row: {
+          amount: number | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          id: string | null
+          imported_at: string | null
+          min_quantity: number | null
+          notes: string | null
+          price_list_id: string | null
+          review_state: string | null
+          source_asset_id: string | null
+          source_ref: string | null
+          state: string | null
+          unit_id: string | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_to: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          id?: string | null
+          imported_at?: string | null
+          min_quantity?: number | null
+          notes?: string | null
+          price_list_id?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_ref?: string | null
+          state?: string | null
+          unit_id?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          id?: string | null
+          imported_at?: string | null
+          min_quantity?: number | null
+          notes?: string | null
+          price_list_id?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_ref?: string | null
+          state?: string | null
+          unit_id?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "variant_prices_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visits: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_type: string | null
+          id: string | null
+          inquiry_source: string | null
+          is_new_customer: boolean | null
+          lead_id: string | null
+          location_id: string | null
+          notes: string | null
+          occurred_at: string | null
+          opportunity_id: string | null
+          origin_area: string | null
+          purpose: string | null
+          staff_user_id: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_type?: string | null
+          id?: string | null
+          inquiry_source?: string | null
+          is_new_customer?: boolean | null
+          lead_id?: string | null
+          location_id?: string | null
+          notes?: string | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          origin_area?: string | null
+          purpose?: string | null
+          staff_user_id?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_type?: string | null
+          id?: string | null
+          inquiry_source?: string | null
+          is_new_customer?: boolean | null
+          lead_id?: string | null
+          location_id?: string | null
+          notes?: string | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          origin_area?: string | null
+          purpose?: string | null
+          staff_user_id?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string | null
+          default_currency: string | null
+          id: string | null
+          name: string | null
+          settings: Json | null
+          slug: string | null
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_currency?: string | null
+          id?: string | null
+          name?: string | null
+          settings?: Json | null
+          slug?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_currency?: string | null
+          id?: string | null
+          name?: string | null
+          settings?: Json | null
+          slug?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+    }
+    Functions: {
+      assign_lead: {
+        Args: { p_lead_id: string; p_owner_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      change_opportunity_stage: {
+        Args: {
+          p_next_action?: string
+          p_next_action_due_at?: string
+          p_opportunity_id: string
+          p_outcome_date?: string
+          p_reason?: string
+          p_to_stage_key: string
+        }
+        Returns: undefined
+      }
+      command_centre_summary: { Args: never; Returns: Json }
+      convert_lead: {
+        Args: {
+          p_account_id?: string
+          p_contact_id: string
+          p_estimated_value?: number
+          p_lead_id: string
+          p_next_action?: string
+          p_next_action_due_at?: string
+          p_opportunity_name?: string
+          p_project_name?: string
+        }
+        Returns: Json
+      }
+      create_contact: {
+        Args: {
+          p_account_id?: string
+          p_customer_type?: string
+          p_display_name: string
+          p_email?: string
+          p_is_provisional?: boolean
+          p_notes?: string
+          p_phone?: string
+          p_source?: string
+        }
+        Returns: string
+      }
+      entity_timeline: {
+        Args: { p_entity_id: string; p_entity_type: string; p_limit?: number }
+        Returns: {
+          actor_id: string
+          actor_name: string
+          body: string
+          channel: string
+          id: string
+          kind: string
+          lead_id: string
+          metadata: Json
+          occurred_at: string
+          opportunity_id: string
+          purchase_id: string
+          subject: string
+          visit_id: string
+        }[]
+      }
+      find_identity_candidates: {
+        Args: {
+          p_company?: string
+          p_email?: string
+          p_limit?: number
+          p_name?: string
+          p_phone?: string
+          p_registration_number?: string
+        }
+        Returns: {
+          confidence: string
+          display_name: string
+          entity_id: string
+          entity_type: string
+          last_activity_at: string
+          lifecycle_state: string
+          masked_email: string
+          masked_phone: string
+          reasons: Json
+          score: number
+        }[]
+      }
+      global_search: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          entity_id: string
+          entity_type: string
+          href: string
+          score: number
+          subtitle: string
+          title: string
+        }[]
+      }
+      log_lead_response: {
+        Args: {
+          p_body?: string
+          p_channel: string
+          p_kind: string
+          p_lead_id: string
+          p_reached?: boolean
+        }
+        Returns: string
+      }
+      merge_contacts: {
+        Args: {
+          p_candidate_id?: string
+          p_merged_id: string
+          p_reason: string
+          p_survivor_id: string
+        }
+        Returns: string
+      }
+      my_membership: {
+        Args: never
+        Returns: {
+          currency: string
+          default_location_id: string
+          role_key: string
+          role_label: string
+          timezone: string
+          workspace_id: string
+          workspace_name: string
+          workspace_slug: string
+        }[]
+      }
+      my_permissions: { Args: never; Returns: string[] }
+      publish_price: {
+        Args: {
+          p_override?: boolean
+          p_reason?: string
+          p_variant_price_id: string
+        }
+        Returns: undefined
+      }
+      record_purchase: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_contact_id: string
+          p_external_ref?: string
+          p_items?: Json
+          p_location_id?: string
+          p_notes?: string
+          p_opportunity_id?: string
+          p_payments?: Json
+          p_project_id?: string
+          p_purchase_source?: string
+          p_purchased_at?: string
+          p_salesperson_id?: string
+          p_visit_id?: string
+        }
+        Returns: string
+      }
+      record_walk_in: {
+        Args: {
+          p_account_id?: string
+          p_contact_id: string
+          p_create_opportunity?: boolean
+          p_customer_type?: string
+          p_inquiry_source?: string
+          p_location_id?: string
+          p_notes?: string
+          p_occurred_at?: string
+          p_opportunity_id?: string
+          p_opportunity_name?: string
+          p_origin_area?: string
+          p_product_interest?: string[]
+          p_project_name?: string
+          p_purchase?: Json
+          p_purpose?: string
+          p_staff_user_id?: string
+        }
+        Returns: Json
+      }
+      reject_identity_candidate: {
+        Args: { p_candidate_id: string; p_note?: string }
+        Returns: undefined
+      }
+      reveal_contact_points: {
+        Args: { p_contact_id: string }
+        Returns: {
+          id: string
+          is_primary: boolean
+          kind: string
+          label: string
+          normalized_value: string
+          raw_value: string
+        }[]
+      }
+      suggest_contact_duplicates: {
+        Args: { p_contact_id: string }
+        Returns: number
+      }
+      unmerge_contacts: {
+        Args: { p_merge_event_id: string; p_reason: string }
+        Returns: undefined
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  api: {
+    Enums: {},
+  },
+} as const
+

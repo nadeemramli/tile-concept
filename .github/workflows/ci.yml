@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:56321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_MODE: demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start local Supabase and apply migrations + seed
+        run: pnpm exec supabase start -x vector,logflare,imgproxy,edge-runtime,studio,realtime,storage-api
+      - name: Types drift check
+        run: |
+          pnpm exec supabase gen types typescript --local --schema api > /tmp/db.types.ts
+          diff -q /tmp/db.types.ts src/lib/supabase/database.types.ts || (echo "database.types.ts is out of date — run pnpm db:types" && exit 1)
+      - name: RLS / function tests (pgTAP)
+        run: pnpm exec supabase test db
