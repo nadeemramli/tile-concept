@@ -23,7 +23,7 @@ import { ModePill } from "@/components/shell/mode-pill";
 import { ThemeToggleItem } from "@/components/shell/theme-toggle";
 import { SidebarBrand, SidebarNav } from "@/components/shell/sidebar";
 import { useSession } from "@/components/shell/session-context";
-import { routeForPath } from "@/lib/nav/routes";
+import { platformRoutes, routeForPath } from "@/lib/nav/routes";
 import { initials } from "@/lib/format";
 import { signOutAction } from "@/server/commands/auth";
 import { Inbox, Store, Contact, FolderKanban, ListTodo, Package, Building2 } from "lucide-react";
@@ -40,7 +40,8 @@ export function TopBar({ notifications = [] }: { notifications?: Notification[] 
   const [searchOpen, setSearchOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
-  const { session, can } = useSession();
+  const { session, can, permissions } = useSession();
+  const platform = platformRoutes(permissions);
   const current = routeForPath(pathname);
 
   return (
@@ -175,6 +176,19 @@ export function TopBar({ notifications = [] }: { notifications?: Notification[] 
                 {session.roleLabel} · {session.workspaceName}
               </div>
             </DropdownMenuLabel>
+            {platform.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Platform</DropdownMenuLabel>
+                {platform.map((r) => (
+                  <DropdownMenuItem key={r.key} asChild>
+                    <Link href={r.path}>
+                      <r.icon className="size-4" aria-hidden /> {r.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
             <DropdownMenuSeparator />
             <ThemeToggleItem />
             <DropdownMenuItem asChild>

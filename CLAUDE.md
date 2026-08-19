@@ -20,7 +20,7 @@ Next.js 16 App Router (React 19, strict TS, `src/proxy.ts` for session refresh),
 - Use patterns in `src/components/patterns`: `DataTable` (one table contract everywhere), `RecordDrawer`/`DrawerSection`/`FactList`, `StatusPill`/`TonePill` with maps in `src/lib/domain/status-maps.ts`, `MetricCard` (always pass `info` — no bare metrics), `PageHeader`/`PageBody`, `Timeline`, `EmptyState`/`PermissionDenied`, `FreshnessBadge`, `Field`.
 - Drawers for inspect/edit, full pages for multi-step/high-risk, dialogs for short confirmations and merge decisions. Masks phone/email in lists; reveal is permissioned + audited (`reveal_contact_points`).
 - Every status needs a label/icon, not colour alone. Keyboard-operable, visible focus.
-- Nav registry: `src/lib/nav/routes.ts`. Permissions: `src/lib/rbac/matrix.ts` (mirror of `core.role_permissions`).
+- Nav registry: `src/lib/nav/routes.ts` — `sidebarRoutes()` feeds the sidebar, `platformRoutes()` feeds the user menu. The Platform group (Integrations, Data Health, Audit, Settings) is administration, not daily work, so it lives in the user dropdown and keeps the sidebar short enough not to scroll (~700px). Adding a sidebar item costs ~28px; check it still fits before adding one. Permissions: `src/lib/rbac/matrix.ts` (mirror of `core.role_permissions`).
 
 ## Commands
 - `pnpm dev` · `pnpm typecheck` · `pnpm lint` · `pnpm test` · `pnpm build`

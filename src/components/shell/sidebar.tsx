@@ -3,20 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ROUTE_GROUPS, isRouteActive, visibleRoutes } from "@/lib/nav/routes";
+import { SIDEBAR_GROUPS, isRouteActive, sidebarRoutes } from "@/lib/nav/routes";
 import { useSession } from "@/components/shell/session-context";
 import { Badge } from "@/components/ui/badge";
-import { publicEnv } from "@/lib/env";
 import { LogoMark } from "@/components/brand/logo";
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { permissions } = useSession();
-  const routes = visibleRoutes(permissions);
+  const routes = sidebarRoutes(permissions);
 
   return (
-    <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4" aria-label="Primary">
-      {ROUTE_GROUPS.map((group) => {
+    // Sized to fit without scrolling (~700px for the full nav): Platform lives
+    // in the user menu, and density is tight. `auto` only engages on a window
+    // shorter than the list, where scrolling beats hiding items.
+    <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-3" aria-label="Primary">
+      {SIDEBAR_GROUPS.map((group) => {
         const items = routes.filter((r) => r.group === group);
         if (items.length === 0) return null;
         return (
@@ -34,7 +36,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-md px-2 py-1 text-sm outline-none transition-colors",
                         "focus-visible:ring-2 focus-visible:ring-ring",
                         // Active items carry a brand-amber rail so the identity
                         // reads in light mode too, where primary is navy.
@@ -80,15 +82,6 @@ export function Sidebar() {
     <aside className="hidden h-full w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
       <SidebarBrand />
       <SidebarNav />
-      <div className="border-t border-sidebar-border px-4 py-3">
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          {publicEnv.appMode === "demo"
-            ? "Demo mode · synthetic data only. No live systems are connected."
-            : publicEnv.appMode === "shadow"
-              ? "Shadow mode · reads real sources, no external writes."
-              : "Live mode · external writes are gated and audited."}
-        </p>
-      </div>
     </aside>
   );
 }

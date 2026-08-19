@@ -211,6 +211,21 @@ export function visibleRoutes(perms: ReadonlySet<string>): RouteDef[] {
   return ROUTES.filter((r) => !r.permission || perms.has(r.permission));
 }
 
+/**
+ * Platform routes are administration surfaces, not daily work — they live in
+ * the user menu rather than the sidebar so the sidebar stays short enough to
+ * never scroll.
+ */
+export const SIDEBAR_GROUPS = ROUTE_GROUPS.filter((g) => g !== "Platform");
+
+export function sidebarRoutes(perms: ReadonlySet<string>): RouteDef[] {
+  return visibleRoutes(perms).filter((r) => r.group !== "Platform");
+}
+
+export function platformRoutes(perms: ReadonlySet<string>): RouteDef[] {
+  return visibleRoutes(perms).filter((r) => r.group === "Platform");
+}
+
 export function routeForPath(pathname: string): RouteDef | undefined {
   const exact = ROUTES.find((r) => r.path === pathname);
   if (exact) return exact;
