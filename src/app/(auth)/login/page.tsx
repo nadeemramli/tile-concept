@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LoginForm } from "./login-form";
 import { publicEnv } from "@/lib/env";
+import { LogoLockup } from "@/components/brand/logo";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -17,10 +18,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background p-6">
       <div className="w-full max-w-sm space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <span className="text-sm font-semibold">TC</span>
-          </div>
+        <div className="flex items-center gap-3.5">
+          <LogoLockup size={64} priority className="ring-1 ring-border" />
           <div>
             <h1 className="text-base font-semibold tracking-tight">Tile Concept OS</h1>
             <p className="text-xs text-muted-foreground">Invite-only internal workspace</p>

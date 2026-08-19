@@ -15,7 +15,8 @@ Next.js 16 App Router (React 19, strict TS, `src/proxy.ts` for session refresh),
 - **No real customer/supplier/price data** in fixtures, tests, logs, or the repo. `supabase/seed.sql` is synthetic.
 
 ## UI contract (PRD §9, §12.2)
-- Shell: 240px grouped sidebar, 56px top bar, dark graphite default + full light mode, Geist Sans/Mono, 8px radius, compact density.
+- Shell: 240px grouped sidebar, 56px top bar, dark navy default + full light mode, Geist Sans/Mono, 8px radius, compact density.
+- **Brand**: navy `#093248` and amber `#eda537`, sampled from the logo. Dark mode = navy surfaces with amber primary; light mode = near-white surfaces with navy primary. `--brand` is amber in both modes and is for non-text affordances only (active-nav rail, focus ring) — see the contrast note in `globals.css`. Assets: `<LogoMark />` (SVG monogram, small chrome) and `<LogoLockup />` (real wordmark, login-size) in `src/components/brand/logo.tsx`; `src/app/icon.png` is the favicon.
 - Use patterns in `src/components/patterns`: `DataTable` (one table contract everywhere), `RecordDrawer`/`DrawerSection`/`FactList`, `StatusPill`/`TonePill` with maps in `src/lib/domain/status-maps.ts`, `MetricCard` (always pass `info` — no bare metrics), `PageHeader`/`PageBody`, `Timeline`, `EmptyState`/`PermissionDenied`, `FreshnessBadge`, `Field`.
 - Drawers for inspect/edit, full pages for multi-step/high-risk, dialogs for short confirmations and merge decisions. Masks phone/email in lists; reveal is permissioned + audited (`reveal_contact_points`).
 - Every status needs a label/icon, not colour alone. Keyboard-operable, visible focus.

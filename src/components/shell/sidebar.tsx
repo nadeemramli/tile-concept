@@ -7,6 +7,7 @@ import { ROUTE_GROUPS, isRouteActive, visibleRoutes } from "@/lib/nav/routes";
 import { useSession } from "@/components/shell/session-context";
 import { Badge } from "@/components/ui/badge";
 import { publicEnv } from "@/lib/env";
+import { LogoMark } from "@/components/brand/logo";
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -33,10 +34,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
                         "focus-visible:ring-2 focus-visible:ring-ring",
+                        // Active items carry a brand-amber rail so the identity
+                        // reads in light mode too, where primary is navy.
                         active
-                          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-1 before:-left-1 before:w-0.5 before:rounded-full before:bg-brand"
                           : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                       )}
                     >
@@ -63,9 +66,7 @@ export function SidebarBrand() {
   const { session } = useSession();
   return (
     <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
-      <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-        <span className="text-sm font-semibold">TC</span>
-      </div>
+      <LogoMark />
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold tracking-tight">{session.workspaceName}</div>
         <div className="truncate text-[11px] leading-tight text-muted-foreground">Command Centre</div>

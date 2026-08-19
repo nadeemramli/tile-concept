@@ -47,6 +47,9 @@
   --color-info-foreground: var(--info-foreground);
   --color-ai: var(--ai);
   --color-ai-foreground: var(--ai-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-navy: var(--brand-navy);
   --color-destructive-foreground: var(--destructive-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -58,96 +61,117 @@
 }
 
 /*
- * Tile Concept theme (PRD §9.2, §12.2) — EFFEN-derived internal command centre.
- * Dark graphite is the default surface set; light mode is complete, not an
- * inversion. Semantic roles: success / warning / destructive / info / ai.
+ * Tile Concept theme — built from the logo: navy #093248 and amber #eda537.
+ *
+ * Dark (default): navy surfaces stepped from near-black to the brand navy,
+ * amber as the primary action so CTAs carry the brand.
+ * Light: near-white surfaces with navy ink and navy primary — in each mode the
+ * primary is whichever brand colour contrasts most with the surface.
+ * --brand stays amber in both modes (logo, active nav rail, focus ring).
+ *
+ * Semantic roles remain success / warning / destructive / info / ai. Warning is
+ * pitched yellower than the brand amber so a warning pill never reads as a
+ * brand accent; status is always paired with a dot and a label as well.
+ *
+ * Contrast (WCAG 2.2): every text pairing above is AA or better in both modes.
+ * The one exception is light-mode --brand on white (3.4:1) — it is used only
+ * for non-text affordances (the active-nav rail, focus ring), which need 3:1.
+ * Do not use text-brand for body copy on a light surface; use text-primary.
  */
 
 :root {
-  --background: #f6f7f8;
-  --foreground: #16181d;
+  --brand: #c07d10;
+  --brand-foreground: #ffffff;
+  --brand-navy: #093248;
+
+  --background: #f4f6f8;
+  --foreground: #0e2c3f;
   --card: #ffffff;
-  --card-foreground: #16181d;
+  --card-foreground: #0e2c3f;
   --popover: #ffffff;
-  --popover-foreground: #16181d;
-  --primary: #232833;
-  --primary-foreground: #f4f3ef;
-  --secondary: #eceef1;
-  --secondary-foreground: #232833;
-  --muted: #eff0f3;
-  --muted-foreground: #5d6470;
-  --accent: #eceef1;
-  --accent-foreground: #232833;
-  --destructive: #d13d3d;
+  --popover-foreground: #0e2c3f;
+  --primary: #093248;
+  --primary-foreground: #f7f4ee;
+  --secondary: #e7ecf0;
+  --secondary-foreground: #093248;
+  --muted: #eaeef2;
+  --muted-foreground: #566b7b;
+  --accent: #e4ebf1;
+  --accent-foreground: #093248;
+  --destructive: #cc3b3b;
   --destructive-foreground: #ffffff;
-  --success: #0e8a5f;
+  --success: #0e7f58;
   --success-foreground: #ffffff;
-  --warning: #b06000;
+  --warning: #a16207;
   --warning-foreground: #ffffff;
-  --info: #2563cf;
+  --info: #1f5fc4;
   --info-foreground: #ffffff;
-  --ai: #6d4fd0;
+  --ai: #6446c9;
   --ai-foreground: #ffffff;
-  --border: #e3e5e9;
-  --input: #e3e5e9;
-  --ring: #94a3b8;
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
+  --border: #dde3e9;
+  --input: #dde3e9;
+  --ring: #c07d10;
+  --chart-1: #1f6f9c;
+  --chart-2: #eda537;
   --chart-3: #1baf7a;
-  --chart-4: #eda100;
-  --chart-5: #e87ba4;
+  --chart-4: #d9642c;
+  --chart-5: #8064c9;
   --radius: 0.5rem;
-  --sidebar: #f0f1f3;
-  --sidebar-foreground: #16181d;
-  --sidebar-primary: #232833;
-  --sidebar-primary-foreground: #f4f3ef;
-  --sidebar-accent: #e4e6ea;
-  --sidebar-accent-foreground: #16181d;
-  --sidebar-border: #e3e5e9;
-  --sidebar-ring: #94a3b8;
+  --sidebar: #eaeff3;
+  --sidebar-foreground: #0e2c3f;
+  --sidebar-primary: #093248;
+  --sidebar-primary-foreground: #f7f4ee;
+  --sidebar-accent: #dbe4eb;
+  --sidebar-accent-foreground: #093248;
+  --sidebar-border: #d5dee5;
+  --sidebar-ring: #c07d10;
 }
 
 .dark {
-  --background: #14171c;
-  --foreground: #eeede9;
-  --card: #1a1e25;
-  --card-foreground: #eeede9;
-  --popover: #20242c;
-  --popover-foreground: #eeede9;
-  --primary: #e7e6e1;
-  --primary-foreground: #1a1e25;
-  --secondary: #262b34;
-  --secondary-foreground: #eeede9;
-  --muted: #232830;
-  --muted-foreground: #99a0ab;
-  --accent: #262b34;
-  --accent-foreground: #eeede9;
-  --destructive: #ef6f66;
-  --destructive-foreground: #1a1013;
+  --brand: #eda537;
+  --brand-foreground: #093248;
+  --brand-navy: #093248;
+
+  --background: #061c28;
+  --foreground: #e9eef2;
+  --card: #0a2b3d;
+  --card-foreground: #e9eef2;
+  --popover: #0e3448;
+  --popover-foreground: #e9eef2;
+  --primary: #eda537;
+  --primary-foreground: #08263a;
+  --secondary: #10384e;
+  --secondary-foreground: #e9eef2;
+  --muted: #0e3145;
+  --muted-foreground: #93a9b8;
+  --accent: #113b52;
+  --accent-foreground: #f2f6f9;
+  --destructive: #f0736a;
+  --destructive-foreground: #21090a;
   --success: #3ecf94;
-  --success-foreground: #071812;
-  --warning: #e5a83b;
-  --warning-foreground: #1c1304;
+  --success-foreground: #04160f;
+  --warning: #e9c04d;
+  --warning-foreground: #1e1503;
   --info: #6aa5f8;
-  --info-foreground: #0a1220;
+  --info-foreground: #08131f;
   --ai: #a78bfa;
   --ai-foreground: #140f24;
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.1);
-  --ring: #4b5563;
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-4: #c98500;
-  --chart-5: #d55181;
-  --sidebar: #171a20;
-  --sidebar-foreground: #eeede9;
-  --sidebar-primary: #e7e6e1;
-  --sidebar-primary-foreground: #1a1e25;
-  --sidebar-accent: #232830;
-  --sidebar-accent-foreground: #eeede9;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
-  --sidebar-ring: #4b5563;
+  --border: rgba(233, 238, 242, 0.1);
+  --input: rgba(233, 238, 242, 0.12);
+  --ring: #eda537;
+  --chart-1: #4d9fd6;
+  --chart-2: #eda537;
+  --chart-3: #3ecf94;
+  --chart-4: #e0793f;
+  --chart-5: #a78bfa;
+  --sidebar: #04161f;
+  --sidebar-foreground: #e9eef2;
+  --sidebar-primary: #eda537;
+  --sidebar-primary-foreground: #08263a;
+  --sidebar-accent: #103a51;
+  --sidebar-accent-foreground: #f2f6f9;
+  --sidebar-border: rgba(233, 238, 242, 0.08);
+  --sidebar-ring: #eda537;
 }
 
 @layer base {
