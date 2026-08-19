@@ -61,6 +61,19 @@ Preview and Production must use separate variable sets. Until a dedicated stagin
 - `src/components/patterns/*` — DataTable, RecordDrawer, StatusPill, MetricCard (always with definition/source/freshness), Timeline, states.
 - `supabase/migrations` — private schemas (`core identity sales marketing merch stock ingest audit`), RLS on every table, `api.*` security-invoker views + SECURITY DEFINER business functions (walk-in, purchase, stage change, merge/unmerge, price publish, search, command-centre summary). `supabase/seed.sql` — synthetic fixtures only.
 
+## Going live (remaining steps)
+
+The GitHub repo and the Vercel project (`tile-concept`, team *nadeemramli's projects*, production branch `main`) exist and are linked; no deployment has been made yet because the hosted Supabase project is still outstanding.
+
+1. **Settle the overdue invoices on the personal Supabase org** — project creation is currently rejected with *"There are overdue invoices in the organization(s) personal"*.
+2. `ORG_ID=knqarurgnmzdtrpbieph ./scripts/cloud-bootstrap.sh` — creates `tile-concept` (Singapore), links, pushes migrations, seeds synthetic data, prints the keys and the DB password (store it in a password manager; it is shown once).
+3. In the Supabase dashboard set **Settings → API → Exposed schemas** to `api` (remove `public`), and under **Authentication → URL configuration** set the site URL and `/auth/**` redirects for the Vercel domain plus `http://localhost:3000`.
+4. In Vercel set the environment variables from `.env.example` for **Preview and Production separately**, then redeploy (any push to `main` deploys).
+5. Invite yourself as administrator:
+   `SUPABASE_URL=… SUPABASE_SECRET_KEY=… APP_URL=… pnpm exec tsx scripts/invite-user.ts m.nadeemramli@gmail.com`
+   The seeded pending invite grants the `admin` role on first sign-in.
+6. Optional: delete the synthetic demo staff users once real staff are invited.
+
 ## Delivery
 
 - `main` is the production branch (Vercel). PRs get preview deployments. CI: lint, typecheck, unit tests, build, migration/types drift check (`.github/workflows/ci.yml`).
