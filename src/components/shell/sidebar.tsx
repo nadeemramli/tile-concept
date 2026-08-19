@@ -17,16 +17,16 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     // Sized to fit without scrolling (~700px for the full nav): Platform lives
     // in the user menu, and density is tight. `auto` only engages on a window
     // shorter than the list, where scrolling beats hiding items.
-    <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-2" aria-label="Primary">
+    <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-3" aria-label="Primary">
       {SIDEBAR_GROUPS.map((group) => {
         const items = routes.filter((r) => r.group === group);
         if (items.length === 0) return null;
         return (
           <div key={group}>
             {group !== "Command Centre" && (
-              <div className="mb-0.5 px-2 text-[11px] font-medium uppercase leading-5 tracking-wider text-muted-foreground/70">{group}</div>
+              <div className="mb-1 px-2 text-[11px] font-medium uppercase leading-5 tracking-wider text-muted-foreground/70">{group}</div>
             )}
-            <ul className="space-y-0.5">
+            <ul className="space-y-1">
               {items.map((r) => {
                 const active = isRouteActive(r, pathname);
                 return (
@@ -36,7 +36,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2 py-1 text-sm outline-none transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors",
                         "focus-visible:ring-2 focus-visible:ring-ring",
                         // Active items carry a brand-amber rail so the identity
                         // reads in light mode too, where primary is navy.
