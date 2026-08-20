@@ -113,20 +113,19 @@ export function Sidebar() {
   return (
     <aside className={cn("hidden h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 lg:flex", collapsed ? "w-14" : "w-60")}>
       <SidebarBrand collapsed={collapsed} />
+      <div className={cn("flex shrink-0 border-b border-sidebar-border/60 py-1.5", collapsed ? "justify-center px-0" : "justify-end px-2")}>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-pressed={collapsed}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {collapsed ? <ChevronsRight className="size-4" aria-hidden /> : <><ChevronsLeft className="size-4" aria-hidden /> Collapse</>}
+        </button>
+      </div>
       <SidebarNav collapsed={collapsed} />
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-pressed={collapsed}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className={cn(
-          "flex h-9 shrink-0 items-center gap-2 border-t border-sidebar-border text-xs text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-          collapsed ? "justify-center px-0" : "px-4",
-        )}
-      >
-        {collapsed ? <ChevronsRight className="size-4" aria-hidden /> : <><ChevronsLeft className="size-4" aria-hidden /> Collapse</>}
-      </button>
     </aside>
   );
 }
