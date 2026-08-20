@@ -447,6 +447,13 @@ export type Database = {
             foreignKeyName: "brands_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "stale_supplier_queue"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "brands_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -546,7 +553,21 @@ export type Database = {
             foreignKeyName: "catalog_entries_source_asset_fk"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
             referencedColumns: ["id"]
           },
           {
@@ -892,6 +913,7 @@ export type Database = {
           created_at: string | null
           customer_owner_id: string | null
           id: string | null
+          interview_subjects: string | null
           marketing_owner_id: string | null
           nominated_by: string | null
           nomination_reason: string | null
@@ -901,6 +923,8 @@ export type Database = {
           project_id: string | null
           purchase_id: string | null
           readiness_state: string | null
+          reference_media: Json | null
+          site_notes: string | null
           special_requirements: string | null
           status: string | null
           story_angle: string | null
@@ -916,6 +940,7 @@ export type Database = {
           created_at?: string | null
           customer_owner_id?: string | null
           id?: string | null
+          interview_subjects?: string | null
           marketing_owner_id?: string | null
           nominated_by?: string | null
           nomination_reason?: string | null
@@ -925,6 +950,8 @@ export type Database = {
           project_id?: string | null
           purchase_id?: string | null
           readiness_state?: string | null
+          reference_media?: Json | null
+          site_notes?: string | null
           special_requirements?: string | null
           status?: string | null
           story_angle?: string | null
@@ -940,6 +967,7 @@ export type Database = {
           created_at?: string | null
           customer_owner_id?: string | null
           id?: string | null
+          interview_subjects?: string | null
           marketing_owner_id?: string | null
           nominated_by?: string | null
           nomination_reason?: string | null
@@ -949,6 +977,8 @@ export type Database = {
           project_id?: string | null
           purchase_id?: string | null
           readiness_state?: string | null
+          reference_media?: Json | null
+          site_notes?: string | null
           special_requirements?: string | null
           status?: string | null
           story_angle?: string | null
@@ -1195,6 +1225,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "external_calendar_links_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_calendar"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "external_calendar_links_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1378,6 +1415,60 @@ export type Database = {
           },
         ]
       }
+      field_mappings: {
+        Row: {
+          connection_id: string | null
+          created_at: string | null
+          created_by: string | null
+          form_ref: string | null
+          id: string | null
+          provider: string | null
+          source_field: string | null
+          target_field: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          connection_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          form_ref?: string | null
+          id?: string | null
+          provider?: string | null
+          source_field?: string | null
+          target_field?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          connection_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          form_ref?: string | null
+          id?: string | null
+          provider?: string | null
+          source_field?: string | null
+          target_field?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_mappings_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "integration_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_mappings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       identity_match_candidates: {
         Row: {
           candidate_id: string | null
@@ -1500,6 +1591,7 @@ export type Database = {
           id: string | null
           job_type: string | null
           parser_version: string | null
+          progress: Json | null
           source_asset_id: string | null
           started_at: string | null
           stats: Json | null
@@ -1515,6 +1607,7 @@ export type Database = {
           id?: string | null
           job_type?: string | null
           parser_version?: string | null
+          progress?: Json | null
           source_asset_id?: string | null
           started_at?: string | null
           stats?: Json | null
@@ -1530,6 +1623,7 @@ export type Database = {
           id?: string | null
           job_type?: string | null
           parser_version?: string | null
+          progress?: Json | null
           source_asset_id?: string | null
           started_at?: string | null
           stats?: Json | null
@@ -1541,7 +1635,21 @@ export type Database = {
             foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
             referencedColumns: ["id"]
           },
           {
@@ -1594,6 +1702,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ingestion_jobs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_records_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["job_id"]
           },
         ]
       }
@@ -1651,6 +1766,28 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "intake_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_reconciliation: {
+        Row: {
+          day: string | null
+          deduplicated: number | null
+          failed: number | null
+          processed: number | null
+          provider: string | null
+          received: number | null
+          source_channel: string | null
+          unlinked: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
           {
             foreignKeyName: "intake_events_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -2464,6 +2601,42 @@ export type Database = {
           },
         ]
       }
+      metric_definitions: {
+        Row: {
+          caveat: string | null
+          formula: string | null
+          grain: string | null
+          key: string | null
+          name: string | null
+          pii_class: string | null
+          quality: string | null
+          report_key: string | null
+          sources: string[] | null
+        }
+        Insert: {
+          caveat?: string | null
+          formula?: string | null
+          grain?: string | null
+          key?: string | null
+          name?: string | null
+          pii_class?: string | null
+          quality?: string | null
+          report_key?: string | null
+          sources?: string[] | null
+        }
+        Update: {
+          caveat?: string | null
+          formula?: string | null
+          grain?: string | null
+          key?: string | null
+          name?: string | null
+          pii_class?: string | null
+          quality?: string | null
+          report_key?: string | null
+          sources?: string[] | null
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           account_id: string | null
@@ -2895,6 +3068,13 @@ export type Database = {
             foreignKeyName: "price_lists_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "stale_supplier_queue"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "price_lists_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -3316,8 +3496,29 @@ export type Database = {
             foreignKeyName: "products_source_asset_fk"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "products_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "source_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "stale_supplier_queue"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "products_supplier_id_fkey"
@@ -3859,6 +4060,7 @@ export type Database = {
       }
       review_items: {
         Row: {
+          confidence: number | null
           conflicts: Json | null
           created_at: string | null
           decision_note: string | null
@@ -3866,6 +4068,7 @@ export type Database = {
           item_type: string | null
           job_id: string | null
           proposed: Json | null
+          published_object_id: string | null
           record_id: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -3873,6 +4076,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          confidence?: number | null
           conflicts?: Json | null
           created_at?: string | null
           decision_note?: string | null
@@ -3880,6 +4084,7 @@ export type Database = {
           item_type?: string | null
           job_id?: string | null
           proposed?: Json | null
+          published_object_id?: string | null
           record_id?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3887,6 +4092,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          confidence?: number | null
           conflicts?: Json | null
           created_at?: string | null
           decision_note?: string | null
@@ -3894,6 +4100,7 @@ export type Database = {
           item_type?: string | null
           job_id?: string | null
           proposed?: Json | null
+          published_object_id?: string | null
           record_id?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -3909,12 +4116,58 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "review_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["job_id"]
+          },
+          {
             foreignKeyName: "review_items_record_id_fkey"
             columns: ["record_id"]
             isOneToOne: false
             referencedRelation: "ingestion_records"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "review_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_queue: {
+        Row: {
+          confidence: number | null
+          conflicts: Json | null
+          created_at: string | null
+          decision_note: string | null
+          fields: Json | null
+          id: string | null
+          item_type: string | null
+          job_id: string | null
+          job_type: string | null
+          page_count: number | null
+          page_no: number | null
+          parser_version: string | null
+          proposed: Json | null
+          published_object_id: string | null
+          raw: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          row_no: number | null
+          source_asset_id: string | null
+          source_kind: string | null
+          source_name: string | null
+          status: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          supplier_name: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
           {
             foreignKeyName: "review_items_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -3967,6 +4220,57 @@ export type Database = {
           rank?: number | null
         }
         Relationships: []
+      }
+      routing_rules: {
+        Row: {
+          assign_to: string | null
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          match_location_id: string | null
+          match_product_interest: string | null
+          match_source_channel: string | null
+          position: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          assign_to?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          match_location_id?: string | null
+          match_product_interest?: string | null
+          match_source_channel?: string | null
+          position?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          assign_to?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          match_location_id?: string | null
+          match_product_interest?: string | null
+          match_source_channel?: string | null
+          position?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routing_rules_match_location_id_fkey"
+            columns: ["match_location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routing_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_views: {
         Row: {
@@ -4063,6 +4367,13 @@ export type Database = {
             referencedRelation: "shoot_bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shoot_booking_status_events_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_calendar"
+            referencedColumns: ["id"]
+          },
         ]
       }
       shoot_bookings: {
@@ -4080,6 +4391,7 @@ export type Database = {
           starts_at: string | null
           status: string | null
           timezone: string | null
+          title: string | null
           updated_at: string | null
           workspace_id: string | null
         }
@@ -4097,6 +4409,7 @@ export type Database = {
           starts_at?: string | null
           status?: string | null
           timezone?: string | null
+          title?: string | null
           updated_at?: string | null
           workspace_id?: string | null
         }
@@ -4114,10 +4427,81 @@ export type Database = {
           starts_at?: string | null
           status?: string | null
           timezone?: string | null
+          title?: string | null
           updated_at?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shoot_bookings_content_opportunity_id_fkey"
+            columns: ["content_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_bookings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoot_calendar: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          all_day: boolean | null
+          contact_id: string | null
+          contact_name: string | null
+          content_opportunity_id: string | null
+          content_types: string[] | null
+          coordinator_id: string | null
+          ends_at: string | null
+          id: string | null
+          notes: string | null
+          outcome: string | null
+          outcome_reason: string | null
+          output_count: number | null
+          participants: Json | null
+          permission_expires_at: string | null
+          permission_status: string | null
+          priority: string | null
+          project_area: string | null
+          project_id: string | null
+          project_name: string | null
+          readiness_state: string | null
+          site_count: number | null
+          starts_at: string | null
+          status: string | null
+          story_angle: string | null
+          timezone: string | null
+          title: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_opportunities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shoot_bookings_content_opportunity_id_fkey"
             columns: ["content_opportunity_id"]
@@ -4167,6 +4551,13 @@ export type Database = {
             referencedRelation: "shoot_bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shoot_checklists_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_calendar"
+            referencedColumns: ["id"]
+          },
         ]
       }
       shoot_locations: {
@@ -4212,40 +4603,56 @@ export type Database = {
             referencedRelation: "shoot_bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shoot_locations_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_calendar"
+            referencedColumns: ["id"]
+          },
         ]
       }
       shoot_outputs: {
         Row: {
+          caption: string | null
           captured_at: string | null
           content_opportunity_id: string | null
           created_at: string | null
           id: string | null
           kind: string | null
+          mime_type: string | null
           shoot_booking_id: string | null
+          size_bytes: number | null
           state: string | null
           storage_path: string | null
           uploaded_by: string | null
           workspace_id: string | null
         }
         Insert: {
+          caption?: string | null
           captured_at?: string | null
           content_opportunity_id?: string | null
           created_at?: string | null
           id?: string | null
           kind?: string | null
+          mime_type?: string | null
           shoot_booking_id?: string | null
+          size_bytes?: number | null
           state?: string | null
           storage_path?: string | null
           uploaded_by?: string | null
           workspace_id?: string | null
         }
         Update: {
+          caption?: string | null
           captured_at?: string | null
           content_opportunity_id?: string | null
           created_at?: string | null
           id?: string | null
           kind?: string | null
+          mime_type?: string | null
           shoot_booking_id?: string | null
+          size_bytes?: number | null
           state?: string | null
           storage_path?: string | null
           uploaded_by?: string | null
@@ -4264,6 +4671,13 @@ export type Database = {
             columns: ["shoot_booking_id"]
             isOneToOne: false
             referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_outputs_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_calendar"
             referencedColumns: ["id"]
           },
           {
@@ -4309,6 +4723,13 @@ export type Database = {
             columns: ["shoot_booking_id"]
             isOneToOne: false
             referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_participants_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_calendar"
             referencedColumns: ["id"]
           },
         ]
@@ -4385,7 +4806,21 @@ export type Database = {
             foreignKeyName: "source_asset_versions_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "source_asset_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_asset_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
             referencedColumns: ["id"]
           },
         ]
@@ -4460,6 +4895,13 @@ export type Database = {
             foreignKeyName: "source_assets_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "stale_supplier_queue"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "source_assets_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
@@ -4471,6 +4913,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      source_library: {
+        Row: {
+          brand_name: string | null
+          checksum: string | null
+          id: string | null
+          job_count: number | null
+          kind: string | null
+          last_processed_at: string | null
+          mime_type: string | null
+          name: string | null
+          page_count: number | null
+          pending_reviews: number | null
+          received_at: string | null
+          size_bytes: number | null
+          status: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          supplier_name: string | null
+          uploaded_by: string | null
+          url: string | null
+          version_no: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stale_supplier_queue: {
+        Row: {
+          aging_hours: number | null
+          fresh_hours: number | null
+          freshness: string | null
+          last_update_at: string | null
+          snapshot_count: number | null
+          supplier_id: string | null
+          supplier_name: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_availability: {
+        Row: {
+          allocated: number | null
+          as_of: string | null
+          availability: string | null
+          evidence_storage_path: string | null
+          expected_replenishment: string | null
+          is_authoritative: boolean | null
+          location_name: string | null
+          notes: string | null
+          on_hand: number | null
+          product_code: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity: number | null
+          sla_minutes: number | null
+          source_channel: string | null
+          source_kind: string | null
+          source_name: string | null
+          supplier_id: string | null
+          supplier_name: string | null
+          unit_code: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: []
       }
       stock_freshness_policies: {
         Row: {
@@ -4507,6 +5030,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory_sources"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_freshness_policies_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "stale_supplier_queue"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "stock_freshness_policies_supplier_id_fkey"
@@ -4597,6 +5127,7 @@ export type Database = {
           quantity: number | null
           source_channel: string | null
           submitted_by: string | null
+          supersedes_id: string | null
           supplier_id: string | null
           unit_id: string | null
           variant_id: string | null
@@ -4613,6 +5144,7 @@ export type Database = {
           quantity?: number | null
           source_channel?: string | null
           submitted_by?: string | null
+          supersedes_id?: string | null
           supplier_id?: string | null
           unit_id?: string | null
           variant_id?: string | null
@@ -4629,6 +5161,7 @@ export type Database = {
           quantity?: number | null
           source_channel?: string | null
           submitted_by?: string | null
+          supersedes_id?: string | null
           supplier_id?: string | null
           unit_id?: string | null
           variant_id?: string | null
@@ -4641,6 +5174,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_availability_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "stale_supplier_queue"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "supplier_availability_snapshots_supplier_id_fkey"
@@ -5080,7 +5627,21 @@ export type Database = {
             foreignKeyName: "variant_prices_source_asset_fk"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "variant_prices_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
             referencedColumns: ["id"]
           },
           {
@@ -5247,6 +5808,29 @@ export type Database = {
       }
     }
     Functions: {
+      accept_intake: {
+        Args: {
+          p_external_id: string
+          p_fields?: Json
+          p_form_ref?: string
+          p_idempotency_key: string
+          p_occurred_at?: string
+          p_payload: Json
+          p_provider: string
+          p_raw_text?: string
+          p_source_channel: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
+      approve_review_item: {
+        Args: {
+          p_corrections?: Json
+          p_note?: string
+          p_review_item_id: string
+        }
+        Returns: Json
+      }
       assign_lead: {
         Args: { p_lead_id: string; p_owner_id: string; p_reason?: string }
         Returns: undefined
@@ -5286,6 +5870,14 @@ export type Database = {
           p_notes?: string
           p_phone?: string
           p_source?: string
+        }
+        Returns: string
+      }
+      create_ingestion_job: {
+        Args: {
+          p_job_type: string
+          p_parser_version?: string
+          p_source_asset_id: string
         }
         Returns: string
       }
@@ -5329,6 +5921,21 @@ export type Database = {
           score: number
         }[]
       }
+      finish_sync_run: {
+        Args: {
+          p_checkpoint?: string
+          p_created?: number
+          p_error?: string
+          p_read?: number
+          p_rejected?: number
+          p_run_id: string
+          p_status: string
+          p_stream?: string
+          p_updated?: number
+        }
+        Returns: undefined
+      }
+      flag_stale_suppliers: { Args: never; Returns: number }
       global_search: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -5349,6 +5956,15 @@ export type Database = {
           p_reached?: boolean
         }
         Returns: string
+      }
+      map_inventory_item: {
+        Args: {
+          p_ignore?: boolean
+          p_mapping_id: string
+          p_unit_id?: string
+          p_variant_id: string
+        }
+        Returns: undefined
       }
       merge_contacts: {
         Args: {
@@ -5373,6 +5989,35 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: never; Returns: string[] }
+      nominate_content_opportunity: {
+        Args: {
+          p_content_types: string[]
+          p_interview_subjects?: string
+          p_nomination_reason?: string
+          p_opportunity_id?: string
+          p_priority?: string
+          p_products_used?: string[]
+          p_project_id: string
+          p_purchase_id?: string
+          p_readiness_state?: string
+          p_site_notes?: string
+          p_special_requirements?: string
+          p_story_angle?: string
+          p_target_window_end?: string
+          p_target_window_start?: string
+        }
+        Returns: string
+      }
+      open_reconciliation_case: {
+        Args: {
+          p_expected: number
+          p_notes?: string
+          p_observed: number
+          p_source_id: string
+          p_variant_id: string
+        }
+        Returns: string
+      }
       publish_price: {
         Args: {
           p_override?: boolean
@@ -5380,6 +6025,45 @@ export type Database = {
           p_variant_price_id: string
         }
         Returns: undefined
+      }
+      record_extraction: {
+        Args: {
+          p_error?: string
+          p_job_id: string
+          p_records: Json
+          p_stats?: Json
+          p_status?: string
+        }
+        Returns: Json
+      }
+      record_inventory_snapshot: {
+        Args: {
+          p_allocated?: number
+          p_available?: number
+          p_checkpoint?: string
+          p_external_item_code: string
+          p_location_code?: string
+          p_on_hand?: number
+          p_source_key: string
+          p_source_timestamp?: string
+          p_unit_id?: string
+        }
+        Returns: string
+      }
+      record_media_permission: {
+        Args: {
+          p_content_opportunity_id: string
+          p_evidence_storage_path?: string
+          p_expires_at?: string
+          p_granted_at?: string
+          p_granted_by_name?: string
+          p_permitted_capture?: string[]
+          p_permitted_uses?: string[]
+          p_restrictions?: string
+          p_revocation_reason?: string
+          p_status: string
+        }
+        Returns: string
       }
       record_purchase: {
         Args: {
@@ -5397,6 +6081,31 @@ export type Database = {
           p_purchased_at?: string
           p_salesperson_id?: string
           p_visit_id?: string
+        }
+        Returns: string
+      }
+      record_shoot_outcome: {
+        Args: {
+          p_booking_id: string
+          p_follow_up?: string
+          p_outcome: string
+          p_reason?: string
+        }
+        Returns: undefined
+      }
+      record_supplier_availability: {
+        Args: {
+          p_availability: string
+          p_captured_at?: string
+          p_evidence_storage_path?: string
+          p_expected_replenishment?: string
+          p_notes?: string
+          p_product_id?: string
+          p_quantity?: number
+          p_source_channel?: string
+          p_supplier_id: string
+          p_unit_id?: string
+          p_variant_id?: string
         }
         Returns: string
       }
@@ -5421,8 +6130,164 @@ export type Database = {
         }
         Returns: Json
       }
+      register_shoot_output: {
+        Args: {
+          p_caption?: string
+          p_captured_at?: string
+          p_content_opportunity_id: string
+          p_kind: string
+          p_mime_type?: string
+          p_shoot_booking_id?: string
+          p_size_bytes?: number
+          p_storage_path: string
+        }
+        Returns: string
+      }
+      register_source_asset: {
+        Args: {
+          p_brand_id?: string
+          p_checksum: string
+          p_kind: string
+          p_mime_type?: string
+          p_name: string
+          p_page_count?: number
+          p_size_bytes?: number
+          p_storage_path?: string
+          p_supplier_id?: string
+          p_url?: string
+        }
+        Returns: Json
+      }
       reject_identity_candidate: {
         Args: { p_candidate_id: string; p_note?: string }
+        Returns: undefined
+      }
+      reject_review_item: {
+        Args: { p_reason: string; p_review_item_id: string }
+        Returns: undefined
+      }
+      replay_intake_event: {
+        Args: { p_fields?: Json; p_intake_event_id: string }
+        Returns: Json
+      }
+      report_cohorts: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          amount: number
+          cohort_month: string
+          customers: number
+          median_days_between: number
+          purchases: number
+          repeat_customers: number
+        }[]
+      }
+      report_content_pipeline: {
+        Args: never
+        Returns: {
+          opportunities: number
+          permission_approved: number
+          shoots_completed: number
+          shoots_confirmed: number
+          status: string
+          usable_assets: number
+        }[]
+      }
+      report_data_quality: {
+        Args: never
+        Returns: {
+          bucket: string
+          duplicates_open: number
+          high_severity: number
+          open_issues: number
+          pending_reviews: number
+          resolved_30d: number
+        }[]
+      }
+      report_demand: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          brand_name: string
+          category_label: string
+          product_code: string
+          product_id: string
+          product_name: string
+          purchased_qty: number
+          purchased_value: number
+          quoted_qty: number
+          quoted_value: number
+        }[]
+      }
+      report_lead_source: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          converted: number
+          disqualified: number
+          leads: number
+          median_response_minutes: number
+          qualified: number
+          responded: number
+          source_channel: string
+        }[]
+      }
+      report_pipeline: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          avg_age_days: number
+          open_value: number
+          opportunities: number
+          overdue: number
+          reporting_group: string
+          stage_key: string
+          stage_label: string
+          stage_position: number
+        }[]
+      }
+      report_price_health: {
+        Args: never
+        Returns: {
+          bucket: string
+          conflicted: number
+          expiring_30d: number
+          products: number
+          unreviewed: number
+          with_current_price: number
+        }[]
+      }
+      report_quotes: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          bucket: string
+          lost: number
+          open: number
+          quotes: number
+          revisions: number
+          total_value: number
+          won: number
+        }[]
+      }
+      report_stock_freshness: {
+        Args: never
+        Returns: {
+          freshness: string
+          last_update_at: string
+          open_cases: number
+          snapshot_count: number
+          supplier_name: string
+        }[]
+      }
+      report_walkins: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          amount: number
+          bucket: string
+          new_customers: number
+          payment_mix: Json
+          purchases: number
+          visits: number
+        }[]
+      }
+      resolve_reconciliation_case: {
+        Args: { p_case_id: string; p_notes: string; p_status: string }
         Returns: undefined
       }
       reveal_contact_points: {
@@ -5436,6 +6301,40 @@ export type Database = {
           raw_value: string
         }[]
       }
+      review_shoot_output: {
+        Args: { p_decision: string; p_output_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      set_content_opportunity_status: {
+        Args: {
+          p_id: string
+          p_marketing_owner_id?: string
+          p_reason?: string
+          p_status: string
+        }
+        Returns: undefined
+      }
+      set_project_readiness: {
+        Args: { p_id: string; p_note?: string; p_readiness: string }
+        Returns: undefined
+      }
+      shoot_conflicts: {
+        Args: {
+          p_booking_id?: string
+          p_buffer_minutes?: number
+          p_ends_at: string
+          p_participant_ids?: string[]
+          p_starts_at: string
+        }
+        Returns: {
+          booking_id: string
+          detail: string
+          kind: string
+          severity: string
+          user_id: string
+        }[]
+      }
+      start_sync_run: { Args: { p_connection_id: string }; Returns: string }
       suggest_contact_duplicates: {
         Args: { p_contact_id: string }
         Returns: number
@@ -5443,6 +6342,23 @@ export type Database = {
       unmerge_contacts: {
         Args: { p_merge_event_id: string; p_reason: string }
         Returns: undefined
+      }
+      upsert_shoot_booking: {
+        Args: {
+          p_all_day?: boolean
+          p_booking_id?: string
+          p_content_opportunity_id: string
+          p_ends_at: string
+          p_notes?: string
+          p_override?: boolean
+          p_participants?: Json
+          p_reason?: string
+          p_sites?: Json
+          p_starts_at: string
+          p_status?: string
+          p_title?: string
+        }
+        Returns: string
       }
     }
     Enums: {
