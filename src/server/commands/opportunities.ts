@@ -42,6 +42,7 @@ export async function updateOpportunityAction(input: unknown): Promise<ActionRes
   const supabase = await createServerSupabase();
   const patch: Database["api"]["Views"]["opportunities"]["Update"] = {
     name: v.name,
+    segment: v.segment ?? null,
     estimated_value: v.estimated_value ?? null,
     currency: v.currency,
     probability_band: v.probability_band ?? null,

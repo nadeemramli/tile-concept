@@ -38,6 +38,30 @@ export async function getCommandCentreSummary(): Promise<CommandCentreSummary | 
   return data as unknown as CommandCentreSummary;
 }
 
+export interface SalesScorecard {
+  year: number;
+  target: number | null;
+  currency: string;
+  collected: number;
+  pipeline: number;
+  segments: { segment: string; value: number }[];
+  generated_at: string;
+}
+
+export async function getSalesScorecard(): Promise<SalesScorecard | null> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.rpc("sales_scorecard", { p_year: undefined });
+  if (error || !data) return null;
+  const d = data as unknown as SalesScorecard;
+  return {
+    ...d,
+    target: d.target === null ? null : Number(d.target),
+    collected: Number(d.collected),
+    pipeline: Number(d.pipeline),
+    segments: (d.segments ?? []).map((s) => ({ segment: s.segment, value: Number(s.value) })),
+  };
+}
+
 export interface AttentionItem {
   id: string;
   title: string;

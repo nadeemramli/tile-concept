@@ -18,6 +18,7 @@ export interface OpportunityRow {
   project_id: string | null;
   owner_id: string | null;
   source_channel: string | null;
+  segment: string | null;
   estimated_value: number | null;
   currency: string;
   probability_band: string | null;
@@ -50,6 +51,7 @@ function mapRow(o: Record<string, unknown>): OpportunityRow {
     project_id: (o.project_id as string | null) ?? null,
     owner_id: (o.owner_id as string | null) ?? null,
     source_channel: (o.source_channel as string | null) ?? null,
+    segment: (o.segment as string | null) ?? null,
     estimated_value: o.estimated_value === null || o.estimated_value === undefined ? null : Number(o.estimated_value),
     currency: (o.currency as string) ?? "MYR",
     probability_band: (o.probability_band as string | null) ?? null,

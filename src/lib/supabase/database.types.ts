@@ -2660,6 +2660,7 @@ export type Database = {
           probability_band: string | null
           product_interest: string[] | null
           project_id: string | null
+          segment: string | null
           source_channel: string | null
           stage_key: string | null
           status: string | null
@@ -2690,6 +2691,7 @@ export type Database = {
           probability_band?: string | null
           product_interest?: string[] | null
           project_id?: string | null
+          segment?: string | null
           source_channel?: string | null
           stage_key?: string | null
           status?: string | null
@@ -2720,6 +2722,7 @@ export type Database = {
           probability_band?: string | null
           product_interest?: string[] | null
           project_id?: string | null
+          segment?: string | null
           source_channel?: string | null
           stage_key?: string | null
           status?: string | null
@@ -4265,6 +4268,50 @@ export type Database = {
           },
           {
             foreignKeyName: "routing_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_targets: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          id: string | null
+          notes: string | null
+          target_amount: number | null
+          updated_at: string | null
+          workspace_id: string | null
+          year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          id?: string | null
+          notes?: string | null
+          target_amount?: number | null
+          updated_at?: string | null
+          workspace_id?: string | null
+          year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          id?: string | null
+          notes?: string | null
+          target_amount?: number | null
+          updated_at?: string | null
+          workspace_id?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_targets_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -6314,6 +6361,7 @@ export type Database = {
         Args: { p_decision: string; p_output_id: string; p_reason?: string }
         Returns: undefined
       }
+      sales_scorecard: { Args: { p_year?: number }; Returns: Json }
       set_content_opportunity_status: {
         Args: {
           p_id: string
@@ -6325,6 +6373,10 @@ export type Database = {
       }
       set_project_readiness: {
         Args: { p_id: string; p_note?: string; p_readiness: string }
+        Returns: undefined
+      }
+      set_sales_target: {
+        Args: { p_amount: number; p_notes?: string; p_year: number }
         Returns: undefined
       }
       shoot_conflicts: {

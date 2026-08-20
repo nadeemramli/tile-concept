@@ -199,3 +199,13 @@ begin
     (ws, 'tiktok', null, 'phone', 'phone', u_admin),
     (ws, 'website', null, 'message', 'notes', u_admin);
 end $$;
+
+-- Command Centre scorecard demo: an annual target + opportunity segments so the
+-- coverage bar and pipeline-by-segment donut have data. Synthetic only.
+insert into sales.sales_targets (workspace_id, year, target_amount, notes)
+select id, 2026, 1000000, 'Demo annual target' from core.workspaces
+on conflict (workspace_id, year) do nothing;
+
+update sales.opportunities
+set segment = (array['institutional','residential','fnb','hospitality','commercial'])[(get_byte(decode(md5(id::text), 'hex'), 0) % 5) + 1]
+where status = 'open' and segment is null;

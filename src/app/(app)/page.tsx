@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { requireSession } from "@/server/session";
-import { getCommandCentreSummary, getMyWork, getRecentActivity } from "@/server/queries/command-centre";
+import { getCommandCentreSummary, getMyWork, getRecentActivity, getSalesScorecard } from "@/server/queries/command-centre";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { MetricCard } from "@/components/patterns/metric-card";
+import { SalesScorecard } from "@/features/command-centre/components/sales-scorecard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill } from "@/components/patterns/status-pill";
@@ -15,11 +16,13 @@ import { EmptyState } from "@/components/patterns/states";
 export default async function CommandCentrePage() {
   const session = await requireSession();
   const canSales = session.permissions.includes("sales.read");
-  const [summary, work, activity] = await Promise.all([
+  const [summary, work, activity, scorecard] = await Promise.all([
     canSales ? getCommandCentreSummary() : Promise.resolve(null),
     canSales ? getMyWork(session.userId) : Promise.resolve({ tasks: [], opportunities: [] }),
     canSales ? getRecentActivity() : Promise.resolve([]),
+    canSales ? getSalesScorecard() : Promise.resolve(null),
   ]);
+  const canManage = session.permissions.includes("settings.manage");
 
   const freshness = summary ? `Computed ${formatRelative(summary.generated_at)} from live tables` : "—";
   const scope = session.permissions.includes("sales.read_all") ? "All sales records" : "Your records";
@@ -49,6 +52,9 @@ export default async function CommandCentrePage() {
               <MetricCard compact label="Duplicate review" value={summary.duplicate_candidates} hint="Awaiting a decision" tone={summary.duplicate_candidates ? "info" : "neutral"} href="/sales/identity-review" info={{ definition: "Suggested identity matches awaiting a human decision. Never auto-merged.", grain: "Candidate pair", source: "identity.identity_match_candidates", freshness }} />
             </div>
           </section>
+
+          {/* Annual target coverage — goal vs collection + pipeline (PRD §7.1) */}
+          {scorecard && <SalesScorecard data={scorecard} canManage={canManage} />}
 
           <div className="grid gap-3 lg:grid-cols-3">
             {/* Pipeline scorecard */}

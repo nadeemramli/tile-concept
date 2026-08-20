@@ -15,9 +15,12 @@ export const changeStageSchema = z.object({
   outcome_date: optionalStr,
 });
 
+export const OPPORTUNITY_SEGMENTS = ["institutional", "residential", "fnb", "hospitality", "commercial", "other"] as const;
+
 export const updateOpportunitySchema = z.object({
   id: uuid(),
   name: z.string().trim().min(2),
+  segment: z.enum(OPPORTUNITY_SEGMENTS).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   estimated_value: optionalNumber,
   currency: z.string().length(3).default("MYR"),
   probability_band: z.enum(["low", "medium", "high"]).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),

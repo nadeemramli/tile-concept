@@ -7,6 +7,7 @@ import { Field } from "@/components/patterns/field";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
 import { EnumSelect, MemberSelect, clean, type MemberOption } from "@/features/crm/components/selects";
 import { PRODUCT_INTERESTS, SOURCE_CHANNELS } from "@/features/crm/schema";
+import { OPPORTUNITY_SEGMENTS } from "@/features/pipeline/schema";
 import { addQuoteVersionAction, reassignOpportunityAction, updateOpportunityAction } from "@/server/commands/opportunities";
 import type { OpportunityDetail } from "@/server/queries/opportunities";
 import { titleCase } from "@/lib/format";
@@ -51,7 +52,10 @@ export function EditOpportunityDialog({ open, onOpenChange, opp, members, canAss
           <Input id="next_action_due_at" name="next_action_due_at" type="datetime-local" defaultValue={opp.next_action_due_at ? toLocalInput(opp.next_action_due_at) : ""} />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Segment">
+          <EnumSelect name="segment" options={OPPORTUNITY_SEGMENTS} defaultValue={opp.segment} labels={{ institutional: "Institutional / Gov", residential: "Residential", fnb: "F&B / Retail", hospitality: "Hospitality", commercial: "Commercial", other: "Other" }} />
+        </Field>
         <Field label="Source">
           <EnumSelect name="source_channel" options={SOURCE_CHANNELS} defaultValue={opp.source_channel} />
         </Field>
