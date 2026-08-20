@@ -864,6 +864,17 @@ Every connector implements:
 - No writes until shadow reconciliation passes, business ownership is clear, idempotency/concurrency is tested, and a separate approval is recorded.
 - Do not assume document semantics. Test which SQL document or status changes available stock.
 
+#### 11.3.1 Deferred until SQL Account is connected
+
+The Command Centre sales scorecard (`api.sales_scorecard`, the "Annual target coverage" card) ships against app-recorded data only. The following are intentionally deferred until the read-only SQL Account connector (§7.7, Phase 5) is live and shadow reconciliation passes:
+
+- **Delivered vs collected split.** Today "YTD collection" is the sum of app-recorded purchases and is labelled as such. Once SQL Account is authoritative, separate *sales delivered* from *cash collected* (as the field scorecard does) and source both from reconciled figures rather than app-entered purchase amounts.
+- **Collection reconciliation.** Replace the app-recorded collection figure with the SQL Account authoritative value, keeping the app number as a cross-check and surfacing variance as a data-health signal — never overwriting the accounting authority.
+- **Period outlook.** Add quarterly / half-year outlook (Q3, Q4, H2, full year) to the coverage view once delivery and payment-term timing is available from SQL Account, so coverage can be phased rather than a single annual figure.
+- **Balance / partial-payment tracking.** Reflect partial payments and outstanding balances per document once SQL Account exposes document-level payment state.
+
+Until then the card states the caveat inline and reads target vs unweighted open pipeline plus app-recorded collection.
+
 ### 11.4 Google Drive/source files
 
 - MVP may use manual upload/export from authorized shared folders.

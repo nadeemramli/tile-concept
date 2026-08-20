@@ -68,10 +68,10 @@ export const ROUTES: RouteDef[] = [
   { key: "walkins", label: "Walk-ins & Purchases", path: "/sales/walk-ins", icon: Store, group: "Sales", status: "live", permission: "sales.read" },
   { key: "tasks", label: "Tasks", path: "/sales/tasks", icon: ListTodo, group: "Sales", status: "live", permission: "sales.read" },
   // Customer — the resolved identity records behind the sales work
+  { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Customer", status: "live", permission: "sales.read" },
   { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
   { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Customer", status: "live", permission: "sales.read" },
   // Marketing
-  { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Marketing", status: "live", permission: "sales.read" },
   { key: "content-opps", label: "Content Opportunities", path: "/marketing/content-opportunities", icon: Megaphone, group: "Marketing", status: "live", permission: "marketing.read" },
   { key: "shoot-calendar", label: "Shoot Calendar", path: "/marketing/shoot-calendar", icon: CalendarDays, group: "Marketing", status: "live", permission: "marketing.read" },
   // Merchandise
