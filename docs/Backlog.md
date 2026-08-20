@@ -70,6 +70,43 @@ Remaining production polish:
   `shoot-outputs`, `permission-evidence`) and their `<workspace_id>/` path
   policies once the source/media flows are used in production.
 
+## Toolchain / CI
+
+Found on 2026-08-21 while getting `main` green again (run
+[32425621032](https://github.com/nadeemramli/tile-concept/actions/runs/32425621032)).
+None of these block development, but each cost real debugging time once.
+
+- **CI actions still target the deprecated Node 20 runtime.** `actions/checkout@v4`,
+  `actions/setup-node@v4` and `pnpm/action-setup@v4` — 6 `uses:` lines across both
+  jobs in `.github/workflows/ci.yml` — are being force-run on Node 24 by GitHub,
+  which emits a deprecation annotation on every run. Bump all three to `@v5`
+  before the forced-run grace period ends.
+- **The default WSL login shell runs Node 20, but the project requires Node 24.**
+  `.nvmrc` pins `24` and `engines` requires `>=24 <25`, yet a plain shell reports
+  `v20.15.1` — and under Node 20 corepack's pnpm shim dies with
+  `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING`, so *every* `pnpm` command fails until
+  you `nvm use 24`. The stack trace names corepack rather than the Node version,
+  so it reads like a broken pnpm install instead of a wrong shell. Add an
+  `.nvmrc` auto-switch (nvm shell hook or `fnm --use-on-cd`) and/or a README line
+  so a fresh clone doesn't lose time to it.
+- **`main` stayed red for 5+ hours across 4 pushes without anyone noticing.**
+  Nothing enforces CI on `main` — pushes land regardless of result. Consider
+  branch protection with `verify` and `database` as required status checks, so a
+  red build blocks rather than accumulates.
+
+### Fixed in this pass — context worth keeping
+
+- **`pnpm typecheck` silently depended on a prior build.** `PageProps<T>` is a
+  Next 16 *generated global*, written to `.next/types/routes.d.ts` by `next dev`,
+  `next build`, or `next typegen`; `tsc` never emits it. The script was bare
+  `tsc --noEmit`, and CI runs it *before* `pnpm build` on a checkout with no
+  `.next`, so all 23 `PageProps` references failed to resolve. It passed locally
+  only because a running `next dev` had already written those types — which also
+  defeats the obvious reproduction, since deleting `.next/types` while dev is
+  running regenerates it instantly. Fixed by making the script
+  `next typegen && tsc --noEmit` so it is correct standalone on a fresh clone.
+  **Keep this ordering in mind for any future script that runs `tsc`.**
+
 ## Already documented elsewhere
 
 - **SQL Account scorecard deferrals** (delivered-vs-collected split, collection
