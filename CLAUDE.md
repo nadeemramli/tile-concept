@@ -27,6 +27,9 @@ Next.js 16 App Router (React 19, strict TS, `src/proxy.ts` for session refresh),
 - Local DB: `pnpm db:start` (ports 56321-56324), `pnpm db:reset` (migrations + seed), `pnpm db:types`
 - Demo logins (local only): `demo.admin@tileconcept.test` … password `TileDemo!2026`
 
+## Phase map
+Phase 1 (sales) and Phases 2-6 all have their database layer in `supabase/migrations`: `…008_phase_enablement` (child-table RLS, storage), `…009_phase2_marketing`, `…010_phase4_sources`, `…011_phase5_stock`, `…012_phase6_reports`, `…013_phase3_intake`. Business rules live in the SQL functions those files define — the UI calls them and must not re-implement or bypass a rule (permission gates, required reasons, permission-before-usable, idempotency).
+
 ## Migrations
 Forward-only SQL in `supabase/migrations/YYYYMMDDNNNNNN_slug.sql`. New tables: add RLS policy (see `20260820000006_rls_api.sql` loop), grant, and an `api.<table>` security-invoker view; regenerate types.
 
@@ -34,6 +37,8 @@ Forward-only SQL in `supabase/migrations/YYYYMMDDNNNNNN_slug.sql`. New tables: a
 - **PostgREST must expose `api`, not `public`.** `supabase/config.toml` sets `[api] schemas = ["api", "graphql_public"]`. The hosted project needs the same under Settings → API → Exposed schemas, or every query returns `PGRST106 Invalid schema: api`. Supabase clients are constructed with `db: { schema: "api" }`.
 - **Never use zod's `.uuid()` for ids** — zod 4 enforces RFC-4122 version/variant bits and rejects valid PostgreSQL uuids (including our fixture ids). Use `uuid()` / `optionalUuid()` from `src/lib/zod.ts`.
 - `MetricCard` and anything passing handlers to it must be a client component.
+- **`authenticated` has no USAGE on the `ingest` schema** (deliberate). The `api.*` views still work because a view resolves its references at creation and only needs table privileges — so the `api` schema really is the only surface reachable by name. Query `api.review_items`, never `ingest.review_items`, including in pgTAP tests.
+- Storage buckets are `source-assets`, `product-media`, `shoot-outputs`, `permission-evidence`; all private, and the policies require every object path to begin with `<workspace_id>/`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
