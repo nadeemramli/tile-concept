@@ -50,3 +50,8 @@ supabase/.branches
 # playwright
 /test-results
 /playwright-report
+
+# corpus import (raw supplier content, resume state, reconciliation reports)
+/.local/
+/corpus
+/corpus/

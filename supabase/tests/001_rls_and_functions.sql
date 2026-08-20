@@ -52,9 +52,9 @@ select ok(exists(select 1 from audit.audit_events where action = 'visit.recorded
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000006');
 select throws_like(
   $$
-  with v as (select variant_id, price_list_id, unit_id from merch.variant_prices where state = 'current' limit 1),
-  ins as (insert into merch.variant_prices (workspace_id, price_list_id, variant_id, amount, unit_id, valid_from, state)
-          select '11111111-1111-1111-1111-111111111111', price_list_id, variant_id, 1, unit_id, current_date, 'draft' from v returning id)
+  with v as (select variant_id, price_list_id, unit_id, currency from merch.variant_prices where state = 'current' limit 1),
+  ins as (insert into merch.variant_prices (workspace_id, price_list_id, variant_id, amount, currency, unit_id, valid_from, state)
+          select '11111111-1111-1111-1111-111111111111', price_list_id, variant_id, 1, currency, unit_id, current_date, 'draft' from v returning id)
   select api.publish_price((select id from ins))
   $$, '%overlapping current price%', 'publishing an overlapping price is blocked without override');
 

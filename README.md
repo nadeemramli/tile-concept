@@ -2,7 +2,10 @@
 
 Internal, invite-only operating system for Tile Concept: lead and walk-in capture, identity resolution, contract-sales pipeline, purchases and repeat history, governed product catalog and effective-dated pricing, with audit and data-health throughout. Product definition: [`docs/prd`](docs/prd/).
 
-**Status:** Phase 1 slice (PRD §23) implemented end-to-end on a full schema; Phase 2–6 modules have schema + placeholder pages. Operating mode defaults to **Demo** (synthetic data only).
+**Status:** deployed. Phase 1 slice (PRD §23) is implemented end-to-end on a full schema;
+Phases 2–6 have their database layer and working surfaces. The 2026-08-21 supplier
+discovery corpus is migrated into the hosted project as **evidence only** — nothing from
+it is published. Operating mode defaults to **Demo** for synthetic app data.
 
 ## Stack
 
@@ -41,6 +44,8 @@ Real administrators are invited from **Platform → Settings → Invites** (Supa
 | `pnpm db:start` / `pnpm db:stop` / `pnpm db:reset` | Local Supabase stack |
 | `pnpm db:types` | Regenerate `src/lib/supabase/database.types.ts` from the local `api` schema |
 | `pnpm db:push` / `pnpm db:types:linked` | Apply migrations / regenerate types against the linked hosted project |
+| `pnpm corpus:plan` | Dry run: recompute every discovery-corpus count and reconcile it against the manifests. Writes nothing |
+| `pnpm corpus:local` / `pnpm corpus:linked` | Upload + import the corpus into the local stack / the linked hosted project |
 
 ## Environment variables
 
@@ -50,9 +55,12 @@ Real administrators are invited from **Platform → Settings → Invites** (Supa
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | browser + server | publishable (anon) key |
 | `NEXT_PUBLIC_APP_URL` | server | canonical site URL (auth redirects) |
 | `NEXT_PUBLIC_APP_MODE` | browser + server | `demo` \| `shadow` \| `live` (PRD §12.9) |
-| `SUPABASE_SECRET_KEY` | **server only** | service-role key; used only for admin invites. Never `NEXT_PUBLIC_`. |
+| `SUPABASE_SECRET_KEY` | **server only** | service-role key; admin invites and the corpus importer. Never `NEXT_PUBLIC_`. |
+| `TILE_CORPUS_ROOT` | corpus tooling only | Absolute path to `Discovery Corpus/_local`. Never defaulted — a wrong default would silently import the wrong tree. |
 
-Preview and Production must use separate variable sets. Until a dedicated staging Supabase project exists, both point at the single `tile-concept` project — a documented deviation from PRD §12.6.
+Production has the five variables set; Preview does not yet, so preview deployments have
+no database. Both are intended to point at separate Supabase projects; until a staging
+project exists this is a documented deviation from PRD §12.6.
 
 ## Architecture at a glance
 
@@ -61,22 +69,63 @@ Preview and Production must use separate variable sets. Until a dedicated stagin
 - `src/components/patterns/*` — DataTable, RecordDrawer, StatusPill, MetricCard (always with definition/source/freshness), Timeline, states.
 - `supabase/migrations` — private schemas (`core identity sales marketing merch stock ingest audit`), RLS on every table, `api.*` security-invoker views + SECURITY DEFINER business functions (walk-in, purchase, stage change, merge/unmerge, price publish, search, command-centre summary). `supabase/seed.sql` — synthetic fixtures only.
 
-## Going live (remaining steps)
+## Hosted project
 
-The GitHub repo and the Vercel project (`tile-concept`, team *nadeemramli's projects*, production branch `main`) exist and are linked; no deployment has been made yet because the hosted Supabase project is still outstanding.
+Supabase project `tile-concept` (`ewyiiematuuojlhpioqh`, ap-northeast-2), org *EFFEN
+Group*, Pro plan. Vercel project `tile-concept`, production branch `main`. Both are
+linked and deployed; `supabase/.temp/project-ref` records the link.
 
-1. **Settle the overdue invoices on the personal Supabase org** — project creation is currently rejected with *"There are overdue invoices in the organization(s) personal"*.
-2. `ORG_ID=knqarurgnmzdtrpbieph ./scripts/cloud-bootstrap.sh` — creates `tile-concept` (Singapore), links, pushes migrations, seeds synthetic data, prints the keys and the DB password (store it in a password manager; it is shown once).
-3. In the Supabase dashboard set **Settings → API → Exposed schemas** to `api` (remove `public`), and under **Authentication → URL configuration** set the site URL and `/auth/**` redirects for the Vercel domain plus `http://localhost:3000`.
-4. In Vercel set the environment variables from `.env.example` for **Preview and Production separately**, then redeploy (any push to `main` deploys).
-5. Invite yourself as administrator:
-   `SUPABASE_URL=… SUPABASE_SECRET_KEY=… APP_URL=… pnpm exec tsx scripts/invite-user.ts m.nadeemramli@gmail.com`
-   The seeded pending invite grants the `admin` role on first sign-in.
-6. Optional: delete the synthetic demo staff users once real staff are invited.
+Settings that are not in migrations and must be checked in the dashboard:
+
+1. **Settings → API → Exposed schemas** must be `api` (not `public`). Without it every
+   request fails with `PGRST106`.
+2. **Storage → Settings → Global file size limit** must be at least **512 MB** for the
+   corpus originals. A bucket limit cannot exceed the global one, so
+   `20260821000005_corpus_storage.sql` is inert until this is raised. 14 of the 154
+   staged catalogues exceed 50 MB; the largest is 366,392,675 bytes.
+3. **Authentication → URL configuration** — site URL and `/auth/**` redirects for the
+   Vercel domain plus `http://localhost:3000`.
+
+To invite an administrator:
+
+```bash
+SUPABASE_URL=… SUPABASE_SECRET_KEY=… APP_URL=… pnpm exec tsx scripts/invite-user.ts you@example.com
+```
+
+`scripts/cloud-bootstrap.sh` created the project originally and is kept for reference; it
+is not part of the normal workflow.
+
+## Corpus migration
+
+The supplier discovery corpus (242 Drive files, ~3.1 GB) lives outside this repository and
+is Git-ignored wherever it is mounted. `scripts/corpus/` moves it into Supabase:
+
+```bash
+export TILE_CORPUS_ROOT="…/Discovery Corpus/_local"
+pnpm corpus:plan                                  # recompute and reconcile; writes nothing
+pnpm corpus:local                                 # rehearse against the local stack
+SUPABASE_URL=… SUPABASE_SECRET_KEY=…   pnpm corpus:linked --workspace <workspace-id>   # hosted
+```
+
+What lands where, and what stays out, is documented in
+[Corpus Compatibility Map](docs/architecture/Corpus%20Compatibility%20Map.md). Three things
+are worth knowing before running it:
+
+- **Import is not publication.** 6,011 variant, 10,183 price, and 62 certificate
+  candidates arrive `pending_review`. `api.approve_review_item` refuses to publish a price
+  until currency, unit basis, tax basis, price type, market, validity, and the price list
+  are each stated explicitly — none of them is defaulted.
+- **It is idempotent.** Objects are create-only and every row is keyed on a stable corpus
+  id, so re-running an unchanged corpus adds nothing.
+- **Three sources are deliberately absent.** The Guocera credentials document is excluded
+  by policy and never read; the Alpha and Bellezza catalogues are recorded as
+  `binary_not_staged` with no object and no placeholder.
 
 ## Delivery
 
 - `main` is the production branch (Vercel). PRs get preview deployments. CI: lint, typecheck, unit tests, build, migration/types drift check (`.github/workflows/ci.yml`).
 - Database changes are committed SQL migrations, applied with `supabase db push` from a reviewed branch — never dashboard-only.
-- After creating the hosted project, set **Settings → API → Exposed schemas** to `api` (and remove `public`). The app talks only to the `api` schema; without this every request fails with `PGRST106`.
-- No production customer, supplier, price, stock, or credential data in Git, fixtures, logs, or this repo.
+- The app talks only to the `api` schema; the hosted project's **Exposed schemas** setting must match, or every request fails with `PGRST106`.
+- No production customer, supplier, price, stock, or credential data in Git, fixtures,
+  logs, or this repo. The discovery corpus reaches Supabase directly from the operator's
+  machine and never passes through the repository.

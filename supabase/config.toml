@@ -115,7 +115,10 @@ port = 56324
 [storage]
 enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
-file_size_limit = "50MiB"
+# 512MiB so the local stack can hold the same corpus originals as the hosted
+# project: 14 staged catalogues exceed 50MiB and the largest is 366MB. The
+# hosted equivalent is the project-wide Storage limit, set in the dashboard.
+file_size_limit = "512MiB"
 
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]

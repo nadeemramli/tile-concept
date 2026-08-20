@@ -4,6 +4,8 @@ import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { PermissionDenied } from "@/components/patterns/states";
 import { MetricCard } from "@/components/patterns/metric-card";
 import { findProductsByCode, listReviewQueue, listSourceAssets } from "@/server/queries/sources";
+import { getBrands, getCategories, getUnits } from "@/server/queries/reference";
+import { listPriceLists } from "@/server/queries/pricing";
 import { ReviewClient } from "@/features/sources/components/review-client";
 
 export const metadata: Metadata = { title: "Imports & OCR Review" };
@@ -17,7 +19,10 @@ export default async function ReviewPage({ searchParams }: PageProps<"/sources/r
   const sp = await searchParams;
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
 
-  const [items, assets, pendingAll] = await Promise.all([
+  // The approval gate refuses a price until its unit basis, programme, tax
+  // basis, and market are explicit, so the reviewer needs something to choose
+  // from rather than a free-text box.
+  const [items, assets, pendingAll, units, priceLists, brands, categories] = await Promise.all([
     listReviewQueue({
       status: str("status") ?? "pending",
       asset: str("asset"),
@@ -27,6 +32,10 @@ export default async function ReviewPage({ searchParams }: PageProps<"/sources/r
     }),
     listSourceAssets(),
     listReviewQueue({ status: "pending" }),
+    getUnits(),
+    listPriceLists(),
+    getBrands(),
+    getCategories(),
   ]);
 
   const codes = items.map((i) => String(i.proposed?.code ?? "")).filter(Boolean);
@@ -87,6 +96,14 @@ export default async function ReviewPage({ searchParams }: PageProps<"/sources/r
         assets={assets.map((a) => ({ id: a.id, name: a.name }))}
         duplicates={duplicates}
         canApprove={hasPermission(session, "review.approve")}
+        refs={{
+          units: units.map((u) => ({ value: u.id, label: `${u.code} — ${u.label}` })),
+          priceLists: priceLists
+            .filter((l) => l.status !== "archived")
+            .map((l) => ({ value: l.id, label: `${l.name} (${l.currency}, ${l.price_type})` })),
+          brands: brands.map((b) => ({ value: b.id, label: b.name })),
+          categories: categories.map((c) => ({ value: c.id, label: c.label })),
+        }}
       />
     </PageBody>
   );

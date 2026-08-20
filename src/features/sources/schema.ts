@@ -39,17 +39,84 @@ export type RejectInput = z.input<typeof rejectSchema>;
 
 export const archiveSchema = z.object({ asset_id: uuid() });
 
-/** Fields the reviewer may correct before approving. */
-export const CORRECTABLE_FIELDS = [
-  { key: "code", label: "Product code" },
-  { key: "name", label: "Name" },
-  { key: "amount", label: "Amount" },
-  { key: "currency", label: "Currency" },
-  { key: "unit", label: "Price basis" },
-  { key: "color", label: "Colour" },
-  { key: "finish", label: "Finish" },
-  { key: "material", label: "Material" },
-  { key: "min_quantity", label: "Minimum quantity" },
-  { key: "valid_from", label: "Valid from" },
-  { key: "source_ref", label: "Source reference" },
+/**
+ * Fields the reviewer may correct before approving.
+ *
+ * `required` is the list of item types for which `api.approve_review_item` will
+ * refuse without an explicit value. These are not defaulted anywhere: a price
+ * whose source never stated a currency, unit basis, tax basis, programme,
+ * market, or validity is a publication blocker, not a row to fill in with
+ * convention (Canonical Merchandise Schema rule 4; PRD §7.6).
+ */
+export const TAX_BASIS_OPTIONS = [
+  { value: "exclusive", label: "Tax exclusive" },
+  { value: "inclusive", label: "Tax inclusive" },
+  { value: "not_applicable", label: "Not applicable" },
 ] as const;
+
+export const PRICE_TYPE_OPTIONS = [
+  { value: "retail", label: "Retail" },
+  { value: "member", label: "Member" },
+  { value: "project", label: "Project" },
+  { value: "contract", label: "Contract" },
+  { value: "cost", label: "Cost" },
+  { value: "other", label: "Other" },
+] as const;
+
+export type CorrectableSource = "units" | "priceLists" | "brands" | "categories" | "taxBasis" | "priceType";
+
+export interface CorrectableField {
+  key: string;
+  label: string;
+  input: "text" | "date" | "select";
+  /** Where a select gets its options. */
+  options?: CorrectableSource;
+  /** Item types this field is shown for; omitted means both. */
+  appliesTo?: readonly ("product" | "price")[];
+  /** Item types for which approval is refused without a value. */
+  required?: readonly ("product" | "price")[];
+  hint?: string;
+}
+
+export const CORRECTABLE_FIELDS: readonly CorrectableField[] = [
+  { key: "code", label: "Product code", input: "text" },
+  { key: "name", label: "Name", input: "text", hint: "A name or a code is required." },
+  { key: "brand_id", label: "Brand", input: "select", options: "brands", required: ["product", "price"] },
+  { key: "category_id", label: "Category", input: "select", options: "categories", appliesTo: ["product"], required: ["product"] },
+  { key: "color", label: "Colour", input: "text", appliesTo: ["product"] },
+  { key: "finish", label: "Finish", input: "text", appliesTo: ["product"] },
+  { key: "material", label: "Material", input: "text", appliesTo: ["product"] },
+  { key: "amount", label: "Amount", input: "text", appliesTo: ["price"], required: ["price"] },
+  { key: "currency", label: "Currency", input: "text", appliesTo: ["price"], required: ["price"], hint: "ISO code. Never assumed from the market." },
+  {
+    key: "unit_id",
+    label: "Price basis",
+    input: "select",
+    options: "units",
+    required: ["product", "price"],
+    hint: "What one unit of this amount buys — piece, sheet, carton, square metre.",
+  },
+  { key: "quantity_unit_id", label: "Quantity basis", input: "select", options: "units", appliesTo: ["price"] },
+  { key: "min_quantity", label: "Minimum quantity", input: "text", appliesTo: ["price"], required: ["price"] },
+  { key: "price_list_id", label: "Price list", input: "select", options: "priceLists", appliesTo: ["price"], required: ["price"], hint: "Which programme this price belongs to. Never auto-selected." },
+  { key: "price_type", label: "Price type", input: "select", options: "priceType", appliesTo: ["price"], required: ["price"] },
+  { key: "tax_basis", label: "Tax basis", input: "select", options: "taxBasis", appliesTo: ["price"], required: ["price"], hint: "“Unknown” is an honest extraction result, not an approvable basis." },
+  { key: "market", label: "Market", input: "text", appliesTo: ["price"], required: ["price"] },
+  { key: "customer_tier", label: "Customer tier", input: "text", appliesTo: ["price"] },
+  { key: "valid_from", label: "Valid from", input: "date", appliesTo: ["price"], required: ["price"] },
+  { key: "valid_to", label: "Valid to", input: "date", appliesTo: ["price"] },
+  { key: "source_page_or_row", label: "Source page or row", input: "text", appliesTo: ["price"] },
+  { key: "source_ref", label: "Source reference", input: "text" },
+];
+
+/** Fields for the given item type, in display order. */
+export function correctableFor(itemType: string): CorrectableField[] {
+  return CORRECTABLE_FIELDS.filter((f) => !f.appliesTo || f.appliesTo.includes(itemType as "product" | "price"));
+}
+
+/** Required keys still empty — the reviewer sees these before clicking approve. */
+export function unresolvedRequired(itemType: string, values: Record<string, string>): CorrectableField[] {
+  return correctableFor(itemType).filter(
+    (f) => f.required?.includes(itemType as "product" | "price") && !(values[f.key] ?? "").trim(),
+  );
+}

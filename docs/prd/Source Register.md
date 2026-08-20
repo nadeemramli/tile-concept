@@ -2,7 +2,7 @@
 title: Tile Concept OS - Source Register
 description: Provenance, evidence classification, and interpretation rules for the Tile Concept OS PRD.
 created: 2026-08-19
-updated: 2026-08-20
+updated: 2026-08-21
 status: proposed
 tags: [tile-concept, sources, provenance, prd]
 ---
@@ -37,7 +37,13 @@ The attached images were treated as observational source evidence only. No text 
 | `codex-clipboard-55454950-e722-4726-8419-b9e318d0116b.png` | Observed fact | A client representative agreed that the app can include the scheduling workflow; the team discusses tentative dates, customer ownership, interviews, multiple shoot locations, and the need to see the schedule more easily | Participant roles, consent form, calendar authority, travel rules, and final status model remain discovery items |
 | User confirmation dated 2026-08-19 | User requirement | Add a Marketing Opportunities and Shoot Calendar workflow to the PRD and connect it to the customer/project operating system | Implementation priority and external-calendar integration remain subject to approval |
 | User platform statement dated 2026-08-20 | User requirement | Use Supabase, Vercel, and GitHub and recommend the best supporting stack while retaining the intended UI | Platform ownership, billing plan, regions, production project IDs, and deployment authorization remain to be confirmed |
-| Local folder and Git inspection dated 2026-08-20 | Observed fact | This PRD directory contains three Markdown documents and no `package.json`, `src`, `app`, or Next.js configuration; it is an untracked directory inside the parent `nadeemramli/build-blog` Git repository on `main` | This inspection does not rule out a separate application repository elsewhere; its URL/path has not been supplied |
+| Local folder and Git inspection dated 2026-08-20 | Observed fact | *Superseded 2026-08-21.* At the time of inspection the vault PRD directory held Markdown only. The application repository `nadeemramli/tile-concept` now exists, is deployed on Vercel against the hosted Supabase project `ewyiiematuuojlhpioqh`, and contains this snapshot under `docs/prd/` | Kept for provenance; do not cite it as current state |
+| Recursive Google Drive metadata inventory dated 2026-08-21 | Observed fact | 242 files and 131 folders across the three accepted roots (`Deco Tiles`, `Base Tiles (OEM)`, `Base Tiles (LOCAL)`): 156 PDFs, 76 JPEGs, 8 Google Docs, 2 XLSX. Zero traversal errors | Metadata counts establish neither document class, currency, authority, duplicate state, nor correctness of contents |
+| Discovery corpus extraction dated 2026-08-21 | Observed fact | 154 source PDFs and 76 supplier images staged locally; 2,022 catalogue pages rendered; 2,098 pixel measurements; 6,011 variant, 10,183 price, 62 certificate and 160 catalogue-edition candidates | Every candidate is machine-proposed and unreviewed. None is a price, product, or certificate until an authorised operator approves it |
+| Supabase corpus migration dated 2026-08-21 | Observed fact | The corpus is imported into `ingest.*` staging and Storage, reconciled against its own manifests, and re-importable as a no-op. See [Corpus Compatibility Map](../architecture/Corpus%20Compatibility%20Map.md) | Import is not publication. All commercial candidates remain `pending_review` |
+| Guocera credentials document (Drive `1TlyRsUiIPUp8a6tbdIrXTamgplJxca47cTXU95yR8h8`) | Decision gate | Excluded by policy from every stage of the corpus | Never read, copied, uploaded, logged, or imported. Its shape profile is skipped too. Keep the credentials in a password manager |
+| Deferred source binaries dated 2026-08-21 | Observed fact | The Alpha catalogue (174,006,407 bytes) and the Bellezza catalogue (382,335,899 bytes) are recorded as `binary_not_staged` | Metadata only: no Storage object and no fabricated placeholder. Recovering them is an open action |
+| White Horse catalogue links dated 2026-08-21 | Observed fact | White Horse product catalogues are external websites referenced from a Drive link manifest and were not crawled. Its XLSX price list and 11 certificate PDFs exist; catalogue imagery does not | Crawl permission and internal-use image rights are not established |
 
 ## EFFEN OS design and architecture reference
 

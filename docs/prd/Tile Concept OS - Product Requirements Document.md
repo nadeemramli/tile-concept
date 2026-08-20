@@ -2,7 +2,7 @@
 title: Tile Concept OS - Product Requirements Document
 description: Comprehensive PRD for an internal sales lifecycle, identity resolution, catalog, pricing, and stock operating system.
 created: 2026-08-19
-updated: 2026-08-20
+updated: 2026-08-21
 status: proposed-v1
 owner: Nadeem / Tile Concept decision-maker
 review_date: 2026-08-26
@@ -566,6 +566,81 @@ Required calendar views:
 - Publishing execution and public-channel scheduling are outside the initial module; the app may link to a published URL later.
 - External calendar synchronization is optional and never replaces the app's booking, permission, or project authority.
 
+### 7.12 Visual ingestion and product media
+
+*Added 2026-08-21, from the discovery corpus.* This section is an acceptance boundary,
+not an aspiration: each rule below is enforced by a constraint or a function and covered
+by `supabase/tests/003_corpus.sql`.
+
+#### What is preserved
+
+- **Source originals.** Supplier PDFs and images are stored privately and immutably,
+  keyed by workspace, source id, and content checksum. A source whose binary was not
+  staged is recorded as such (`binary_not_staged`, `connector_text_only`) rather than
+  quietly missing.
+- **Page renders.** Visually relevant catalogue, price-list, and technical pages are
+  rendered and kept as derived media assets, each retaining its parent document and page
+  number. A crop retains its page; a page retains its document.
+- **Region provenance.** `page_number` and `region` are evidence locators. They are never
+  product attributes.
+
+#### Three kinds of knowing, kept apart
+
+Every visual observation records *how* it was learned, because the difference decides
+what may be published:
+
+| Basis | What it is | Publishable as a product fact |
+| --- | --- | --- |
+| `pixel_measurement` | Reproducible image statistics: palette, brightness, saturation, edge density | **No** |
+| `ocr_or_supplier_text` | A size, finish, colour name, code, or claim printed by the supplier | After review |
+| `machine_visual_classification` | A proposed colour family, pattern, texture, shape, scene, or swatch | **No**, until a human confirms it |
+| `human_visual_review` | A reviewer-confirmed description | Yes |
+
+A pixel palette is not a product colour. A photographed room or a page background can
+dominate it, so an observation may only reach `approved` when its basis is
+`human_visual_review`.
+
+#### Candidate semantics
+
+Machine passes may propose colour family, pattern, texture, finish, shape, application
+context, and whether an image is a scene or a swatch. These arrive as candidates in
+`machine_visual_review_complete_human_approval_pending` and are never written into a
+product's own colour, finish, or pattern columns.
+
+#### Mapping an image to a product
+
+`media_asset_variant_link.link_basis` records the strength of the association:
+
+- `exact_supplier_code`, `exact_ocr_code` - a code matched exactly;
+- `same_catalog_page` - the image and the code share a page;
+- `manual_match` - a human decided;
+- `same_source_document` - the image and the code appeared in the same PDF.
+
+**A same-document link is discovery context only.** It cannot be approved and cannot
+become published media; re-link it to an exact page, region, code, or a manual decision
+first. Otherwise one catalogue page would become the published image for every variant
+in that catalogue.
+
+#### Image usage rights
+
+Rights are a separate gate from correctness: an image may be correctly matched to a
+variant and still not be ours to display. `media_assets.usage_rights_state` is
+`unreviewed` on import, and `merch.product_media` cannot be marked `reviewed` unless
+rights are `accepted`.
+
+#### Never infer dimensions from pixels
+
+A dimension becomes a product fact only when it is printed in supplier text, drawn in a
+technical drawing, supplied in structured data, or confirmed by a reviewer. Deriving it
+from image scale is prohibited, and
+`visual_observations.physical_size_inferred_from_pixels` is CHECK-constrained to `false`
+so such a row cannot be stored at all.
+
+#### Delivery
+
+All buckets are private. Originals and derivatives are served through signed or
+authenticated URLs; a public URL is never used for supplier material.
+
 ## 8. Information architecture and screen inventory
 
 ### 8.1 Global shell
@@ -948,7 +1023,16 @@ The UI target remains the EFFEN-style internal command centre already defined in
 
 ### 12.3 Application repository shape
 
-The current PRD directory is inside the broader `nadeemramli/build-blog` knowledge-vault repository and contains no `package.json`, `src`, `app`, or Next.js configuration as of 2026-08-20. Application code should live in a dedicated GitHub repository such as `tile-concept-os`; this reduces accidental exposure of vault content, simplifies Vercel root selection, and gives the client application an independent issue, access, release, and retention boundary.
+*Resolved 2026-08-20.* Application code lives in the dedicated repository
+`nadeemramli/tile-concept`, deployed on Vercel against the hosted Supabase project
+`ewyiiematuuojlhpioqh`. This document is a dated snapshot inside it under `docs/prd/`;
+the canonical copy remains in the Obsidian Build Vault, which is still where product
+decisions are made. The separation was kept for the reasons originally given: it avoids
+exposing vault content, simplifies Vercel root selection, and gives the application an
+independent issue, access, release, and retention boundary.
+
+The layout below was followed, with one deviation: `tests/fixtures/` does not exist -
+fixtures live in `supabase/seed.sql` and `supabase/seeds/`.
 
 Recommended initial repository layout:
 
@@ -1091,7 +1175,14 @@ flowchart TB
 - `Shadow`: reads real authorized sources and compares/reviews; no external writes.
 - `Live`: approved workflows create operational records and any external write is separately gated.
 
-The current PRD authorizes only design and a future Demo/Shadow build. Live external writes require a new decision.
+*Updated 2026-08-21.* The build is deployed and the hosted database holds real supplier
+source material, so this is no longer a design-only authorization. External **writes**
+remain ungranted: nothing in the system writes to Google Drive, a supplier site, or SQL
+Account. The corpus migration is a one-way read from Drive into Supabase, and the Drive
+originals were never modified.
+
+Note that importing supplier data is not the same as publishing it. Every commercial
+candidate from the corpus is `pending_review`; see §7.12.
 
 ## 13. Security, privacy, and governance
 

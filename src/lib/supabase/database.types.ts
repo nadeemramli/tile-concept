@@ -52,6 +52,13 @@ export type Database = {
             foreignKeyName: "account_aliases_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "account_aliases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -105,6 +112,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_contact_relationships_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "account_contact_relationships_workspace_id_fkey"
@@ -195,6 +209,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "accounts_workspace_id_fkey"
@@ -317,6 +338,13 @@ export type Database = {
             foreignKeyName: "activities_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "activities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -324,36 +352,52 @@ export type Database = {
       }
       attribute_definitions: {
         Row: {
+          comparable: boolean | null
           data_type: string | null
           description: string | null
           id: string | null
           key: string | null
           label: string | null
           options: Json | null
+          schema_version: number | null
+          status: string | null
           unit: string | null
           workspace_id: string | null
         }
         Insert: {
+          comparable?: boolean | null
           data_type?: string | null
           description?: string | null
           id?: string | null
           key?: string | null
           label?: string | null
           options?: Json | null
+          schema_version?: number | null
+          status?: string | null
           unit?: string | null
           workspace_id?: string | null
         }
         Update: {
+          comparable?: boolean | null
           data_type?: string | null
           description?: string | null
           id?: string | null
           key?: string | null
           label?: string | null
           options?: Json | null
+          schema_version?: number | null
+          status?: string | null
           unit?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "attribute_definitions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "attribute_definitions_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -413,36 +457,52 @@ export type Database = {
       }
       brands: {
         Row: {
+          country_code: string | null
           created_at: string | null
           id: string | null
           is_house_brand: boolean | null
           name: string | null
           normalized_name: string | null
+          owner_organization_id: string | null
+          slug: string | null
           supplier_id: string | null
           updated_at: string | null
           workspace_id: string | null
         }
         Insert: {
+          country_code?: string | null
           created_at?: string | null
           id?: string | null
           is_house_brand?: boolean | null
           name?: string | null
           normalized_name?: string | null
+          owner_organization_id?: string | null
+          slug?: string | null
           supplier_id?: string | null
           updated_at?: string | null
           workspace_id?: string | null
         }
         Update: {
+          country_code?: string | null
           created_at?: string | null
           id?: string | null
           is_house_brand?: boolean | null
           name?: string | null
           normalized_name?: string | null
+          owner_organization_id?: string | null
+          slug?: string | null
           supplier_id?: string | null
           updated_at?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "brands_owner_organization_id_fkey"
+            columns: ["owner_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "brands_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -456,6 +516,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brands_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "brands_workspace_id_fkey"
@@ -505,6 +572,409 @@ export type Database = {
             foreignKeyName: "business_locations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "business_locations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_facts: {
+        Row: {
+          candidate_record_id: string | null
+          confidence: number | null
+          created_at: string | null
+          field_path: string | null
+          id: string | null
+          mapping_rule_version: string | null
+          normalized_value: Json | null
+          raw_label: string | null
+          raw_value: string | null
+          source_page: number | null
+          source_region: Json | null
+          validation_state: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          candidate_record_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          field_path?: string | null
+          id?: string | null
+          mapping_rule_version?: string | null
+          normalized_value?: Json | null
+          raw_label?: string | null
+          raw_value?: string | null
+          source_page?: number | null
+          source_region?: Json | null
+          validation_state?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          candidate_record_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          field_path?: string | null
+          id?: string | null
+          mapping_rule_version?: string | null
+          normalized_value?: Json | null
+          raw_label?: string | null
+          raw_value?: string | null
+          source_page?: number | null
+          source_region?: Json | null
+          validation_state?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_facts_candidate_record_id_fkey"
+            columns: ["candidate_record_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_facts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "candidate_facts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_records: {
+        Row: {
+          candidate_key: string | null
+          candidate_record_type: string | null
+          created_at: string | null
+          extraction_rule: string | null
+          group_confidence: number | null
+          id: string | null
+          import_run_id: string | null
+          published_object_id: string | null
+          published_object_type: string | null
+          raw_group_reference: string | null
+          review_state: string | null
+          source_asset_id: string | null
+          source_locator: Json | null
+          source_version_id: string | null
+          updated_at: string | null
+          validation_state: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          candidate_key?: string | null
+          candidate_record_type?: string | null
+          created_at?: string | null
+          extraction_rule?: string | null
+          group_confidence?: number | null
+          id?: string | null
+          import_run_id?: string | null
+          published_object_id?: string | null
+          published_object_type?: string | null
+          raw_group_reference?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_version_id?: string | null
+          updated_at?: string | null
+          validation_state?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          candidate_key?: string | null
+          candidate_record_type?: string | null
+          created_at?: string | null
+          extraction_rule?: string | null
+          group_confidence?: number | null
+          id?: string | null
+          import_run_id?: string | null
+          published_object_id?: string | null
+          published_object_type?: string | null
+          raw_group_reference?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_version_id?: string | null
+          updated_at?: string | null
+          validation_state?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_records_import_run_id_fkey"
+            columns: ["import_run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_records_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "candidate_records_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_records_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_records_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "candidate_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_edition_candidates: {
+        Row: {
+          brand_hint: string | null
+          candidate_key: string | null
+          candidate_record_id: string | null
+          created_at: string | null
+          edition_label_candidate: string | null
+          external_source_id: string | null
+          id: string | null
+          language_signals: string[] | null
+          name_candidate: string | null
+          publication_date_candidate: string | null
+          review_state: string | null
+          root_name: string | null
+          source_asset_id: string | null
+          source_path: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          created_at?: string | null
+          edition_label_candidate?: string | null
+          external_source_id?: string | null
+          id?: string | null
+          language_signals?: string[] | null
+          name_candidate?: string | null
+          publication_date_candidate?: string | null
+          review_state?: string | null
+          root_name?: string | null
+          source_asset_id?: string | null
+          source_path?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          created_at?: string | null
+          edition_label_candidate?: string | null
+          external_source_id?: string | null
+          id?: string | null
+          language_signals?: string[] | null
+          name_candidate?: string | null
+          publication_date_candidate?: string | null
+          review_state?: string | null
+          root_name?: string | null
+          source_asset_id?: string | null
+          source_path?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_edition_candidates_candidate_record_id_fkey"
+            columns: ["candidate_record_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_edition_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "catalog_edition_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_edition_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_edition_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "catalog_edition_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_editions: {
+        Row: {
+          brand_id: string | null
+          created_at: string | null
+          created_by: string | null
+          edition_label: string | null
+          id: string | null
+          language: string | null
+          market: string | null
+          name: string | null
+          publication_date: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_asset_id: string | null
+          source_version_id: string | null
+          status: string | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_to: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          edition_label?: string | null
+          id?: string | null
+          language?: string | null
+          market?: string | null
+          name?: string | null
+          publication_date?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_asset_id?: string | null
+          source_version_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          edition_label?: string | null
+          id?: string | null
+          language?: string | null
+          market?: string | null
+          name?: string | null
+          publication_date?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_asset_id?: string | null
+          source_version_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_editions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -512,36 +982,58 @@ export type Database = {
       }
       catalog_entries: {
         Row: {
+          catalog_edition_id: string | null
           created_at: string | null
+          display_order: number | null
           id: string | null
           page_ref: string | null
           product_id: string | null
+          raw_catalog_label: string | null
           region: Json | null
           snippet: string | null
           source_asset_id: string | null
+          source_version_id: string | null
+          variant_id: string | null
           workspace_id: string | null
         }
         Insert: {
+          catalog_edition_id?: string | null
           created_at?: string | null
+          display_order?: number | null
           id?: string | null
           page_ref?: string | null
           product_id?: string | null
+          raw_catalog_label?: string | null
           region?: Json | null
           snippet?: string | null
           source_asset_id?: string | null
+          source_version_id?: string | null
+          variant_id?: string | null
           workspace_id?: string | null
         }
         Update: {
+          catalog_edition_id?: string | null
           created_at?: string | null
+          display_order?: number | null
           id?: string | null
           page_ref?: string | null
           product_id?: string | null
+          raw_catalog_label?: string | null
           region?: Json | null
           snippet?: string | null
           source_asset_id?: string | null
+          source_version_id?: string | null
+          variant_id?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "catalog_entries_catalog_edition_id_fkey"
+            columns: ["catalog_edition_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_editions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "catalog_entries_product_id_fkey"
             columns: ["product_id"]
@@ -569,6 +1061,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "source_library"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "catalog_entries_workspace_id_fkey"
@@ -624,6 +1137,489 @@ export type Database = {
           },
           {
             foreignKeyName: "category_attribute_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "category_attribute_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certificate_candidates: {
+        Row: {
+          brand_hint: string | null
+          candidate_key: string | null
+          candidate_record_id: string | null
+          certificate_number_candidates: string[] | null
+          certificate_type_signal_candidates: string[] | null
+          confidence: number | null
+          created_at: string | null
+          date_candidates: string[] | null
+          external_source_id: string | null
+          extraction_rule: string | null
+          filename_date_candidates: string[] | null
+          filename_identifier_candidates: string[] | null
+          id: string | null
+          published_certificate_id: string | null
+          review_state: string | null
+          role_candidates: Json | null
+          root_name: string | null
+          scope_text_raw: string | null
+          scope_type: string | null
+          source_asset_id: string | null
+          source_locator: Json | null
+          source_path: string | null
+          standard_candidates: string[] | null
+          title_candidate: string | null
+          updated_at: string | null
+          validation_flags: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          certificate_number_candidates?: string[] | null
+          certificate_type_signal_candidates?: string[] | null
+          confidence?: number | null
+          created_at?: string | null
+          date_candidates?: string[] | null
+          external_source_id?: string | null
+          extraction_rule?: string | null
+          filename_date_candidates?: string[] | null
+          filename_identifier_candidates?: string[] | null
+          id?: string | null
+          published_certificate_id?: string | null
+          review_state?: string | null
+          role_candidates?: Json | null
+          root_name?: string | null
+          scope_text_raw?: string | null
+          scope_type?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          standard_candidates?: string[] | null
+          title_candidate?: string | null
+          updated_at?: string | null
+          validation_flags?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          certificate_number_candidates?: string[] | null
+          certificate_type_signal_candidates?: string[] | null
+          confidence?: number | null
+          created_at?: string | null
+          date_candidates?: string[] | null
+          external_source_id?: string | null
+          extraction_rule?: string | null
+          filename_date_candidates?: string[] | null
+          filename_identifier_candidates?: string[] | null
+          id?: string | null
+          published_certificate_id?: string | null
+          review_state?: string | null
+          role_candidates?: Json | null
+          root_name?: string | null
+          scope_text_raw?: string | null
+          scope_type?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          standard_candidates?: string[] | null
+          title_candidate?: string | null
+          updated_at?: string | null
+          validation_flags?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_candidates_candidate_record_id_fkey"
+            columns: ["candidate_record_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "certificate_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "certificate_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certificate_scopes: {
+        Row: {
+          brand_id: string | null
+          certificate_id: string | null
+          created_at: string | null
+          facility_text: string | null
+          id: string | null
+          organization_id: string | null
+          product_category_id: string | null
+          product_id: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scope_text_raw: string | null
+          scope_type: string | null
+          updated_at: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          certificate_id?: string | null
+          created_at?: string | null
+          facility_text?: string | null
+          id?: string | null
+          organization_id?: string | null
+          product_category_id?: string | null
+          product_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope_text_raw?: string | null
+          scope_type?: string | null
+          updated_at?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          certificate_id?: string | null
+          created_at?: string | null
+          facility_text?: string | null
+          id?: string | null
+          organization_id?: string | null
+          product_category_id?: string | null
+          product_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope_text_raw?: string | null
+          scope_type?: string | null
+          updated_at?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_scopes_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_product_category_id_fkey"
+            columns: ["product_category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certificates: {
+        Row: {
+          certificate_number: string | null
+          certificate_type: string | null
+          created_at: string | null
+          created_by: string | null
+          expires_on: string | null
+          holder_organization_id: string | null
+          id: string | null
+          issued_on: string | null
+          issuing_organization_id: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_asset_id: string | null
+          source_version_id: string | null
+          standard_code: string | null
+          title: string | null
+          updated_at: string | null
+          validity_state: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          certificate_number?: string | null
+          certificate_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_on?: string | null
+          holder_organization_id?: string | null
+          id?: string | null
+          issued_on?: string | null
+          issuing_organization_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_asset_id?: string | null
+          source_version_id?: string | null
+          standard_code?: string | null
+          title?: string | null
+          updated_at?: string | null
+          validity_state?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          certificate_number?: string | null
+          certificate_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_on?: string | null
+          holder_organization_id?: string | null
+          id?: string | null
+          issued_on?: string | null
+          issuing_organization_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_asset_id?: string | null
+          source_version_id?: string | null
+          standard_code?: string | null
+          title?: string | null
+          updated_at?: string | null
+          validity_state?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_holder_organization_id_fkey"
+            columns: ["holder_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_issuing_organization_id_fkey"
+            columns: ["issuing_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "certificates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "certificates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_amount_observations: {
+        Row: {
+          amount_normalized: number | null
+          amount_raw: string | null
+          brand_hint: string | null
+          candidate_record_id: string | null
+          created_at: string | null
+          currency_code: string | null
+          external_source_id: string | null
+          id: string | null
+          observation_key: string | null
+          observation_type: string | null
+          raw_excerpt: string | null
+          reason_not_price_candidate: string | null
+          review_state: string | null
+          source_asset_id: string | null
+          source_locator: Json | null
+          source_path: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          amount_normalized?: number | null
+          amount_raw?: string | null
+          brand_hint?: string | null
+          candidate_record_id?: string | null
+          created_at?: string | null
+          currency_code?: string | null
+          external_source_id?: string | null
+          id?: string | null
+          observation_key?: string | null
+          observation_type?: string | null
+          raw_excerpt?: string | null
+          reason_not_price_candidate?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          amount_normalized?: number | null
+          amount_raw?: string | null
+          brand_hint?: string | null
+          candidate_record_id?: string | null
+          created_at?: string | null
+          currency_code?: string | null
+          external_source_id?: string | null
+          id?: string | null
+          observation_key?: string | null
+          observation_type?: string | null
+          raw_excerpt?: string | null
+          reason_not_price_candidate?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_amount_observations_candidate_record_id_fkey"
+            columns: ["candidate_record_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_amount_observations_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "commercial_amount_observations_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_amount_observations_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_amount_observations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "commercial_amount_observations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -712,6 +1708,13 @@ export type Database = {
             foreignKeyName: "consent_records_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "consent_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -776,6 +1779,123 @@ export type Database = {
           },
           {
             foreignKeyName: "contact_points_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "contact_points_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_sheet_items: {
+        Row: {
+          contact_sheet_id: string | null
+          created_at: string | null
+          id: string | null
+          label: string | null
+          media_asset_id: string | null
+          source_path: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          contact_sheet_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          label?: string | null
+          media_asset_id?: string | null
+          source_path?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          contact_sheet_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          label?: string | null
+          media_asset_id?: string | null
+          source_path?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_sheet_items_contact_sheet_id_fkey"
+            columns: ["contact_sheet_id"]
+            isOneToOne: false
+            referencedRelation: "contact_sheets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_sheet_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_sheet_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "contact_sheet_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_sheets: {
+        Row: {
+          content_checksum: string | null
+          created_at: string | null
+          id: string | null
+          item_count: number | null
+          object_path: string | null
+          sheet_key: string | null
+          storage_bucket: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          content_checksum?: string | null
+          created_at?: string | null
+          id?: string | null
+          item_count?: number | null
+          object_path?: string | null
+          sheet_key?: string | null
+          storage_bucket?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          content_checksum?: string | null
+          created_at?: string | null
+          id?: string | null
+          item_count?: number | null
+          object_path?: string | null
+          sheet_key?: string | null
+          storage_bucket?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_sheets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "contact_sheets_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -860,6 +1980,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "contacts_workspace_id_fkey"
@@ -1027,6 +2154,13 @@ export type Database = {
             foreignKeyName: "content_opportunities_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "content_opportunities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1066,6 +2200,168 @@ export type Database = {
             columns: ["content_opportunity_id"]
             isOneToOne: false
             referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      corpus_reconciliation: {
+        Row: {
+          catalog_edition_candidates: number | null
+          certificate_candidates: number | null
+          certificate_candidates_not_pending: number | null
+          commercial_amount_observations: number | null
+          corpus_review_tasks: number | null
+          duplicate_code_groups: number | null
+          media_assets: number | null
+          media_links: number | null
+          page_renders: number | null
+          price_candidates: number | null
+          price_candidates_not_pending: number | null
+          shape_profiles: number | null
+          source_assets: number | null
+          source_pdfs: number | null
+          standalone_images: number | null
+          variant_candidates: number | null
+          variant_candidates_not_pending: number | null
+          versions_connector_only: number | null
+          versions_deferred: number | null
+          versions_excluded: number | null
+          versions_uploaded: number | null
+          visual_observations: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          catalog_edition_candidates?: never
+          certificate_candidates?: never
+          certificate_candidates_not_pending?: never
+          commercial_amount_observations?: never
+          corpus_review_tasks?: never
+          duplicate_code_groups?: never
+          media_assets?: never
+          media_links?: never
+          page_renders?: never
+          price_candidates?: never
+          price_candidates_not_pending?: never
+          shape_profiles?: never
+          source_assets?: never
+          source_pdfs?: never
+          standalone_images?: never
+          variant_candidates?: never
+          variant_candidates_not_pending?: never
+          versions_connector_only?: never
+          versions_deferred?: never
+          versions_excluded?: never
+          versions_uploaded?: never
+          visual_observations?: never
+          workspace_id?: string | null
+        }
+        Update: {
+          catalog_edition_candidates?: never
+          certificate_candidates?: never
+          certificate_candidates_not_pending?: never
+          commercial_amount_observations?: never
+          corpus_review_tasks?: never
+          duplicate_code_groups?: never
+          media_assets?: never
+          media_links?: never
+          page_renders?: never
+          price_candidates?: never
+          price_candidates_not_pending?: never
+          shape_profiles?: never
+          source_assets?: never
+          source_pdfs?: never
+          standalone_images?: never
+          variant_candidates?: never
+          variant_candidates_not_pending?: never
+          versions_connector_only?: never
+          versions_deferred?: never
+          versions_excluded?: never
+          versions_uploaded?: never
+          visual_observations?: never
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      corpus_validation_issues: {
+        Row: {
+          affected_candidate_count: number | null
+          created_at: string | null
+          details: Json | null
+          external_source_id: string | null
+          id: string | null
+          issue_key: string | null
+          issue_type: string | null
+          review_state: string | null
+          severity: string | null
+          severity_raw: string | null
+          source_asset_id: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          affected_candidate_count?: number | null
+          created_at?: string | null
+          details?: Json | null
+          external_source_id?: string | null
+          id?: string | null
+          issue_key?: string | null
+          issue_type?: string | null
+          review_state?: string | null
+          severity?: string | null
+          severity_raw?: string | null
+          source_asset_id?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          affected_candidate_count?: number | null
+          created_at?: string | null
+          details?: Json | null
+          external_source_id?: string | null
+          id?: string | null
+          issue_key?: string | null
+          issue_type?: string | null
+          review_state?: string | null
+          severity?: string | null
+          severity_raw?: string | null
+          source_asset_id?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corpus_validation_issues_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "corpus_validation_issues_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corpus_validation_issues_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corpus_validation_issues_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "corpus_validation_issues_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1113,6 +2409,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "variant_prices_workspace_id_fkey"
@@ -1172,6 +2475,79 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "data_quality_issues_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "data_quality_issues_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      duplicate_code_groups: {
+        Row: {
+          brand_hint: string | null
+          candidate_count: number | null
+          candidate_keys: string[] | null
+          created_at: string | null
+          external_source_ids: string[] | null
+          group_key: string | null
+          id: string | null
+          resolution_state: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source_count: number | null
+          supplier_code_normalized: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_hint?: string | null
+          candidate_count?: number | null
+          candidate_keys?: string[] | null
+          created_at?: string | null
+          external_source_ids?: string[] | null
+          group_key?: string | null
+          id?: string | null
+          resolution_state?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_count?: number | null
+          supplier_code_normalized?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_hint?: string | null
+          candidate_count?: number | null
+          candidate_keys?: string[] | null
+          created_at?: string | null
+          external_source_ids?: string[] | null
+          group_key?: string | null
+          id?: string | null
+          resolution_state?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_count?: number | null
+          supplier_code_normalized?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duplicate_code_groups_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "duplicate_code_groups_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1235,6 +2611,13 @@ export type Database = {
             foreignKeyName: "external_calendar_links_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "external_calendar_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1281,6 +2664,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "external_document_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "external_document_links_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -1338,6 +2728,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_identities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "external_identities_workspace_id_fkey"
@@ -1410,6 +2807,13 @@ export type Database = {
             foreignKeyName: "feature_flags_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "feature_flags_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1459,6 +2863,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "integration_connections"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_mappings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "field_mappings_workspace_id_fkey"
@@ -1520,6 +2931,13 @@ export type Database = {
             foreignKeyName: "identity_match_candidates_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "identity_match_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1574,6 +2992,161 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "identity_merge_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "identity_merge_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_items: {
+        Row: {
+          actual_count: number | null
+          attempts: number | null
+          checksum: string | null
+          created_at: string | null
+          expected_count: number | null
+          external_key: string | null
+          id: string | null
+          import_run_id: string | null
+          item_kind: string | null
+          message: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actual_count?: number | null
+          attempts?: number | null
+          checksum?: string | null
+          created_at?: string | null
+          expected_count?: number | null
+          external_key?: string | null
+          id?: string | null
+          import_run_id?: string | null
+          item_kind?: string | null
+          message?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actual_count?: number | null
+          attempts?: number | null
+          checksum?: string | null
+          created_at?: string | null
+          expected_count?: number | null
+          external_key?: string | null
+          id?: string | null
+          import_run_id?: string | null
+          item_kind?: string | null
+          message?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_items_import_run_id_fkey"
+            columns: ["import_run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "import_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_runs: {
+        Row: {
+          completed_at: string | null
+          corpus_cutoff: string | null
+          counts: Json | null
+          created_at: string | null
+          created_by: string | null
+          error_code: string | null
+          error_detail_safe: string | null
+          id: string | null
+          parser_name: string | null
+          parser_version: string | null
+          pipeline_version: string | null
+          run_key: string | null
+          started_at: string | null
+          status: string | null
+          target_env: string | null
+          updated_at: string | null
+          warning_count: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          corpus_cutoff?: string | null
+          counts?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          error_code?: string | null
+          error_detail_safe?: string | null
+          id?: string | null
+          parser_name?: string | null
+          parser_version?: string | null
+          pipeline_version?: string | null
+          run_key?: string | null
+          started_at?: string | null
+          status?: string | null
+          target_env?: string | null
+          updated_at?: string | null
+          warning_count?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          corpus_cutoff?: string | null
+          counts?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          error_code?: string | null
+          error_detail_safe?: string | null
+          id?: string | null
+          parser_name?: string | null
+          parser_version?: string | null
+          pipeline_version?: string | null
+          run_key?: string | null
+          started_at?: string | null
+          status?: string | null
+          target_env?: string | null
+          updated_at?: string | null
+          warning_count?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "import_runs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1651,6 +3224,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "source_library"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "ingestion_jobs_workspace_id_fkey"
@@ -1770,6 +3350,13 @@ export type Database = {
             foreignKeyName: "intake_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "intake_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1788,6 +3375,13 @@ export type Database = {
           workspace_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "intake_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "intake_events_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -1860,6 +3454,13 @@ export type Database = {
             foreignKeyName: "integration_connections_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "integration_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1922,6 +3523,13 @@ export type Database = {
             foreignKeyName: "inventory_item_mappings_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "inventory_item_mappings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1969,6 +3577,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory_sources"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_locations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "inventory_locations_workspace_id_fkey"
@@ -2047,6 +3662,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "inventory_movements_workspace_id_fkey"
@@ -2136,6 +3758,13 @@ export type Database = {
             foreignKeyName: "inventory_snapshots_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "inventory_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -2176,6 +3805,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_sources_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "inventory_sources_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -2349,6 +3985,249 @@ export type Database = {
             foreignKeyName: "leads_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_asset_variant_links: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          external_key: string | null
+          id: string | null
+          link_basis: string | null
+          link_basis_raw: string | null
+          media_asset_id: string | null
+          page_number: number | null
+          product_variant_id: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_code_raw: string | null
+          source_region: Json | null
+          updated_at: string | null
+          variant_candidate_id: string | null
+          variant_candidate_key: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          external_key?: string | null
+          id?: string | null
+          link_basis?: string | null
+          link_basis_raw?: string | null
+          media_asset_id?: string | null
+          page_number?: number | null
+          product_variant_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_code_raw?: string | null
+          source_region?: Json | null
+          updated_at?: string | null
+          variant_candidate_id?: string | null
+          variant_candidate_key?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          external_key?: string | null
+          id?: string | null
+          link_basis?: string | null
+          link_basis_raw?: string | null
+          media_asset_id?: string | null
+          page_number?: number | null
+          product_variant_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_code_raw?: string | null
+          source_region?: Json | null
+          updated_at?: string | null
+          variant_candidate_id?: string | null
+          variant_candidate_key?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_asset_variant_links_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
+            columns: ["product_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_variant_candidate_id_fkey"
+            columns: ["variant_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "variant_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_assets: {
+        Row: {
+          asset_kind: string | null
+          brand_hint: string | null
+          content_checksum: string | null
+          created_at: string | null
+          document_class: string | null
+          external_key: string | null
+          height_px: number | null
+          id: string | null
+          mime_type: string | null
+          object_path: string | null
+          orientation: string | null
+          page_number: number | null
+          parent_media_asset_id: string | null
+          pipeline_version: string | null
+          region: Json | null
+          review_state: string | null
+          size_bytes: number | null
+          source_asset_id: string | null
+          source_path: string | null
+          source_version_id: string | null
+          source_web_url: string | null
+          storage_bucket: string | null
+          updated_at: string | null
+          usage_rights_state: string | null
+          width_px: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          asset_kind?: string | null
+          brand_hint?: string | null
+          content_checksum?: string | null
+          created_at?: string | null
+          document_class?: string | null
+          external_key?: string | null
+          height_px?: number | null
+          id?: string | null
+          mime_type?: string | null
+          object_path?: string | null
+          orientation?: string | null
+          page_number?: number | null
+          parent_media_asset_id?: string | null
+          pipeline_version?: string | null
+          region?: Json | null
+          review_state?: string | null
+          size_bytes?: number | null
+          source_asset_id?: string | null
+          source_path?: string | null
+          source_version_id?: string | null
+          source_web_url?: string | null
+          storage_bucket?: string | null
+          updated_at?: string | null
+          usage_rights_state?: string | null
+          width_px?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          asset_kind?: string | null
+          brand_hint?: string | null
+          content_checksum?: string | null
+          created_at?: string | null
+          document_class?: string | null
+          external_key?: string | null
+          height_px?: number | null
+          id?: string | null
+          mime_type?: string | null
+          object_path?: string | null
+          orientation?: string | null
+          page_number?: number | null
+          parent_media_asset_id?: string | null
+          pipeline_version?: string | null
+          region?: Json | null
+          review_state?: string | null
+          size_bytes?: number | null
+          source_asset_id?: string | null
+          source_path?: string | null
+          source_version_id?: string | null
+          source_web_url?: string | null
+          storage_bucket?: string | null
+          updated_at?: string | null
+          usage_rights_state?: string | null
+          width_px?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_assets_parent_media_asset_id_fkey"
+            columns: ["parent_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "media_assets_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "media_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -2441,6 +4320,13 @@ export type Database = {
             foreignKeyName: "media_permission_records_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "media_permission_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -2494,6 +4380,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "membership_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "membership_invites_workspace_id_fkey"
@@ -2591,6 +4484,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "memberships_workspace_id_fkey"
@@ -2764,6 +4664,13 @@ export type Database = {
             foreignKeyName: "opportunities_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "opportunities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -2815,6 +4722,13 @@ export type Database = {
             foreignKeyName: "opportunity_stage_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "opportunity_stage_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -2859,6 +4773,174 @@ export type Database = {
             foreignKeyName: "opportunity_stages_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "opportunity_stages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_roles: {
+        Row: {
+          brand_id: string | null
+          created_at: string | null
+          id: string | null
+          organization_id: string | null
+          product_category_id: string | null
+          review_state: string | null
+          role: string | null
+          scope_note: string | null
+          source_version_id: string | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_to: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          organization_id?: string | null
+          product_category_id?: string | null
+          review_state?: string | null
+          role?: string | null
+          scope_note?: string | null
+          source_version_id?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          organization_id?: string | null
+          product_category_id?: string | null
+          review_state?: string | null
+          role?: string | null
+          scope_note?: string | null
+          source_version_id?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_roles_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_roles_product_category_id_fkey"
+            columns: ["product_category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_roles_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_roles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "organization_roles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          canonical_name: string | null
+          country_code: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          normalized_name: string | null
+          registration_name: string | null
+          review_state: string | null
+          source_version_id: string | null
+          status: string | null
+          updated_at: string | null
+          website: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          canonical_name?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          normalized_name?: string | null
+          registration_name?: string | null
+          review_state?: string | null
+          source_version_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          canonical_name?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          normalized_name?: string | null
+          registration_name?: string | null
+          review_state?: string | null
+          source_version_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "organizations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -2869,6 +4951,9 @@ export type Database = {
           coverage_per_pack: number | null
           coverage_unit_id: string | null
           created_at: string | null
+          effective_from: string | null
+          effective_to: string | null
+          gross_weight_kg: number | null
           id: string | null
           inner_unit_id: string | null
           moq: number | null
@@ -2876,6 +4961,8 @@ export type Database = {
           pack_label: string | null
           pack_unit_id: string | null
           quantity_per_pack: number | null
+          review_state: string | null
+          source_version_id: string | null
           variant_id: string | null
           workspace_id: string | null
         }
@@ -2883,6 +4970,9 @@ export type Database = {
           coverage_per_pack?: number | null
           coverage_unit_id?: string | null
           created_at?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          gross_weight_kg?: number | null
           id?: string | null
           inner_unit_id?: string | null
           moq?: number | null
@@ -2890,6 +4980,8 @@ export type Database = {
           pack_label?: string | null
           pack_unit_id?: string | null
           quantity_per_pack?: number | null
+          review_state?: string | null
+          source_version_id?: string | null
           variant_id?: string | null
           workspace_id?: string | null
         }
@@ -2897,6 +4989,9 @@ export type Database = {
           coverage_per_pack?: number | null
           coverage_unit_id?: string | null
           created_at?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          gross_weight_kg?: number | null
           id?: string | null
           inner_unit_id?: string | null
           moq?: number | null
@@ -2904,6 +4999,8 @@ export type Database = {
           pack_label?: string | null
           pack_unit_id?: string | null
           quantity_per_pack?: number | null
+          review_state?: string | null
+          source_version_id?: string | null
           variant_id?: string | null
           workspace_id?: string | null
         }
@@ -2930,11 +5027,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "packaging_configurations_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "packaging_configurations_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packaging_configurations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "packaging_configurations_workspace_id_fkey"
@@ -2990,6 +5101,290 @@ export type Database = {
           },
           {
             foreignKeyName: "price_approval_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "price_approval_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_candidates: {
+        Row: {
+          amount_normalized: number | null
+          amount_raw: string | null
+          brand_hint: string | null
+          candidate_key: string | null
+          candidate_record_id: string | null
+          confidence: number | null
+          created_at: string | null
+          currency_code: string | null
+          effective_date_raw: string | null
+          external_source_id: string | null
+          extraction_rule: string | null
+          id: string | null
+          price_type_raw: string | null
+          product_code_candidate: string | null
+          published_price_id: string | null
+          review_state: string | null
+          source_asset_id: string | null
+          source_locator: Json | null
+          source_path: string | null
+          tax_basis: string | null
+          unit_basis: string | null
+          updated_at: string | null
+          validation_flags: Json | null
+          variant_candidate_key: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          amount_normalized?: number | null
+          amount_raw?: string | null
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          currency_code?: string | null
+          effective_date_raw?: string | null
+          external_source_id?: string | null
+          extraction_rule?: string | null
+          id?: string | null
+          price_type_raw?: string | null
+          product_code_candidate?: string | null
+          published_price_id?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          tax_basis?: string | null
+          unit_basis?: string | null
+          updated_at?: string | null
+          validation_flags?: Json | null
+          variant_candidate_key?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          amount_normalized?: number | null
+          amount_raw?: string | null
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          currency_code?: string | null
+          effective_date_raw?: string | null
+          external_source_id?: string | null
+          extraction_rule?: string | null
+          id?: string | null
+          price_type_raw?: string | null
+          product_code_candidate?: string | null
+          published_price_id?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          tax_basis?: string | null
+          unit_basis?: string | null
+          updated_at?: string | null
+          validation_flags?: Json | null
+          variant_candidate_key?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_candidates_candidate_record_id_fkey"
+            columns: ["candidate_record_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_candidates_published_price_id_fkey"
+            columns: ["published_price_id"]
+            isOneToOne: false
+            referencedRelation: "current_variant_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_candidates_published_price_id_fkey"
+            columns: ["published_price_id"]
+            isOneToOne: false
+            referencedRelation: "variant_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "price_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "price_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_list_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          created_by: string | null
+          default_currency_code: string | null
+          default_market: string | null
+          default_price_type: string | null
+          default_price_unit_id: string | null
+          default_tax_basis: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string | null
+          issued_at: string | null
+          price_list_id: string | null
+          review_state: string | null
+          source_asset_id: string | null
+          source_version_id: string | null
+          supersedes_version_id: string | null
+          updated_at: string | null
+          version_label: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_currency_code?: string | null
+          default_market?: string | null
+          default_price_type?: string | null
+          default_price_unit_id?: string | null
+          default_tax_basis?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          issued_at?: string | null
+          price_list_id?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_version_id?: string | null
+          supersedes_version_id?: string | null
+          updated_at?: string | null
+          version_label?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_currency_code?: string | null
+          default_market?: string | null
+          default_price_type?: string | null
+          default_price_unit_id?: string | null
+          default_tax_basis?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          issued_at?: string | null
+          price_list_id?: string | null
+          review_state?: string | null
+          source_asset_id?: string | null
+          source_version_id?: string | null
+          supersedes_version_id?: string | null
+          updated_at?: string | null
+          version_label?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_list_versions_default_price_unit_id_fkey"
+            columns: ["default_price_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_supersedes_version_id_fkey"
+            columns: ["supersedes_version_id"]
+            isOneToOne: false
+            referencedRelation: "price_list_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -3085,6 +5480,13 @@ export type Database = {
             foreignKeyName: "price_lists_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "price_lists_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -3133,6 +5535,13 @@ export type Database = {
             foreignKeyName: "product_aliases_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "product_aliases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -3145,7 +5554,12 @@ export type Database = {
           created_at: string | null
           id: string | null
           product_id: string | null
+          review_state: string | null
           source_ref: string | null
+          source_version_id: string | null
+          unit_id: string | null
+          valid_from: string | null
+          valid_to: string | null
           value: Json | null
           variant_id: string | null
           workspace_id: string | null
@@ -3156,7 +5570,12 @@ export type Database = {
           created_at?: string | null
           id?: string | null
           product_id?: string | null
+          review_state?: string | null
           source_ref?: string | null
+          source_version_id?: string | null
+          unit_id?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
           value?: Json | null
           variant_id?: string | null
           workspace_id?: string | null
@@ -3167,7 +5586,12 @@ export type Database = {
           created_at?: string | null
           id?: string | null
           product_id?: string | null
+          review_state?: string | null
           source_ref?: string | null
+          source_version_id?: string | null
+          unit_id?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
           value?: Json | null
           variant_id?: string | null
           workspace_id?: string | null
@@ -3188,11 +5612,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_attribute_values_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "product_attribute_values_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "product_attribute_values_workspace_id_fkey"
@@ -3243,6 +5688,13 @@ export type Database = {
             foreignKeyName: "product_categories_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "product_categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -3250,45 +5702,83 @@ export type Database = {
       }
       product_media: {
         Row: {
+          alt_text: string | null
           caption: string | null
           created_at: string | null
           id: string | null
           is_primary: boolean | null
           kind: string | null
+          media_asset_id: string | null
+          media_asset_variant_link_id: string | null
           product_id: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sort_order: number | null
           source_ref: string | null
           storage_bucket: string | null
           storage_path: string | null
+          usage_rights_state: string | null
           variant_id: string | null
           workspace_id: string | null
         }
         Insert: {
+          alt_text?: string | null
           caption?: string | null
           created_at?: string | null
           id?: string | null
           is_primary?: boolean | null
           kind?: string | null
+          media_asset_id?: string | null
+          media_asset_variant_link_id?: string | null
           product_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sort_order?: number | null
           source_ref?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          usage_rights_state?: string | null
           variant_id?: string | null
           workspace_id?: string | null
         }
         Update: {
+          alt_text?: string | null
           caption?: string | null
           created_at?: string | null
           id?: string | null
           is_primary?: boolean | null
           kind?: string | null
+          media_asset_id?: string | null
+          media_asset_variant_link_id?: string | null
           product_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sort_order?: number | null
           source_ref?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          usage_rights_state?: string | null
           variant_id?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_media_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_media_media_asset_variant_link_id_fkey"
+            columns: ["media_asset_variant_link_id"]
+            isOneToOne: false
+            referencedRelation: "media_asset_variant_links"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_media_product_id_fkey"
             columns: ["product_id"]
@@ -3307,6 +5797,100 @@ export type Database = {
             foreignKeyName: "product_media_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "product_media_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_status_history: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string | null
+          review_state: string | null
+          source_locator: Json | null
+          source_version_id: string | null
+          status_code: string | null
+          status_raw: string | null
+          supersedes_id: string | null
+          updated_at: string | null
+          variant_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          review_state?: string | null
+          source_locator?: Json | null
+          source_version_id?: string | null
+          status_code?: string | null
+          status_raw?: string | null
+          supersedes_id?: string | null
+          updated_at?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string | null
+          review_state?: string | null
+          source_locator?: Json | null
+          source_version_id?: string | null
+          status_code?: string | null
+          status_raw?: string | null
+          supersedes_id?: string | null
+          updated_at?: string | null
+          variant_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_status_history_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_status_history_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "product_status_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_status_history_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_status_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "product_status_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -3314,47 +5898,71 @@ export type Database = {
       }
       product_variants: {
         Row: {
+          color_code: string | null
           created_at: string | null
           dimensions: Json | null
+          finish_code: string | null
+          grade_code: string | null
           id: string | null
           is_default: boolean | null
+          manufacturer_code: string | null
+          manufacturer_code_key: string | null
           name: string | null
           product_id: string | null
           purchase_unit_id: string | null
           selling_unit_id: string | null
           sku: string | null
           sku_key: string | null
+          source_version_id: string | null
           status: string | null
+          supplier_code: string | null
+          supplier_code_key: string | null
           updated_at: string | null
           workspace_id: string | null
         }
         Insert: {
+          color_code?: string | null
           created_at?: string | null
           dimensions?: Json | null
+          finish_code?: string | null
+          grade_code?: string | null
           id?: string | null
           is_default?: boolean | null
+          manufacturer_code?: string | null
+          manufacturer_code_key?: string | null
           name?: string | null
           product_id?: string | null
           purchase_unit_id?: string | null
           selling_unit_id?: string | null
           sku?: string | null
           sku_key?: string | null
+          source_version_id?: string | null
           status?: string | null
+          supplier_code?: string | null
+          supplier_code_key?: string | null
           updated_at?: string | null
           workspace_id?: string | null
         }
         Update: {
+          color_code?: string | null
           created_at?: string | null
           dimensions?: Json | null
+          finish_code?: string | null
+          grade_code?: string | null
           id?: string | null
           is_default?: boolean | null
+          manufacturer_code?: string | null
+          manufacturer_code_key?: string | null
           name?: string | null
           product_id?: string | null
           purchase_unit_id?: string | null
           selling_unit_id?: string | null
           sku?: string | null
           sku_key?: string | null
+          source_version_id?: string | null
           status?: string | null
+          supplier_code?: string | null
+          supplier_code_key?: string | null
           updated_at?: string | null
           workspace_id?: string | null
         }
@@ -3381,6 +5989,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_variants_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
             foreignKeyName: "product_variants_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3405,14 +6027,18 @@ export type Database = {
           finish: string | null
           id: string | null
           material: string | null
+          material_code: string | null
           name: string | null
           normalized_name: string | null
+          published_version: number | null
           review_state: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           search_keywords: string[] | null
+          series_name: string | null
           source_asset_id: string | null
           source_ref: string | null
+          source_version_id: string | null
           status: string | null
           style: string | null
           supplier_id: string | null
@@ -3435,14 +6061,18 @@ export type Database = {
           finish?: string | null
           id?: string | null
           material?: string | null
+          material_code?: string | null
           name?: string | null
           normalized_name?: string | null
+          published_version?: number | null
           review_state?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           search_keywords?: string[] | null
+          series_name?: string | null
           source_asset_id?: string | null
           source_ref?: string | null
+          source_version_id?: string | null
           status?: string | null
           style?: string | null
           supplier_id?: string | null
@@ -3465,14 +6095,18 @@ export type Database = {
           finish?: string | null
           id?: string | null
           material?: string | null
+          material_code?: string | null
           name?: string | null
           normalized_name?: string | null
+          published_version?: number | null
           review_state?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           search_keywords?: string[] | null
+          series_name?: string | null
           source_asset_id?: string | null
           source_ref?: string | null
+          source_version_id?: string | null
           status?: string | null
           style?: string | null
           supplier_id?: string | null
@@ -3517,6 +6151,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "products_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "products_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -3529,6 +6170,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "products_workspace_id_fkey"
@@ -3601,6 +6249,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "project_sites_workspace_id_fkey"
@@ -3680,6 +6335,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "projects_workspace_id_fkey"
@@ -3895,6 +6557,13 @@ export type Database = {
             foreignKeyName: "purchases_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -4005,6 +6674,13 @@ export type Database = {
             foreignKeyName: "quote_versions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quote_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -4056,6 +6732,80 @@ export type Database = {
             foreignKeyName: "quotes_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quotes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_decisions: {
+        Row: {
+          corrected_value: Json | null
+          created_at: string | null
+          decision: string | null
+          id: string | null
+          reason: string | null
+          review_target_id: string | null
+          review_target_key: string | null
+          review_target_type: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          supersedes_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          corrected_value?: Json | null
+          created_at?: string | null
+          decision?: string | null
+          id?: string | null
+          reason?: string | null
+          review_target_id?: string | null
+          review_target_key?: string | null
+          review_target_type?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          supersedes_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          corrected_value?: Json | null
+          created_at?: string | null
+          decision?: string | null
+          id?: string | null
+          reason?: string | null
+          review_target_id?: string | null
+          review_target_key?: string | null
+          review_target_type?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          supersedes_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_decisions_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "review_decisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_decisions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "review_decisions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -4067,15 +6817,22 @@ export type Database = {
           conflicts: Json | null
           created_at: string | null
           decision_note: string | null
+          external_key: string | null
           id: string | null
+          import_run_id: string | null
           item_type: string | null
           job_id: string | null
+          priority: number | null
           proposed: Json | null
           published_object_id: string | null
           record_id: string | null
+          review_target_id: string | null
+          review_target_key: string | null
+          review_target_type: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string | null
+          task_type: string | null
           workspace_id: string | null
         }
         Insert: {
@@ -4083,15 +6840,22 @@ export type Database = {
           conflicts?: Json | null
           created_at?: string | null
           decision_note?: string | null
+          external_key?: string | null
           id?: string | null
+          import_run_id?: string | null
           item_type?: string | null
           job_id?: string | null
+          priority?: number | null
           proposed?: Json | null
           published_object_id?: string | null
           record_id?: string | null
+          review_target_id?: string | null
+          review_target_key?: string | null
+          review_target_type?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string | null
+          task_type?: string | null
           workspace_id?: string | null
         }
         Update: {
@@ -4099,18 +6863,32 @@ export type Database = {
           conflicts?: Json | null
           created_at?: string | null
           decision_note?: string | null
+          external_key?: string | null
           id?: string | null
+          import_run_id?: string | null
           item_type?: string | null
           job_id?: string | null
+          priority?: number | null
           proposed?: Json | null
           published_object_id?: string | null
           record_id?: string | null
+          review_target_id?: string | null
+          review_target_key?: string | null
+          review_target_type?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string | null
+          task_type?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "review_items_import_run_id_fkey"
+            columns: ["import_run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "review_items_job_id_fkey"
             columns: ["job_id"]
@@ -4131,6 +6909,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ingestion_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "review_items_workspace_id_fkey"
@@ -4171,6 +6956,13 @@ export type Database = {
           workspace_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "review_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "review_items_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -4270,6 +7062,13 @@ export type Database = {
             foreignKeyName: "routing_rules_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "routing_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -4310,6 +7109,13 @@ export type Database = {
           year?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_targets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "sales_targets_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -4365,6 +7171,191 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "saved_views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "saved_views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shape_clusters: {
+        Row: {
+          cluster_key: string | null
+          created_at: string | null
+          document_class: string | null
+          document_count: number | null
+          extraction_method: string | null
+          id: string | null
+          layout_hint: string | null
+          member_source_ids: string[] | null
+          mime_type: string | null
+          representative_source_id: string | null
+          representative_source_path: string | null
+          review_state: string | null
+          root_name: string | null
+          selection_score: number | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          cluster_key?: string | null
+          created_at?: string | null
+          document_class?: string | null
+          document_count?: number | null
+          extraction_method?: string | null
+          id?: string | null
+          layout_hint?: string | null
+          member_source_ids?: string[] | null
+          mime_type?: string | null
+          representative_source_id?: string | null
+          representative_source_path?: string | null
+          review_state?: string | null
+          root_name?: string | null
+          selection_score?: number | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          cluster_key?: string | null
+          created_at?: string | null
+          document_class?: string | null
+          document_count?: number | null
+          extraction_method?: string | null
+          id?: string | null
+          layout_hint?: string | null
+          member_source_ids?: string[] | null
+          mime_type?: string | null
+          representative_source_id?: string | null
+          representative_source_path?: string | null
+          review_state?: string | null
+          root_name?: string | null
+          selection_score?: number | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shape_clusters_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "shape_clusters_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shape_profiles: {
+        Row: {
+          brand_hint: string | null
+          created_at: string | null
+          document_class: string | null
+          external_source_id: string | null
+          extraction: Json | null
+          id: string | null
+          language_signals: string[] | null
+          likely_grain: string | null
+          notes: string | null
+          observed_fields: Json | null
+          review_state: string | null
+          safe_for_schema_learning: boolean | null
+          source_asset_id: string | null
+          source_path: string | null
+          source_version_id: string | null
+          text_metrics: Json | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_hint?: string | null
+          created_at?: string | null
+          document_class?: string | null
+          external_source_id?: string | null
+          extraction?: Json | null
+          id?: string | null
+          language_signals?: string[] | null
+          likely_grain?: string | null
+          notes?: string | null
+          observed_fields?: Json | null
+          review_state?: string | null
+          safe_for_schema_learning?: boolean | null
+          source_asset_id?: string | null
+          source_path?: string | null
+          source_version_id?: string | null
+          text_metrics?: Json | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_hint?: string | null
+          created_at?: string | null
+          document_class?: string | null
+          external_source_id?: string | null
+          extraction?: Json | null
+          id?: string | null
+          language_signals?: string[] | null
+          likely_grain?: string | null
+          notes?: string | null
+          observed_fields?: Json | null
+          review_state?: string | null
+          safe_for_schema_learning?: boolean | null
+          source_asset_id?: string | null
+          source_path?: string | null
+          source_version_id?: string | null
+          text_metrics?: Json | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shape_profiles_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "shape_profiles_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shape_profiles_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shape_profiles_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shape_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "shape_profiles_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -4490,6 +7481,13 @@ export type Database = {
             foreignKeyName: "shoot_bookings_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "shoot_bookings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -4555,6 +7553,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "content_opportunities"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoot_bookings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "shoot_bookings_workspace_id_fkey"
@@ -4731,6 +7736,13 @@ export type Database = {
             foreignKeyName: "shoot_outputs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "shoot_outputs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -4818,6 +7830,13 @@ export type Database = {
             foreignKeyName: "shoot_requests_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "shoot_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -4827,26 +7846,59 @@ export type Database = {
         Row: {
           checksum: string | null
           created_at: string | null
+          discovered_at: string | null
           id: string | null
+          mime_type: string | null
+          modified_at_source: string | null
+          parser_hint: string | null
+          provider_revision_id: string | null
+          size_bytes: number | null
+          snapshot_state: string | null
           source_asset_id: string | null
+          source_page_count: number | null
+          storage_bucket: string | null
           storage_path: string | null
+          supersedes_version_id: string | null
           version_no: number | null
+          workspace_id: string | null
         }
         Insert: {
           checksum?: string | null
           created_at?: string | null
+          discovered_at?: string | null
           id?: string | null
+          mime_type?: string | null
+          modified_at_source?: string | null
+          parser_hint?: string | null
+          provider_revision_id?: string | null
+          size_bytes?: number | null
+          snapshot_state?: string | null
           source_asset_id?: string | null
+          source_page_count?: number | null
+          storage_bucket?: string | null
           storage_path?: string | null
+          supersedes_version_id?: string | null
           version_no?: number | null
+          workspace_id?: string | null
         }
         Update: {
           checksum?: string | null
           created_at?: string | null
+          discovered_at?: string | null
           id?: string | null
+          mime_type?: string | null
+          modified_at_source?: string | null
+          parser_hint?: string | null
+          provider_revision_id?: string | null
+          size_bytes?: number | null
+          snapshot_state?: string | null
           source_asset_id?: string | null
+          source_page_count?: number | null
+          storage_bucket?: string | null
           storage_path?: string | null
+          supersedes_version_id?: string | null
           version_no?: number | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -4870,20 +7922,48 @@ export type Database = {
             referencedRelation: "source_library"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "source_asset_versions_supersedes_version_id_fkey"
+            columns: ["supersedes_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_asset_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "source_asset_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
         ]
       }
       source_assets: {
         Row: {
+          asset_class: string | null
+          asset_class_review_state: string | null
           brand_id: string | null
           checksum: string | null
           created_at: string | null
+          current_version_id: string | null
+          external_id: string | null
           id: string | null
           kind: string | null
           mime_type: string | null
           name: string | null
           page_count: number | null
+          provider: string | null
           received_at: string | null
           size_bytes: number | null
+          source_location_id: string | null
+          source_web_url: string | null
           status: string | null
           storage_bucket: string | null
           storage_path: string | null
@@ -4893,16 +7973,23 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          asset_class?: string | null
+          asset_class_review_state?: string | null
           brand_id?: string | null
           checksum?: string | null
           created_at?: string | null
+          current_version_id?: string | null
+          external_id?: string | null
           id?: string | null
           kind?: string | null
           mime_type?: string | null
           name?: string | null
           page_count?: number | null
+          provider?: string | null
           received_at?: string | null
           size_bytes?: number | null
+          source_location_id?: string | null
+          source_web_url?: string | null
           status?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
@@ -4912,16 +7999,23 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          asset_class?: string | null
+          asset_class_review_state?: string | null
           brand_id?: string | null
           checksum?: string | null
           created_at?: string | null
+          current_version_id?: string | null
+          external_id?: string | null
           id?: string | null
           kind?: string | null
           mime_type?: string | null
           name?: string | null
           page_count?: number | null
+          provider?: string | null
           received_at?: string | null
           size_bytes?: number | null
+          source_location_id?: string | null
+          source_web_url?: string | null
           status?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
@@ -4936,6 +8030,20 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_assets_current_version_fk"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_assets_source_location_id_fkey"
+            columns: ["source_location_id"]
+            isOneToOne: false
+            referencedRelation: "source_locations"
             referencedColumns: ["id"]
           },
           {
@@ -4954,6 +8062,70 @@ export type Database = {
           },
           {
             foreignKeyName: "source_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "source_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_collections: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          created_by: string | null
+          external_folder_id: string | null
+          id: string | null
+          name: string | null
+          provider: string | null
+          status: string | null
+          supply_model: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          external_folder_id?: string | null
+          id?: string | null
+          name?: string | null
+          provider?: string | null
+          status?: string | null
+          supply_model?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          external_folder_id?: string | null
+          id?: string | null
+          name?: string | null
+          provider?: string | null
+          status?: string | null
+          supply_model?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_collections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "source_collections_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -4989,6 +8161,96 @@ export type Database = {
             foreignKeyName: "source_assets_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "source_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_locations: {
+        Row: {
+          access_state: string | null
+          brand_hint: string | null
+          created_at: string | null
+          display_path: string | null
+          external_id: string | null
+          id: string | null
+          last_scanned_at: string | null
+          location_type: string | null
+          name: string | null
+          parent_id: string | null
+          provider: string | null
+          source_collection_id: string | null
+          updated_at: string | null
+          web_url: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          access_state?: string | null
+          brand_hint?: string | null
+          created_at?: string | null
+          display_path?: string | null
+          external_id?: string | null
+          id?: string | null
+          last_scanned_at?: string | null
+          location_type?: string | null
+          name?: string | null
+          parent_id?: string | null
+          provider?: string | null
+          source_collection_id?: string | null
+          updated_at?: string | null
+          web_url?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          access_state?: string | null
+          brand_hint?: string | null
+          created_at?: string | null
+          display_path?: string | null
+          external_id?: string | null
+          id?: string | null
+          last_scanned_at?: string | null
+          location_type?: string | null
+          name?: string | null
+          parent_id?: string | null
+          provider?: string | null
+          source_collection_id?: string | null
+          updated_at?: string | null
+          web_url?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_locations_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "source_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_locations_source_collection_id_fkey"
+            columns: ["source_collection_id"]
+            isOneToOne: false
+            referencedRelation: "source_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "source_locations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "source_locations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -5006,6 +8268,13 @@ export type Database = {
           workspace_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "suppliers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "suppliers_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -5096,6 +8365,13 @@ export type Database = {
             foreignKeyName: "stock_freshness_policies_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "stock_freshness_policies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -5152,6 +8428,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_cases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "stock_reconciliation_cases_workspace_id_fkey"
@@ -5261,6 +8544,13 @@ export type Database = {
             foreignKeyName: "supplier_availability_snapshots_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -5274,6 +8564,7 @@ export type Database = {
           name: string | null
           normalized_name: string | null
           notes: string | null
+          organization_id: string | null
           status: string | null
           updated_at: string | null
           website: string | null
@@ -5286,6 +8577,7 @@ export type Database = {
           name?: string | null
           normalized_name?: string | null
           notes?: string | null
+          organization_id?: string | null
           status?: string | null
           updated_at?: string | null
           website?: string | null
@@ -5298,12 +8590,27 @@ export type Database = {
           name?: string | null
           normalized_name?: string | null
           notes?: string | null
+          organization_id?: string | null
           status?: string | null
           updated_at?: string | null
           website?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "suppliers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "suppliers_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -5461,6 +8768,13 @@ export type Database = {
             foreignKeyName: "tasks_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -5486,6 +8800,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "teams_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
           {
             foreignKeyName: "teams_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -5555,6 +8876,13 @@ export type Database = {
             foreignKeyName: "unit_conversions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "unit_conversions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -5587,6 +8915,147 @@ export type Database = {
             foreignKeyName: "units_of_measure_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "units_of_measure_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      variant_candidates: {
+        Row: {
+          brand_hint: string | null
+          candidate_key: string | null
+          candidate_record_id: string | null
+          confidence: number | null
+          created_at: string | null
+          dimensions_raw: string[] | null
+          external_source_id: string | null
+          extraction_rule: string | null
+          family_name_candidate: string | null
+          finish_raw: string | null
+          id: string | null
+          material_raw: string | null
+          package_raw: string | null
+          published_variant_id: string | null
+          raw_excerpt: string | null
+          review_state: string | null
+          root_name: string | null
+          source_asset_id: string | null
+          source_locator: Json | null
+          source_path: string | null
+          status_raw: string | null
+          supplier_code_normalized: string | null
+          supplier_code_raw: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          dimensions_raw?: string[] | null
+          external_source_id?: string | null
+          extraction_rule?: string | null
+          family_name_candidate?: string | null
+          finish_raw?: string | null
+          id?: string | null
+          material_raw?: string | null
+          package_raw?: string | null
+          published_variant_id?: string | null
+          raw_excerpt?: string | null
+          review_state?: string | null
+          root_name?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          status_raw?: string | null
+          supplier_code_normalized?: string | null
+          supplier_code_raw?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brand_hint?: string | null
+          candidate_key?: string | null
+          candidate_record_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          dimensions_raw?: string[] | null
+          external_source_id?: string | null
+          extraction_rule?: string | null
+          family_name_candidate?: string | null
+          finish_raw?: string | null
+          id?: string | null
+          material_raw?: string | null
+          package_raw?: string | null
+          published_variant_id?: string | null
+          raw_excerpt?: string | null
+          review_state?: string | null
+          root_name?: string | null
+          source_asset_id?: string | null
+          source_locator?: Json | null
+          source_path?: string | null
+          status_raw?: string | null
+          supplier_code_normalized?: string | null
+          supplier_code_raw?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "variant_candidates_candidate_record_id_fkey"
+            columns: ["candidate_record_id"]
+            isOneToOne: false
+            referencedRelation: "candidate_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_published_variant_id_fkey"
+            columns: ["published_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -5600,15 +9069,23 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           currency: string | null
+          customer_tier: string | null
           id: string | null
           imported_at: string | null
+          market: string | null
           min_quantity: number | null
           notes: string | null
           price_list_id: string | null
+          price_list_version_id: string | null
+          price_type: string | null
+          quantity_unit_id: string | null
           review_state: string | null
           source_asset_id: string | null
+          source_page_or_row: string | null
           source_ref: string | null
+          source_version_id: string | null
           state: string | null
+          tax_basis: string | null
           unit_id: string | null
           updated_at: string | null
           valid_from: string | null
@@ -5623,15 +9100,23 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
+          customer_tier?: string | null
           id?: string | null
           imported_at?: string | null
+          market?: string | null
           min_quantity?: number | null
           notes?: string | null
           price_list_id?: string | null
+          price_list_version_id?: string | null
+          price_type?: string | null
+          quantity_unit_id?: string | null
           review_state?: string | null
           source_asset_id?: string | null
+          source_page_or_row?: string | null
           source_ref?: string | null
+          source_version_id?: string | null
           state?: string | null
+          tax_basis?: string | null
           unit_id?: string | null
           updated_at?: string | null
           valid_from?: string | null
@@ -5646,15 +9131,23 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
+          customer_tier?: string | null
           id?: string | null
           imported_at?: string | null
+          market?: string | null
           min_quantity?: number | null
           notes?: string | null
           price_list_id?: string | null
+          price_list_version_id?: string | null
+          price_type?: string | null
+          quantity_unit_id?: string | null
           review_state?: string | null
           source_asset_id?: string | null
+          source_page_or_row?: string | null
           source_ref?: string | null
+          source_version_id?: string | null
           state?: string | null
+          tax_basis?: string | null
           unit_id?: string | null
           updated_at?: string | null
           valid_from?: string | null
@@ -5668,6 +9161,20 @@ export type Database = {
             columns: ["price_list_id"]
             isOneToOne: false
             referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_price_list_version_id_fkey"
+            columns: ["price_list_version_id"]
+            isOneToOne: false
+            referencedRelation: "price_list_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_quantity_unit_id_fkey"
+            columns: ["quantity_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
           },
           {
@@ -5692,6 +9199,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "variant_prices_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "source_asset_versions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "variant_prices_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -5704,6 +9218,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
           },
           {
             foreignKeyName: "variant_prices_workspace_id_fkey"
@@ -5824,6 +9345,101 @@ export type Database = {
             foreignKeyName: "visits_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "visits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visual_observations: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          external_key: string | null
+          id: string | null
+          media_asset_id: string | null
+          model_or_rule_version: string | null
+          observation_basis: string | null
+          observation_basis_raw: string | null
+          observation_scope: string | null
+          observation_type: string | null
+          page_number: number | null
+          physical_size_inferred_from_pixels: boolean | null
+          region: Json | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_text_raw: string | null
+          value: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          external_key?: string | null
+          id?: string | null
+          media_asset_id?: string | null
+          model_or_rule_version?: string | null
+          observation_basis?: string | null
+          observation_basis_raw?: string | null
+          observation_scope?: string | null
+          observation_type?: string | null
+          page_number?: number | null
+          physical_size_inferred_from_pixels?: boolean | null
+          region?: Json | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_text_raw?: string | null
+          value?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          external_key?: string | null
+          id?: string | null
+          media_asset_id?: string | null
+          model_or_rule_version?: string | null
+          observation_basis?: string | null
+          observation_basis_raw?: string | null
+          observation_scope?: string | null
+          observation_type?: string | null
+          page_number?: number | null
+          physical_size_inferred_from_pixels?: boolean | null
+          region?: Json | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_text_raw?: string | null
+          value?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visual_observations_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visual_observations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "visual_observations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -5878,6 +9494,14 @@ export type Database = {
           p_workspace_id: string
         }
         Returns: Json
+      }
+      approve_certificate_candidate: {
+        Args: { p_candidate_id: string; p_corrections?: Json; p_note?: string }
+        Returns: string
+      }
+      approve_media_link: {
+        Args: { p_link_id: string; p_note?: string; p_variant_id: string }
+        Returns: string
       }
       approve_review_item: {
         Args: {
@@ -5976,6 +9600,17 @@ export type Database = {
           reasons: Json
           score: number
         }[]
+      }
+      finish_import_run: {
+        Args: {
+          p_counts?: Json
+          p_error_code?: string
+          p_error_detail_safe?: string
+          p_import_run_id: string
+          p_status: string
+          p_warning_count?: number
+        }
+        Returns: undefined
       }
       finish_sync_run: {
         Args: {
@@ -6082,6 +9717,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      publish_product_media: {
+        Args: {
+          p_alt_text?: string
+          p_is_primary?: boolean
+          p_link_id: string
+          p_sort_order?: number
+        }
+        Returns: string
+      }
       record_extraction: {
         Args: {
           p_error?: string
@@ -6091,6 +9735,19 @@ export type Database = {
           p_status?: string
         }
         Returns: Json
+      }
+      record_import_item: {
+        Args: {
+          p_actual_count?: number
+          p_checksum?: string
+          p_expected_count?: number
+          p_external_key: string
+          p_import_run_id: string
+          p_item_kind: string
+          p_message?: string
+          p_status: string
+        }
+        Returns: string
       }
       record_inventory_snapshot: {
         Args: {
@@ -6394,6 +10051,17 @@ export type Database = {
           severity: string
           user_id: string
         }[]
+      }
+      start_import_run: {
+        Args: {
+          p_corpus_cutoff?: string
+          p_parser_name?: string
+          p_parser_version?: string
+          p_pipeline_version: string
+          p_run_key: string
+          p_target_env: string
+        }
+        Returns: string
       }
       start_sync_run: { Args: { p_connection_id: string }; Returns: string }
       suggest_contact_duplicates: {

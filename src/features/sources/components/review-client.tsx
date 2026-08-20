@@ -17,18 +17,30 @@ import { EmptyState } from "@/components/patterns/states";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { EvidenceViewer } from "@/features/sources/components/evidence-viewer";
 import { CONFLICT_LABEL, ITEM_TYPE, REVIEW_ITEM_STATUS, confidenceLabel, confidenceTone } from "@/features/sources/status-maps";
-import { CORRECTABLE_FIELDS } from "@/features/sources/schema";
+import { PRICE_TYPE_OPTIONS, TAX_BASIS_OPTIONS, correctableFor, unresolvedRequired, type CorrectableField } from "@/features/sources/schema";
 import { approveReviewItemAction, rejectReviewItemAction } from "@/server/commands/sources";
 import type { ExtractedFieldRow, ReviewItemRow } from "@/server/queries/sources";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+export interface ReviewOption {
+  value: string;
+  label: string;
+}
+
 interface Props {
   items: ReviewItemRow[];
   assets: { id: string; name: string }[];
   duplicates: Record<string, { id: string; name: string; code: string | null }>;
   canApprove: boolean;
+  /** Reference data the strict approval gate needs a reviewer to choose from. */
+  refs: {
+    units: ReviewOption[];
+    priceLists: ReviewOption[];
+    brands: ReviewOption[];
+    categories: ReviewOption[];
+  };
 }
 
 function asText(v: unknown): string {
@@ -37,7 +49,7 @@ function asText(v: unknown): string {
   return String(v);
 }
 
-export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
+export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Props) {
   const router = useRouter();
   const [status, setStatus] = useQueryState("status", parseAsString.withDefault("pending"));
   const [asset, setAsset] = useQueryState("asset", parseAsString.withDefault(""));
@@ -57,6 +69,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
   const index = Math.max(0, items.findIndex((i) => i.id === current));
   const item: ReviewItemRow | undefined = items[index] ?? items[0];
   const itemId = item?.id;
+  const fields = useMemo(() => correctableFor(item?.item_type ?? "product"), [item?.item_type]);
 
   // Reset the working copy whenever the selected item changes — done during
   // render rather than in an effect so there is no cascading render.
@@ -64,7 +77,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
   if (itemId && itemId !== loadedFor) {
     setLoadedFor(itemId);
     const base: Record<string, string> = {};
-    for (const f of CORRECTABLE_FIELDS) base[f.key] = asText(item?.proposed?.[f.key]);
+    for (const f of correctableFor(item?.item_type ?? "product")) base[f.key] = asText(item?.proposed?.[f.key]);
     setDraft(base);
     setNote("");
     setFocused(null);
@@ -72,8 +85,37 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
 
   const dirtyKeys = useMemo(() => {
     if (!item) return [] as string[];
-    return CORRECTABLE_FIELDS.filter((f) => (draft[f.key] ?? "") !== asText(item.proposed?.[f.key])).map((f) => f.key);
-  }, [draft, item]);
+    return fields.filter((f) => (draft[f.key] ?? "") !== asText(item.proposed?.[f.key])).map((f) => f.key);
+  }, [draft, fields, item]);
+
+  // What the source never established. Approval is refused server-side until
+  // each of these is answered, so say so before the click rather than after it.
+  const blockers = useMemo(
+    () => (item ? unresolvedRequired(item.item_type, draft) : []),
+    [draft, item],
+  );
+
+  const optionsFor = useCallback(
+    (f: CorrectableField): ReviewOption[] => {
+      switch (f.options) {
+        case "units":
+          return refs.units;
+        case "priceLists":
+          return refs.priceLists;
+        case "brands":
+          return refs.brands;
+        case "categories":
+          return refs.categories;
+        case "taxBasis":
+          return TAX_BASIS_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+        case "priceType":
+          return PRICE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+        default:
+          return [];
+      }
+    },
+    [refs],
+  );
 
   const fieldByKey = useMemo(() => {
     const map = new Map<string, ExtractedFieldRow>();
@@ -94,6 +136,13 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
     setPending("approve");
     const corrections: Record<string, string> = {};
     for (const k of dirtyKeys) corrections[k] = draft[k];
+    // Required answers travel even when they merely echo the proposal, so the
+    // gate never has to fall back on what the parser guessed.
+    for (const f of fields) {
+      if (!f.required?.includes(item.item_type as "product" | "price")) continue;
+      const v = (draft[f.key] ?? "").trim();
+      if (v) corrections[f.key] = v;
+    }
     const res = await approveReviewItemAction({ review_item_id: item.id, corrections: Object.keys(corrections).length ? corrections : undefined, note: note || undefined });
     setPending(null);
     if (!res.ok) {
@@ -105,7 +154,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
     const next = items[index + 1];
     if (next) setCurrent(next.id);
     router.refresh();
-  }, [canApprove, dirtyKeys, draft, index, item, items, note, router, setCurrent]);
+  }, [canApprove, dirtyKeys, draft, fields, index, item, items, note, router, setCurrent]);
 
   const reject = useCallback(async () => {
     if (!item) return;
@@ -137,7 +186,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
       } else if (e.key === "k" || e.key === "ArrowUp") {
         e.preventDefault();
         go(-1);
-      } else if (e.key === "a" && canApprove && item?.status === "pending") {
+      } else if (e.key === "a" && canApprove && item?.status === "pending" && blockers.length === 0) {
         e.preventDefault();
         void approve();
       } else if (e.key === "r" && canApprove && item?.status === "pending") {
@@ -147,7 +196,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [approve, canApprove, go, item?.status]);
+  }, [approve, blockers.length, canApprove, go, item?.status]);
 
   const filters = (
     <div className="flex flex-wrap items-center gap-2">
@@ -297,26 +346,47 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
           )}
 
           <div className="space-y-3">
-            {CORRECTABLE_FIELDS.map((f) => {
+            {fields.map((f) => {
               const ext = fieldByKey.get(f.key);
               const changed = dirtyKeys.includes(f.key);
               const low = ext?.confidence != null && ext.confidence < 0.8;
+              const blocking = blockers.some((b) => b.key === f.key);
+              const required = f.required?.includes(item.item_type as "product" | "price") ?? false;
+              const hint = ext?.source_text ? `Read from: ${ext.source_text}` : f.hint;
               return (
-                <div key={f.key} className={cn("rounded-md border px-2.5 py-2", low && "border-destructive/30 bg-destructive/5", changed && "border-brand/50 bg-brand/5")}>
-                  <Field
-                    label={f.label}
-                    htmlFor={`f-${f.key}`}
-                    hint={ext?.source_text ? `Read from: ${ext.source_text}` : undefined}
-                  >
+                <div
+                  key={f.key}
+                  className={cn(
+                    "rounded-md border px-2.5 py-2",
+                    low && "border-destructive/30 bg-destructive/5",
+                    changed && "border-brand/50 bg-brand/5",
+                    blocking && "border-warning/50 bg-warning/10",
+                  )}
+                >
+                  <Field label={f.label} htmlFor={`f-${f.key}`} required={required} hint={hint}>
                     <div className="flex items-center gap-2">
-                      <Input
-                        id={`f-${f.key}`}
-                        value={draft[f.key] ?? ""}
-                        onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
-                        onFocus={() => setFocused(f.key)}
-                        disabled={!isPending || !canApprove}
-                        className="h-8 text-sm"
-                      />
+                      {f.input === "select" ? (
+                        <SimpleSelect
+                          value={draft[f.key] ?? ""}
+                          onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))}
+                          options={optionsFor(f)}
+                          placeholder="Not established by the source"
+                          noneLabel="Not established by the source"
+                          disabled={!isPending || !canApprove}
+                          className="h-8 flex-1 text-sm"
+                          id={`f-${f.key}`}
+                        />
+                      ) : (
+                        <Input
+                          id={`f-${f.key}`}
+                          type={f.input === "date" ? "date" : "text"}
+                          value={draft[f.key] ?? ""}
+                          onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                          onFocus={() => setFocused(f.key)}
+                          disabled={!isPending || !canApprove}
+                          className="h-8 text-sm"
+                        />
+                      )}
                       {ext?.confidence != null && <TonePill tone={confidenceTone(ext.confidence)} label={confidenceLabel(ext.confidence)} />}
                       {changed && <TonePill tone="ai" label="Edited" />}
                     </div>
@@ -345,9 +415,21 @@ export function ReviewClient({ items, assets, duplicates, canApprove }: Props) {
             </p>
           )}
 
+          {isPending && canApprove && blockers.length > 0 && (
+            <div className="rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-sm">
+              <p className="flex items-start gap-2 text-warning">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <span>
+                  The source does not establish {blockers.map((b) => b.label.toLowerCase()).join(", ")}. Answer each one
+                  before approving — none of them is filled in for you.
+                </span>
+              </p>
+            </div>
+          )}
+
           {isPending && (
             <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-              <Button onClick={approve} disabled={!canApprove || pending !== null}>
+              <Button onClick={approve} disabled={!canApprove || pending !== null || blockers.length > 0}>
                 {pending === "approve" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
                 {dirtyKeys.length > 0 ? `Correct & approve (${dirtyKeys.length})` : "Approve"}
               </Button>
