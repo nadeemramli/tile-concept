@@ -12,8 +12,11 @@ export interface VisitRow {
   opportunity_id: string | null;
   customer_type: string | null;
   origin_area: string | null;
+  renovation_area: string | null;
   inquiry_source: string | null;
   purpose: string | null;
+  quotation_ref: string | null;
+  quotation_amount: number | null;
   is_new_customer: boolean | null;
   notes: string | null;
 }

@@ -12,6 +12,18 @@ import type { IdentityCandidate } from "@/features/inbox/types";
 
 const blank = (v: string | undefined | null) => (v && v.length > 0 ? v : undefined);
 
+/**
+ * Daily Tracker per-visit fields (renovation area, quotation ref/amount) are
+ * set on the visit after record_walk_in returns, via the updatable api.visits
+ * view under the member_update RLS policy. Returns null when nothing to set.
+ */
+function visitTrackerPatch(renovation_area: string | undefined | null, quotation_ref: string | undefined | null, quotation_amount: number | null | undefined) {
+  const ra = blank(renovation_area ?? undefined) ?? null;
+  const qr = blank(quotation_ref ?? undefined) ?? null;
+  const qa = quotation_amount ?? null;
+  return ra === null && qr === null && qa === null ? null : { renovation_area: ra, quotation_ref: qr, quotation_amount: qa };
+}
+
 function revalidateWalkins() {
   revalidatePath("/sales/walk-ins");
   revalidatePath("/sales/inbox");
@@ -130,8 +142,11 @@ export async function recordWalkInAction(input: WalkInInput): Promise<ActionResu
       p_purchase: purchase,
     });
     if (error) return fail(error);
+    const res = data as unknown as WalkInResult;
+    const patch = visitTrackerPatch(v.renovation_area, v.quotation_ref, v.quotation_amount);
+    if (patch && res?.visit_id) await supabase.from("visits").update(patch).eq("id", res.visit_id);
     revalidateWalkins();
-    return ok(data as unknown as WalkInResult, "Walk-in recorded.");
+    return ok(res, "Walk-in recorded.");
   } catch (e) {
     return fail(e);
   }
@@ -290,6 +305,9 @@ export async function commitImportAction(rows: ImportRow[], options: { location_
         result.errors.push({ row_no: r.row_no, error: error.message });
         continue;
       }
+      const patch = visitTrackerPatch(r.renovation_area, r.quotation_ref, r.quotation_amount);
+      const visitId = (data as { visit_id?: string } | null)?.visit_id;
+      if (patch && visitId) await supabase.from("visits").update(patch).eq("id", visitId);
       result.visits += 1;
       if ((data as { purchase_id?: string | null } | null)?.purchase_id) result.purchases += 1;
     }

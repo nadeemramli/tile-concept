@@ -22,7 +22,7 @@ export async function listVisits(limit = 500): Promise<VisitRow[]> {
   const supabase = await createServerSupabase();
   const { data } = await supabase
     .from("visits")
-    .select("id, occurred_at, location_id, staff_user_id, contact_id, account_id, lead_id, opportunity_id, customer_type, origin_area, inquiry_source, purpose, is_new_customer, notes")
+    .select("id, occurred_at, location_id, staff_user_id, contact_id, account_id, lead_id, opportunity_id, customer_type, origin_area, renovation_area, inquiry_source, purpose, quotation_ref, quotation_amount, is_new_customer, notes")
     .order("occurred_at", { ascending: false })
     .limit(limit);
   const rows = data ?? [];
@@ -42,8 +42,11 @@ export async function listVisits(limit = 500): Promise<VisitRow[]> {
     opportunity_id: r.opportunity_id,
     customer_type: r.customer_type,
     origin_area: r.origin_area,
+    renovation_area: r.renovation_area,
     inquiry_source: r.inquiry_source,
     purpose: r.purpose,
+    quotation_ref: r.quotation_ref,
+    quotation_amount: r.quotation_amount === null ? null : Number(r.quotation_amount),
     is_new_customer: r.is_new_customer,
     notes: r.notes,
   }));

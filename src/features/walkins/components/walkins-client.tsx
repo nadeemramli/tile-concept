@@ -42,11 +42,21 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
   const visit = visits.find((v) => v.id === visitId) ?? null;
   const purchase = purchases.find((p) => p.id === purchaseId) ?? null;
 
+  // The Daily Tracker shows the day's collection (ORC + amount) on the same
+  // visit row; the app models that as a linked purchase, so map it here.
+  const purchaseByVisit = useMemo(() => {
+    const m = new Map<string, PurchaseRow>();
+    for (const p of purchases) if (p.visit_id) m.set(p.visit_id, p);
+    return m;
+  }, [purchases]);
+
+  // Column set and order follow the showroom Daily Tracker sheet:
+  // Date · SMP · Customer · From · Status · Type · Area · ORC · Collection ·
+  // SQ · Quotation · How they heard · Purpose (+ Opportunity link, app value).
   const visitColumns = useMemo<ColumnDef<VisitRow, unknown>[]>(
     () => [
-      { accessorKey: "occurred_at", header: "When", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.occurred_at)}>{formatRelative(row.original.occurred_at)}</span> },
-      { accessorKey: "location_name", header: "Location", cell: ({ row }) => row.original.location_name ?? "—" },
-      { accessorKey: "staff_name", header: "Staff", cell: ({ row }) => row.original.staff_name ?? "—" },
+      { accessorKey: "occurred_at", header: "Date", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.occurred_at)}>{formatRelative(row.original.occurred_at)}</span> },
+      { accessorKey: "staff_name", header: "SMP", cell: ({ row }) => row.original.staff_name ?? "—" },
       {
         accessorKey: "contact_name",
         header: "Customer",
@@ -59,11 +69,27 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
             "—"
           ),
       },
+      { accessorKey: "origin_area", header: "From", cell: ({ row }) => row.original.origin_area ?? "—" },
+      { accessorKey: "is_new_customer", header: "Status", cell: ({ row }) => (row.original.is_new_customer === null ? "—" : row.original.is_new_customer ? <TonePill tone="info" label="New" /> : <TonePill tone="ai" label="Existing" />) },
       { accessorKey: "customer_type", header: "Type", cell: ({ row }) => (row.original.customer_type ? titleCase(row.original.customer_type) : "—") },
-      { accessorKey: "origin_area", header: "Origin / area", cell: ({ row }) => row.original.origin_area ?? "—" },
-      { accessorKey: "inquiry_source", header: "Inquiry source", cell: ({ row }) => (row.original.inquiry_source ? <StatusPill map={SOURCE_CHANNEL} value={row.original.inquiry_source} /> : "—") },
+      { accessorKey: "renovation_area", header: "Area / renovation", cell: ({ row }) => row.original.renovation_area ?? "—" },
+      {
+        id: "orc_number",
+        header: "ORC",
+        cell: ({ row }) => <MonoCell value={purchaseByVisit.get(row.original.id)?.external_ref ?? null} />,
+      },
+      {
+        id: "collection",
+        header: "Collection",
+        cell: ({ row }) => {
+          const p = purchaseByVisit.get(row.original.id);
+          return p ? <MoneyCell value={p.amount} currency={p.currency} className="font-medium" /> : <span className="text-muted-foreground">—</span>;
+        },
+      },
+      { accessorKey: "quotation_ref", header: "SQ", cell: ({ row }) => <MonoCell value={row.original.quotation_ref} /> },
+      { accessorKey: "quotation_amount", header: "Quotation", cell: ({ row }) => (row.original.quotation_amount !== null ? <MoneyCell value={row.original.quotation_amount} currency="MYR" /> : <span className="text-muted-foreground">—</span>) },
+      { accessorKey: "inquiry_source", header: "How they heard", cell: ({ row }) => (row.original.inquiry_source ? <StatusPill map={SOURCE_CHANNEL} value={row.original.inquiry_source} /> : "—") },
       { accessorKey: "purpose", header: "Purpose", cell: ({ row }) => titleCase(row.original.purpose) || "—" },
-      { accessorKey: "is_new_customer", header: "New / existing", cell: ({ row }) => (row.original.is_new_customer === null ? "—" : row.original.is_new_customer ? <TonePill tone="info" label="New" /> : <TonePill tone="ai" label="Existing" />) },
       {
         accessorKey: "opportunity_id",
         header: "Opportunity",
@@ -77,13 +103,13 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
           ),
       },
     ],
-    [],
+    [purchaseByVisit],
   );
 
   const purchaseColumns = useMemo<ColumnDef<PurchaseRow, unknown>[]>(
     () => [
-      { accessorKey: "purchased_at", header: "Date", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.purchased_at)}>{formatRelative(row.original.purchased_at)}</span> },
-      { accessorKey: "external_ref", header: "ORC / ref", cell: ({ row }) => <MonoCell value={row.original.external_ref} /> },
+      { accessorKey: "purchased_at", header: "Posting date", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.purchased_at)}>{formatRelative(row.original.purchased_at)}</span> },
+      { accessorKey: "external_ref", header: "Document no.", cell: ({ row }) => <MonoCell value={row.original.external_ref} /> },
       {
         id: "customer",
         header: "Customer",
@@ -105,7 +131,8 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
         ),
       },
       { accessorKey: "amount", header: "Amount", cell: ({ row }) => <MoneyCell value={row.original.amount} currency={row.original.currency} className="font-medium" /> },
-      { accessorKey: "payment_methods", header: "Payment", cell: ({ row }) => (row.original.payment_methods.length ? row.original.payment_methods.map(titleCase).join(", ") : <span className="text-muted-foreground">—</span>) },
+      { accessorKey: "payment_methods", header: "Payment method", cell: ({ row }) => (row.original.payment_methods.length ? row.original.payment_methods.map(titleCase).join(", ") : <span className="text-muted-foreground">—</span>) },
+      { id: "ext_ref", header: "Bank / ext. ref", cell: ({ row }) => <MonoCell value={row.original.payments.find((p) => p.reference)?.reference ?? null} /> },
       { accessorKey: "purchase_source", header: "Source", cell: ({ row }) => (row.original.purchase_source ? titleCase(row.original.purchase_source) : "—") },
       { accessorKey: "location_name", header: "Location", cell: ({ row }) => row.original.location_name ?? "—" },
       { accessorKey: "salesperson_name", header: "Salesperson", cell: ({ row }) => row.original.salesperson_name ?? "—" },
@@ -163,9 +190,11 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
                   { label: "Customer", value: visit.contact_id ? <Link href={`/sales/contacts/${visit.contact_id}`} className="hover:underline">{visit.contact_name}</Link> : "—" },
                   { label: "Staff", value: visit.staff_name },
                   { label: "Customer type", value: titleCase(visit.customer_type) || "—" },
-                  { label: "Origin / area", value: visit.origin_area },
-                  { label: "Inquiry source", value: titleCase(visit.inquiry_source) || "—" },
+                  { label: "From (customer area)", value: visit.origin_area },
+                  { label: "Area / renovation", value: visit.renovation_area || "—" },
+                  { label: "How they heard", value: titleCase(visit.inquiry_source) || "—" },
                   { label: "Purpose", value: titleCase(visit.purpose) || "—" },
+                  { label: "Quotation", value: visit.quotation_amount !== null || visit.quotation_ref ? `${visit.quotation_ref ?? "—"}${visit.quotation_amount !== null ? ` · ${formatMoney(visit.quotation_amount, "MYR")}` : ""}` : "—" },
                   { label: "New customer", value: visit.is_new_customer === null ? "—" : visit.is_new_customer ? "Yes" : "No (existing)" },
                   { label: "Opportunity", value: visit.opportunity_id ? <Link href={`/sales/pipeline?opportunity=${visit.opportunity_id}`} className="text-info hover:underline">Open opportunity</Link> : "—" },
                 ]}

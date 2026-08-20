@@ -62,8 +62,11 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [staffId, setStaffId] = useState(session.userId);
   const [customerType, setCustomerType] = useState<string>("homeowner");
   const [area, setArea] = useState("");
+  const [renovationArea, setRenovationArea] = useState("");
   const [source, setSource] = useState<string>("walk_in");
   const [purpose, setPurpose] = useState<string>("browse");
+  const [sqNumber, setSqNumber] = useState("");
+  const [quotationAmount, setQuotationAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [interest, setInterest] = useState<string[]>([]);
   const [oppMode, setOppMode] = useState<"none" | "create" | "link">("none");
@@ -140,8 +143,11 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       staff_user_id: staffId,
       customer_type: customerType as WalkInInput["customer_type"],
       origin_area: area,
+      renovation_area: renovationArea,
       inquiry_source: source,
       purpose: purpose as WalkInInput["purpose"],
+      quotation_ref: sqNumber,
+      quotation_amount: quotationAmount ? Number(quotationAmount) : null,
       notes,
       product_interest: interest as WalkInInput["product_interest"],
       opportunity_mode: oppMode,
@@ -177,7 +183,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
   function reset() {
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
-    setOccurredAt(localNow()); setArea(""); setSource("walk_in"); setPurpose("browse"); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
+    setOccurredAt(localNow()); setArea(""); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
     setHasPurchase(false); setOrc(""); setAmount(""); setPayments([{ method: "cash", amount: "", reference: "" }]); setItems([]); setResult(null);
   }
 
@@ -308,7 +314,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
                 <SelectContent>{CUSTOMER_TYPES.map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="Origin / project area"><Input className="h-9" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Cheras, Puchong" /></Field>
+            <Field label="From (customer's area)"><Input className="h-9" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Cheras, Puchong" /></Field>
+            <Field label="Area / renovation"><Input className="h-9" value={renovationArea} onChange={(e) => setRenovationArea(e.target.value)} placeholder="e.g. Wet kitchen, Master bath" /></Field>
             <Field label="How did they hear of us?">
               <Select value={source} onValueChange={setSource}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -327,6 +334,14 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             </Field>
           </div>
           <Field label="Notes"><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
+
+          <div className="rounded-md border p-3">
+            <div className="mb-2 text-xs font-medium">Quotation (optional)</div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Field label="SQ / quotation no."><Input className="h-9 font-mono" value={sqNumber} onChange={(e) => setSqNumber(e.target.value)} placeholder="QT-000123" /></Field>
+              <Field label="Quotation amount (MYR)"><Input className="h-9 tnum" inputMode="decimal" value={quotationAmount} onChange={(e) => setQuotationAmount(e.target.value)} placeholder="0.00" /></Field>
+            </div>
+          </div>
 
           <div className="rounded-md border p-3">
             <div className="mb-2 text-xs font-medium">Project / opportunity</div>
@@ -427,9 +442,11 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <Row label="Location" value={locations.find((l) => l.id === locationId)?.name ?? "—"} />
             <Row label="Staff" value={members.find((m) => m.user_id === staffId)?.full_name ?? "—"} />
             <Row label="Type" value={titleCase(customerType)} />
-            <Row label="Area" value={area || "—"} />
+            <Row label="From" value={area || "—"} />
+            <Row label="Area / renovation" value={renovationArea || "—"} />
             <Row label="Source" value={statusMeta(SOURCE_CHANNEL, source).label} />
             <Row label="Purpose" value={titleCase(purpose)} />
+            <Row label="Quotation" value={sqNumber || quotationAmount ? `${sqNumber || "—"}${quotationAmount ? ` · ${formatMoney(Number(quotationAmount))}` : ""}` : "—"} />
             <Row label="Interest" value={interest.map((i) => INTEREST_LABEL[i]).join(", ") || "—"} />
             <Row label="Opportunity" value={oppMode === "none" ? "None" : oppMode === "create" ? `Create: ${projectName}` : `Link: ${openOpps.find((o) => o.id === oppId)?.name ?? ""}`} />
             <Row label="Purchase" value={hasPurchase ? `${formatMoney(amountNum)}${orc ? ` · ${orc}` : ""}` : "None"} />

@@ -5684,6 +5684,9 @@ export type Database = {
           opportunity_id: string | null
           origin_area: string | null
           purpose: string | null
+          quotation_amount: number | null
+          quotation_ref: string | null
+          renovation_area: string | null
           staff_user_id: string | null
           updated_at: string | null
           workspace_id: string | null
@@ -5704,6 +5707,9 @@ export type Database = {
           opportunity_id?: string | null
           origin_area?: string | null
           purpose?: string | null
+          quotation_amount?: number | null
+          quotation_ref?: string | null
+          renovation_area?: string | null
           staff_user_id?: string | null
           updated_at?: string | null
           workspace_id?: string | null
@@ -5724,6 +5730,9 @@ export type Database = {
           opportunity_id?: string | null
           origin_area?: string | null
           purpose?: string | null
+          quotation_amount?: number | null
+          quotation_ref?: string | null
+          renovation_area?: string | null
           staff_user_id?: string | null
           updated_at?: string | null
           workspace_id?: string | null

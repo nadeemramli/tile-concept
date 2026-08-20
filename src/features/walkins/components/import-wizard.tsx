@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -23,11 +23,14 @@ const TARGETS = [
   { key: "customer_name", label: "Customer name", required: true },
   { key: "phone", label: "Contact phone", required: true },
   { key: "origin_area", label: "Origin / area" },
-  { key: "new_existing", label: "New / existing" },
+  { key: "new_existing", label: "Customer status (new/existing)" },
   { key: "customer_type", label: "Customer type" },
+  { key: "renovation_area", label: "Area / renovation" },
   { key: "orc_number", label: "ORC number" },
   { key: "amount", label: "Collection amount" },
-  { key: "inquiry_source", label: "Inquiry source" },
+  { key: "sq_number", label: "SQ / quotation number" },
+  { key: "quotation_amount", label: "Quotation amount" },
+  { key: "inquiry_source", label: "How customer heard" },
   { key: "online_enquiry", label: "Online enquiry? (flag)" },
   { key: "walk_in", label: "Walk in? (flag)" },
   { key: "pay_cash", label: "Payment: cash (flag/amount)" },
@@ -39,15 +42,18 @@ type TargetKey = (typeof TARGETS)[number]["key"];
 
 const GUESS: Record<TargetKey, RegExp> = {
   date: /date|tarikh/i,
-  salesperson: /sales|staff|pic/i,
-  customer_name: /customer|name|nama/i,
+  salesperson: /^smp$|sales|staff|pic/i,
+  customer_name: /customer name|name|nama/i,
   phone: /phone|contact|tel|hp|mobile/i,
-  origin_area: /origin|area|location|kawasan/i,
-  new_existing: /new|existing/i,
+  origin_area: /^from$|origin|kawasan/i,
+  new_existing: /status|new|existing/i,
   customer_type: /type|category/i,
-  orc_number: /orc|receipt|doc/i,
-  amount: /amount|collection|total|rm/i,
-  inquiry_source: /source|channel|enquiry source/i,
+  renovation_area: /renovation|renovate|\breno\b/i,
+  orc_number: /orc|receipt/i,
+  amount: /collection|deposit/i,
+  sq_number: /sq|quotation number|quote no|quotation no/i,
+  quotation_amount: /quotation amount|quote amount|quotation.*rm|quotation \(rm\)/i,
+  inquiry_source: /how.*(know|hear)|source|channel|enquiry source/i,
   online_enquiry: /online/i,
   walk_in: /walk/i,
   pay_cash: /cash/i,
@@ -91,6 +97,8 @@ function toIsoDate(v: unknown): string | null {
 
 export function ImportWizard({ locations }: { locations: { id: string; name: string }[] }) {
   const [fileName, setFileName] = useState<string | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [sheetName, setSheetName] = useState<string>("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [mapping, setMapping] = useState<Partial<Record<TargetKey, string>>>({});
@@ -98,27 +106,43 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
   const [result, setResult] = useState<ImportCommitResult | null>(null);
   const [pending, start] = useTransition();
+  const wbRef = useRef<XLSX.WorkBook | null>(null);
+
+  function loadSheet(name: string) {
+    const wb = wbRef.current;
+    if (!wb || !wb.Sheets[name]) return;
+    const ws = wb.Sheets[name];
+    // Daily Tracker sheets carry a title row above the real header row, so find
+    // the header row (first row that looks like column headers) rather than
+    // assuming row 1.
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, defval: "" });
+    let headerIdx = matrix.findIndex((r) => r.some((c) => /customer|nama|posting date|description/i.test(String(c))) && r.some((c) => /date|tarikh|^no$|document/i.test(String(c))));
+    if (headerIdx < 0) headerIdx = 0;
+    const hdrs = (matrix[headerIdx] ?? []).map((c, i) => String(c).trim() || `Column ${i + 1}`);
+    const json = matrix.slice(headerIdx + 1).map((r) => Object.fromEntries(hdrs.map((h, i) => [h, r[i] ?? ""])));
+    setHeaders(hdrs);
+    setRows(json);
+    setPreview(null);
+    setResult(null);
+    const guess: Partial<Record<TargetKey, string>> = {};
+    for (const t of TARGETS) {
+      const hit = hdrs.find((h) => GUESS[t.key].test(h) && !Object.values(guess).includes(h));
+      if (hit) guess[t.key] = hit;
+    }
+    setMapping(guess);
+    setSheetName(name);
+    toast.success(`Read ${json.length} rows from ${name}.`);
+  }
 
   function onFile(file: File) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const wb = XLSX.read(e.target?.result, { type: "array", cellDates: true });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-        const hdrs = json.length ? Object.keys(json[0]) : (XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 })[0] ?? []).map(String);
-        setHeaders(hdrs);
-        setRows(json);
+        wbRef.current = wb;
+        setSheetNames(wb.SheetNames);
         setFileName(file.name);
-        setPreview(null);
-        setResult(null);
-        const guess: Partial<Record<TargetKey, string>> = {};
-        for (const t of TARGETS) {
-          const hit = hdrs.find((h) => GUESS[t.key].test(h) && !Object.values(guess).includes(h));
-          if (hit) guess[t.key] = hit;
-        }
-        setMapping(guess);
-        toast.success(`Read ${json.length} rows from ${wb.SheetNames[0]}.`);
+        loadSheet(wb.SheetNames[0]);
       } catch {
         toast.error("Could not read that file. Use .xlsx, .xls or .csv.");
       }
@@ -166,8 +190,11 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
         origin_area: String(get(r, "origin_area") ?? "").trim(),
         new_existing: String(get(r, "new_existing") ?? "").trim(),
         customer_type: String(get(r, "customer_type") ?? "").trim(),
+        renovation_area: String(get(r, "renovation_area") ?? "").trim(),
         orc_number: String(get(r, "orc_number") ?? "").trim(),
         amount,
+        quotation_ref: String(get(r, "sq_number") ?? "").trim(),
+        quotation_amount: num(get(r, "quotation_amount")),
         inquiry_source: inquiry,
         payments,
         status,
@@ -195,7 +222,7 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
 
   function commit() {
     start(async () => {
-      const r = await commitImportAction(commitRows.slice(0, 500).map((p) => ({ row_no: p.row_no, date: p.date, salesperson: p.salesperson, customer_name: p.customer_name, phone: p.phone, origin_area: p.origin_area, new_existing: p.new_existing, customer_type: p.customer_type, orc_number: p.orc_number, amount: p.amount, inquiry_source: p.inquiry_source, payments: p.payments })), { location_id: locationId || undefined });
+      const r = await commitImportAction(commitRows.slice(0, 500).map((p) => ({ row_no: p.row_no, date: p.date, salesperson: p.salesperson, customer_name: p.customer_name, phone: p.phone, origin_area: p.origin_area, new_existing: p.new_existing, customer_type: p.customer_type, renovation_area: p.renovation_area, orc_number: p.orc_number, amount: p.amount, quotation_ref: p.quotation_ref, quotation_amount: p.quotation_amount, inquiry_source: p.inquiry_source, payments: p.payments })), { location_id: locationId || undefined });
       if (!r.ok) {
         toast.error(r.error);
         return;
@@ -222,7 +249,7 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
         <p className="text-xs text-muted-foreground">Every imported row is audited. Keep the workbook as a read-only archive; from now on, record walk-ins in the app.</p>
         <div className="flex gap-2">
           <Button asChild><Link href="/sales/walk-ins">Open walk-ins</Link></Button>
-          <Button variant="outline" onClick={() => { setResult(null); setPreview(null); setRows([]); setHeaders([]); setFileName(null); }}>Import another file</Button>
+          <Button variant="outline" onClick={() => { setResult(null); setPreview(null); setRows([]); setHeaders([]); setFileName(null); setSheetNames([]); setSheetName(""); wbRef.current = null; }}>Import another file</Button>
         </div>
       </Card>
     );
@@ -237,6 +264,14 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
             <input type="file" accept=".xlsx,.xls,.csv" className="sr-only" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
           </label>
           {fileName && <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><FileSpreadsheet className="size-4" aria-hidden /> {fileName} · {rows.length} rows · {headers.length} columns</span>}
+          {sheetNames.length > 1 && (
+            <div className="w-44">
+              <Select value={sheetName} onValueChange={loadSheet}>
+                <SelectTrigger className="h-8"><SelectValue placeholder="Sheet" /></SelectTrigger>
+                <SelectContent>{sheetNames.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="ml-auto w-56">
             <Select value={locationId} onValueChange={setLocationId}>
               <SelectTrigger className="h-8"><SelectValue placeholder="Default location" /></SelectTrigger>
@@ -244,7 +279,7 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
             </Select>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground">First sheet is read in the browser; nothing is uploaded until you commit. Boolean columns (Online enquiry?, Walk in?, payment flags) are normalized into channel and payment records — they are not copied as schema.</p>
+        <p className="text-[11px] text-muted-foreground">Pick the month sheet to import; it is read in the browser and nothing is uploaded until you commit. The title row above the headers is skipped automatically. Boolean columns (Online enquiry?, Walk in?, payment flags) are normalized into channel and payment records — they are not copied as schema.</p>
       </Card>
 
       {headers.length > 0 && (
@@ -303,7 +338,7 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
                     <TableCell className="tnum py-1 text-xs">{p.row_no}</TableCell>
                     <TableCell className="py-1"><TonePill tone={p.status === "valid" ? "success" : p.status === "corrected" ? "info" : p.status === "duplicate" ? "warning" : "destructive"} label={p.status} /></TableCell>
                     <TableCell className="tnum py-1 text-xs">{p.date ? p.date.slice(0, 10) : "—"}</TableCell>
-                    <TableCell className="py-1 text-xs">{p.customer_name || "—"}<div className="text-[10px] text-muted-foreground">{p.customer_type}{p.origin_area ? ` · ${p.origin_area}` : ""}</div></TableCell>
+                    <TableCell className="py-1 text-xs">{p.customer_name || "—"}<div className="text-[10px] text-muted-foreground">{[p.customer_type, p.origin_area, p.renovation_area].filter(Boolean).join(" · ")}</div></TableCell>
                     <TableCell className="py-1 font-mono text-xs">{p.phone || "—"}</TableCell>
                     <TableCell className="py-1 font-mono text-xs">{p.orc_number || "—"}</TableCell>
                     <TableCell className="tnum py-1 text-xs">{p.amount !== null ? formatMoney(p.amount) : "—"}</TableCell>
