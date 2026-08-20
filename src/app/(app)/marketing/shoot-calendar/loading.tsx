@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <PageBody className="max-w-none">
+    <PageBody>
       <Skeleton className="h-6 w-48" />
       <div className="flex gap-2">
         <Skeleton className="h-8 w-64 animate-skeleton" />

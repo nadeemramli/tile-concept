@@ -18,7 +18,7 @@ export default async function PipelinePage({ searchParams }: PageProps<"/sales/p
   const oppId = typeof sp.opportunity === "string" ? sp.opportunity : null;
   const [rows, stages, members, detail, quoteNo] = await Promise.all([listOpportunities(view), getStages(), getMembers(), oppId ? getOpportunityDetail(oppId) : Promise.resolve(null), nextQuoteNumber()]);
   return (
-    <PageBody className="max-w-none">
+    <PageBody>
       <PageHeader title="Pipeline" description="Every active opportunity has a stage, owner, next action and due date. Won/Lost/Deferred and backward moves require a reason." />
       <PipelineView rows={rows} stages={stages} members={members} view={view} detail={detail} suggestedQuoteNumber={quoteNo} />
     </PageBody>

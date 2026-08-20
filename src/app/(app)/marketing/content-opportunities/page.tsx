@@ -27,7 +27,7 @@ export default async function ContentOpportunitiesPage({ searchParams }: PagePro
   ]);
 
   return (
-    <PageBody className="max-w-none">
+    <PageBody>
       <PageHeader
         title="Content Opportunities"
         description="Customer projects nominated for marketing. Permission is recorded separately from sales consent, and nothing is published without it."

@@ -22,7 +22,10 @@ export function PageHeader({ title, description, children, className, eyebrow }:
 }
 
 export function PageBody({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("mx-auto w-full max-w-[1400px] space-y-5 p-4 md:p-5", className)}>{children}</div>;
+  // Full width by default so tables and boards use the whole viewport. Pages
+  // that want a narrower measure (forms, detail) pass their own max-w-* which
+  // tailwind-merge applies over this.
+  return <div className={cn("w-full space-y-5 p-4 md:p-5", className)}>{children}</div>;
 }
 
 /** Compact KPI / exception strip used at the top of index pages. */

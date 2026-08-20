@@ -29,7 +29,7 @@ export default async function ShootCalendarPage({ searchParams }: PageProps<"/ma
   ]);
 
   return (
-    <PageBody className="max-w-none">
+    <PageBody>
       <PageHeader
         title="Shoot Calendar"
         description="Tentative holds, standby crew and confirmed bookings stay distinct. Confirming checks for clashes; rescheduling keeps the previous slot."
