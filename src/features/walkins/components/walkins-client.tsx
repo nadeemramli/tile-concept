@@ -33,7 +33,7 @@ interface Props {
 export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
   const router = useRouter();
   const { can } = useSession();
-  const [, setTab] = useQueryState("tab");
+  const [, setTab] = useQueryState("tab", { shallow: false });
   const [visitId, setVisitId] = useQueryState("visit");
   const [purchaseId, setPurchaseId] = useQueryState("purchase");
   const [correcting, setCorrecting] = useState(false);
