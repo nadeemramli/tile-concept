@@ -31,7 +31,7 @@ export const ROUTE_GROUPS = [
   "Command Centre",
   "Sales",
   "Customer",
-  "Marketing Coordination",
+  "Marketing",
   "Merchandise",
   "Sources",
   "Insights",
@@ -63,7 +63,6 @@ export const ROUTES: RouteDef[] = [
     description: "What needs attention now: aging leads, overdue follow-ups, data health.",
   },
   // Sales
-  { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Sales", status: "live", permission: "sales.read" },
   { key: "pipeline", label: "Pipeline", path: "/sales/pipeline", icon: KanbanSquare, group: "Sales", status: "live", permission: "sales.read" },
   { key: "projects", label: "Projects", path: "/sales/projects", icon: FolderKanban, group: "Sales", status: "live", permission: "sales.read" },
   { key: "walkins", label: "Walk-ins & Purchases", path: "/sales/walk-ins", icon: Store, group: "Sales", status: "live", permission: "sales.read" },
@@ -72,8 +71,9 @@ export const ROUTES: RouteDef[] = [
   { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
   { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Customer", status: "live", permission: "sales.read" },
   // Marketing
-  { key: "content-opps", label: "Content Opportunities", path: "/marketing/content-opportunities", icon: Megaphone, group: "Marketing Coordination", status: "live", permission: "marketing.read" },
-  { key: "shoot-calendar", label: "Shoot Calendar", path: "/marketing/shoot-calendar", icon: CalendarDays, group: "Marketing Coordination", status: "live", permission: "marketing.read" },
+  { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Marketing", status: "live", permission: "sales.read" },
+  { key: "content-opps", label: "Content Opportunities", path: "/marketing/content-opportunities", icon: Megaphone, group: "Marketing", status: "live", permission: "marketing.read" },
+  { key: "shoot-calendar", label: "Shoot Calendar", path: "/marketing/shoot-calendar", icon: CalendarDays, group: "Marketing", status: "live", permission: "marketing.read" },
   // Merchandise
   { key: "catalog", label: "Catalog", path: "/merchandise/catalog", icon: Package, group: "Merchandise", status: "live", permission: "catalog.read" },
   { key: "pricing", label: "Pricing", path: "/merchandise/pricing", icon: Tags, group: "Merchandise", status: "live", permission: "price.read" },
