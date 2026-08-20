@@ -38,19 +38,19 @@ export default async function CommandCentrePage() {
       {summary && (
         <>
           {/* Morning brief — exception first (PRD §2.2 #8, §7.1) */}
-          <section className="space-y-2">
+          <section className="space-y-1.5">
             <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Morning brief · exceptions</h2>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-              <MetricCard label="Aging leads" value={summary.aging_leads} tone={summary.aging_leads ? "warning" : "neutral"} href="/sales/inbox?view=aging" info={{ definition: "Leads still New or Contact attempted more than 2 days after creation.", grain: "Lead", source: "sales.leads", freshness }} />
-              <MetricCard label="Overdue follow-ups" value={summary.overdue_followups} tone={summary.overdue_followups ? "destructive" : "neutral"} href="/sales/pipeline?view=overdue" info={{ definition: "Open opportunities whose next action due date has passed.", grain: "Opportunity", source: "sales.opportunities", freshness }} />
-              <MetricCard label="Unassigned inquiries" value={summary.unassigned_leads} tone={summary.unassigned_leads ? "warning" : "neutral"} href="/sales/inbox?view=unassigned" info={{ definition: "Active leads with no owner.", grain: "Lead", source: "sales.leads", freshness }} />
-              <MetricCard label="No first response" value={summary.no_response_leads} tone={summary.no_response_leads ? "warning" : "neutral"} href="/sales/inbox?view=no-response" info={{ definition: "New leads with no logged response attempt.", grain: "Lead", source: "sales.leads", freshness }} />
-              <MetricCard label="Quotes expiring" value={summary.quotes_expiring} tone={summary.quotes_expiring ? "info" : "neutral"} href="/sales/pipeline?view=quotes" info={{ definition: "Issued quote versions whose validity ends within 7 days.", grain: "Quote version", source: "sales.quote_versions", freshness }} />
-              <MetricCard label="Duplicate review" value={summary.duplicate_candidates} tone={summary.duplicate_candidates ? "info" : "neutral"} href="/sales/identity-review" info={{ definition: "Suggested identity matches awaiting a human decision. Never auto-merged.", grain: "Candidate pair", source: "identity.identity_match_candidates", freshness }} />
+            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 xl:grid-cols-6">
+              <MetricCard compact label="Aging leads" value={summary.aging_leads} hint="New / attempted > 2 days" tone={summary.aging_leads ? "warning" : "neutral"} href="/sales/inbox?view=aging" info={{ definition: "Leads still New or Contact attempted more than 2 days after creation.", grain: "Lead", source: "sales.leads", freshness }} />
+              <MetricCard compact label="Overdue follow-ups" value={summary.overdue_followups} hint="Next action past due" tone={summary.overdue_followups ? "destructive" : "neutral"} href="/sales/pipeline?view=overdue" info={{ definition: "Open opportunities whose next action due date has passed.", grain: "Opportunity", source: "sales.opportunities", freshness }} />
+              <MetricCard compact label="Unassigned inquiries" value={summary.unassigned_leads} hint="No owner yet" tone={summary.unassigned_leads ? "warning" : "neutral"} href="/sales/inbox?view=unassigned" info={{ definition: "Active leads with no owner.", grain: "Lead", source: "sales.leads", freshness }} />
+              <MetricCard compact label="No first response" value={summary.no_response_leads} hint="Never responded to" tone={summary.no_response_leads ? "warning" : "neutral"} href="/sales/inbox?view=no-response" info={{ definition: "New leads with no logged response attempt.", grain: "Lead", source: "sales.leads", freshness }} />
+              <MetricCard compact label="Quotes expiring" value={summary.quotes_expiring} hint="Valid ≤ 7 days" tone={summary.quotes_expiring ? "info" : "neutral"} href="/sales/pipeline?view=quotes" info={{ definition: "Issued quote versions whose validity ends within 7 days.", grain: "Quote version", source: "sales.quote_versions", freshness }} />
+              <MetricCard compact label="Duplicate review" value={summary.duplicate_candidates} hint="Awaiting a decision" tone={summary.duplicate_candidates ? "info" : "neutral"} href="/sales/identity-review" info={{ definition: "Suggested identity matches awaiting a human decision. Never auto-merged.", grain: "Candidate pair", source: "identity.identity_match_candidates", freshness }} />
             </div>
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-3">
             {/* Pipeline scorecard */}
             <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
@@ -61,15 +61,15 @@ export default async function CommandCentrePage() {
                   </Link>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                <MetricCard compact label="Open opportunities" value={summary.open_opportunities} href="/sales/pipeline" info={{ definition: "Opportunities in an open reporting group.", grain: "Opportunity", source: "sales.opportunities", freshness }} />
-                <MetricCard compact label="Open value" value={formatMoney(summary.open_value, session.currency)} info={{ definition: "Sum of estimated value on open opportunities. Unweighted; probability bands are not yet accepted by the business.", grain: "Opportunity", source: "sales.opportunities", freshness, caveat: "Estimates only — not a forecast." }} />
-                <MetricCard compact label="Won (30d)" value={summary.won_30d} tone="success" href="/sales/pipeline?view=won" info={{ definition: "Opportunities moved to Won in the last 30 days.", grain: "Opportunity", source: "sales.opportunity_stage_events", freshness }} />
-                <MetricCard compact label="Lost (30d)" value={summary.lost_30d} tone={summary.lost_30d ? "destructive" : "neutral"} href="/sales/pipeline?view=lost" info={{ definition: "Opportunities moved to Lost in the last 30 days.", grain: "Opportunity", source: "sales.opportunity_stage_events", freshness }} />
-                <MetricCard compact label="Visits today" value={summary.visits_today} href="/sales/walk-ins" info={{ definition: "Walk-in visits recorded today (Asia/Kuala_Lumpur).", grain: "Visit", source: "sales.visits", freshness }} />
-                <MetricCard compact label="Purchases (7d)" value={summary.purchases_7d} href="/sales/walk-ins?tab=purchases" info={{ definition: "Purchases recorded in the last 7 days (excluding voided).", grain: "Purchase", source: "sales.purchases", freshness }} />
-                <MetricCard compact label="Purchase amount (7d)" value={formatMoney(summary.purchase_amount_7d, session.currency)} info={{ definition: "Sum of recorded purchase amounts in the last 7 days. Not reconciled with SQL Account.", grain: "Purchase", source: "sales.purchases", freshness, caveat: "App-recorded amounts; accounting remains in SQL Account." }} />
-                <MetricCard compact label="Missing next action" value={summary.missing_next_action} tone={summary.missing_next_action ? "warning" : "neutral"} href="/sales/pipeline?view=missing-next-action" info={{ definition: "Open opportunities without a next action or due date.", grain: "Opportunity", source: "sales.opportunities", freshness }} />
+              <CardContent className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
+                <MetricCard compact label="Open opportunities" value={summary.open_opportunities} hint="In an open stage" href="/sales/pipeline" info={{ definition: "Opportunities in an open reporting group.", grain: "Opportunity", source: "sales.opportunities", freshness }} />
+                <MetricCard compact label="Open value" value={formatMoney(summary.open_value, session.currency)} hint="Unweighted estimate" tone="info" href="/sales/pipeline" info={{ definition: "Sum of estimated value on open opportunities. Unweighted; probability bands are not yet accepted by the business.", grain: "Opportunity", source: "sales.opportunities", freshness, caveat: "Estimates only — not a forecast." }} />
+                <MetricCard compact label="Won (30d)" value={summary.won_30d} hint="Last 30 days" tone="success" href="/sales/pipeline?view=won" info={{ definition: "Opportunities moved to Won in the last 30 days.", grain: "Opportunity", source: "sales.opportunity_stage_events", freshness }} />
+                <MetricCard compact label="Lost (30d)" value={summary.lost_30d} hint="Last 30 days" tone={summary.lost_30d ? "destructive" : "neutral"} href="/sales/pipeline?view=lost" info={{ definition: "Opportunities moved to Lost in the last 30 days.", grain: "Opportunity", source: "sales.opportunity_stage_events", freshness }} />
+                <MetricCard compact label="Visits today" value={summary.visits_today} hint="Recorded today" href="/sales/walk-ins" info={{ definition: "Walk-in visits recorded today (Asia/Kuala_Lumpur).", grain: "Visit", source: "sales.visits", freshness }} />
+                <MetricCard compact label="Purchases (7d)" value={summary.purchases_7d} hint="Last 7 days" href="/sales/walk-ins?tab=purchases" info={{ definition: "Purchases recorded in the last 7 days (excluding voided).", grain: "Purchase", source: "sales.purchases", freshness }} />
+                <MetricCard compact label="Purchase amount (7d)" value={formatMoney(summary.purchase_amount_7d, session.currency)} hint="Last 7 days · app-recorded" tone="success" href="/sales/walk-ins?tab=purchases" info={{ definition: "Sum of recorded purchase amounts in the last 7 days. Not reconciled with SQL Account.", grain: "Purchase", source: "sales.purchases", freshness, caveat: "App-recorded amounts; accounting remains in SQL Account." }} />
+                <MetricCard compact label="Missing next action" value={summary.missing_next_action} hint="No next step set" tone={summary.missing_next_action ? "warning" : "neutral"} href="/sales/pipeline?view=missing-next-action" info={{ definition: "Open opportunities without a next action or due date.", grain: "Opportunity", source: "sales.opportunities", freshness }} />
               </CardContent>
             </Card>
 
@@ -118,24 +118,30 @@ export default async function CommandCentrePage() {
             </Card>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-3">
             {/* Sales activity */}
             <Card className="lg:col-span-2">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Sales activity</CardTitle>
+                <CardTitle className="flex items-center justify-between text-sm">
+                  Sales activity
+                  <Link href="/sales/pipeline" className="text-xs font-normal text-info hover:underline">Open pipeline</Link>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Timeline items={activity as unknown as TimelineItem[]} emptyText="No activity recorded yet." />
               </CardContent>
             </Card>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Merchandise trust */}
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Merchandise trust</CardTitle>
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    Merchandise trust
+                    <Link href="/merchandise/catalog" className="text-xs font-normal text-info hover:underline">Catalog</Link>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-3 gap-2">
+                <CardContent className="grid grid-cols-3 gap-1.5">
                   <MetricCard compact label="No price" value={summary.products_without_price} tone={summary.products_without_price ? "warning" : "neutral"} href="/merchandise/catalog?view=missing-price" info={{ definition: "Active products with no current approved price on any list.", grain: "Product", source: "merch", freshness }} />
                   <MetricCard compact label="Conflicts" value={summary.price_conflicts} tone={summary.price_conflicts ? "destructive" : "neutral"} href="/merchandise/pricing?state=conflicted" info={{ definition: "Prices blocked by an overlapping current price for the same scope.", grain: "Price", source: "merch.variant_prices", freshness }} />
                   <MetricCard compact label="Unreviewed" value={summary.unreviewed_products} tone={summary.unreviewed_products ? "warning" : "neutral"} href="/merchandise/catalog?view=unreviewed" info={{ definition: "Products whose attributes have not been reviewed by a catalog operator.", grain: "Product", source: "merch.products", freshness }} />
@@ -145,10 +151,13 @@ export default async function CommandCentrePage() {
               {/* Content schedule placeholder + data health */}
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Data health</CardTitle>
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    Data health
+                    <Link href="/platform/data-health" className="text-xs font-normal text-info hover:underline">Open</Link>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     <MetricCard compact label="Open issues" value={summary.open_data_issues} tone={summary.open_data_issues ? "warning" : "neutral"} href="/platform/data-health" info={{ definition: "Open data-quality issues: duplicates, unmapped units, stale snapshots, overlapping prices.", grain: "Issue", source: "ingest.data_quality_issues", freshness }} />
                     <MetricCard compact label="Reviews" value={summary.pending_reviews} href="/sources/review" info={{ definition: "Pending import/OCR review items.", grain: "Review item", source: "ingest.review_items", freshness }} />
                     <MetricCard compact label="Connectors" value={summary.connectors_failed} tone={summary.connectors_failed ? "destructive" : "neutral"} href="/platform/integrations" info={{ definition: "Connectors in failed or degraded state.", grain: "Connection", source: "ingest.integration_connections", freshness }} />
