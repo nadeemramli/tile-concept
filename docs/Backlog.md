@@ -5,31 +5,50 @@ for verification and technical debt we chose to defer.
 
 ## Corpus migration — remaining steps
 
-The 2026-08-21 discovery corpus is fully imported and reconciled **against the
-local stack**. Everything below is what stands between that and the hosted
-project. See
+The 2026-08-21 discovery corpus is **imported and fully reconciled on the hosted
+project** (`ewyiiematuuojlhpioqh`) as well as locally. See
 [Corpus Compatibility Map](architecture/Corpus%20Compatibility%20Map.md).
 
-### Blocked on a dashboard setting
+### The real blocker now: the hosted project has no reference data
 
-- **Raise the project-wide Storage file size limit to 512 MB** (Storage →
-  Settings on `ewyiiematuuojlhpioqh`). A bucket limit cannot exceed the global
-  one, so `20260821000005_corpus_storage.sql` raises `source-assets` to 512 MiB
-  but stays inert until this is done. 14 of the 154 staged catalogues exceed the
-  current 50 MB cap; the largest is 366,392,675 bytes. Without it those 14
-  uploads fail and the rest still succeed — the importer is resumable, so it can
-  be re-run after the limit is raised and will upload only what is missing.
+The corpus is in, but a reviewer cannot approve anything, because
+`api.approve_review_item` requires an explicit brand, category, selling unit and
+price list — and the hosted project has **zero** brands, categories, units of
+measure, and price lists. It has one contact and one membership; the synthetic
+seed was never applied there, correctly.
 
-### Then
+So before the review queue is workable someone has to create:
 
-1. `pnpm exec supabase db push --linked` — six migrations, verified against a
-   clean local reset and 56/56 pgTAP.
-2. `pnpm db:types:linked` and confirm no diff against the committed types.
-3. `TILE_CORPUS_ROOT=… SUPABASE_URL=… SUPABASE_SECRET_KEY=… pnpm corpus:linked --workspace 638c7f4d-39f2-420b-96d7-6e403cf51cc3`
-   — ~2.73 GB across 2,261 objects. Expect roughly the local timings.
-4. Re-run the same command and confirm it uploads 0 and inserts 0.
-5. Re-run the Supabase advisors and diff against the 113 WARN + 1 INFO baseline
-   recorded below.
+1. **Units of measure** — piece, sheet, carton, square metre, and whatever else
+   the business actually sells in. Structural vocabulary, safe to create.
+2. **Product categories** — PRD §7.5 already names them: wall panel, tile, cut
+   tile, mosaic, finishing product, accessory.
+3. **Brands** — the corpus carries 19 folder labels (Alpha, Deer Tiles, Feruni,
+   Guocera, Johnson, Kimgres, MML, Niro, White Horse, Balena, Belleza, BMS,
+   Citigres, Muda Seramik, Super Ceramic, GNG, Jerry's Mosaic, Mosycle, Yidodo).
+   Per the Source Register these are provenance hints, not canonical identities,
+   so promoting them to `merch.brands` is a product decision rather than a
+   mechanical one.
+4. **Price lists** — definitionally a business decision. Which programmes exist,
+   in which currency, at which tax basis. Nothing can be approved into a price
+   list that does not exist.
+
+### Done 2026-08-21
+
+Global Storage limit raised to 536,870,912 via the Management API (`PATCH
+/v1/projects/{ref}/config/storage`) — **not** `supabase config push`, which would
+have overwritten the hosted auth `site_url` with `http://localhost:3000` from
+`config.toml` and broken sign-in on the deployed app.
+
+Seven migrations applied, 2,261 objects / 2.73 GB uploaded, every count
+reconciled, and all safety invariants verified on the hosted project: no public
+bucket, no object for either deferred binary, no row anywhere for the
+credentials document, and nothing approved or published.
+
+Advisors went from 114 findings (113 WARN + 1 INFO) to 124, no ERROR. Migration
+`…07_corpus_function_hardening` closed four of the ten new ones; the remaining
+six are the expected "SECURITY DEFINER function executable by authenticated"
+note, which is what those functions are for.
 
 ### Review capacity, not engineering
 

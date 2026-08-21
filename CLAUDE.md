@@ -52,6 +52,7 @@ Forward-only SQL in `supabase/migrations/YYYYMMDDNNNNNN_slug.sql`. New tables: a
 - **`authenticated` has no USAGE on the `ingest` schema** (deliberate). The `api.*` views still work because a view resolves its references at creation and only needs table privileges — so the `api` schema really is the only surface reachable by name. Query `api.review_items`, never `ingest.review_items`, including in pgTAP tests.
 - Storage buckets are `source-assets`, `product-media`, `shoot-outputs`, `permission-evidence`, `ingest-artifacts`; all private, and the policies require every object path to begin with `<workspace_id>/`. The bucket name is chosen by the SDK and never repeated inside the key.
 - **A bucket's `file_size_limit` cannot exceed the project-wide Storage limit**, which is a dashboard/Management-API setting and not SQL. `source-assets` is raised to 512 MiB for the corpus originals; if a large upload fails with a size error, check the global limit first.
+- **`supabase projects api-keys` returns the new-style `sb_secret_` key redacted** (41 chars, 401 on use). For a server-side script against the hosted project use the legacy `service_role` JWT from the same output, or the real secret key from Vercel's environment.
 - Files above 6 MB upload through TUS against `https://<ref>.storage.supabase.co/storage/v1/upload/resumable` with 6 MB chunks — the direct storage hostname, not the API hostname.
 
 <!-- BEGIN:nextjs-agent-rules -->
