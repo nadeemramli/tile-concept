@@ -96,6 +96,27 @@ Nothing commercial was published, deliberately. What is now waiting on a person:
   `item_type`. The task types have readable labels and the queue is usable, but
   each corpus task type deserves its own editor.
 
+### Authentication
+
+- **Custom SMTP is still not configured** (`smtp_host` is null). Auth emails go
+  through Supabase's default service, which their docs call best-effort and
+  intend for "testing email templates with the members of the project's team".
+  An invitation to a staff address may never arrive, so
+  `scripts/provision-user.mts` is the reliable route for now — it creates the
+  account and prints a one-time password instead of relying on delivery.
+  Configuring Resend (or any SMTP provider) would restore the normal invite flow;
+  also raise the auth email rate limit afterwards, which defaults low.
+- **Self-signup was open on the hosted project until 2026-08-21** — `disable_signup`
+  was `false` while `supabase/config.toml` said `enable_signup = false`. Now closed.
+  Nothing was exposed: an account with no membership sees nothing through RLS. But
+  the hosted auth config is not covered by any migration, so it can drift again;
+  `supabase config push` is **not** the fix, because it would overwrite `site_url`
+  with the localhost value from `config.toml`.
+- **`scripts/invite-user` and `provision-user` are `.mts`, not `.ts`.** A `.ts`
+  script with top-level await fails under tsx, because package.json has no
+  `"type": "module"` so esbuild targets CJS. `invite-user` had this latent bug
+  from the start and had never been run in this environment.
+
 ### Tooling follow-ups
 
 - `severityLevel` in `import-postgres.mts` is not yet covered by a unit test;
@@ -164,7 +185,7 @@ Remaining production polish:
   default sender (rate-limited to a few per hour). Configure a real SMTP provider
   before onboarding multiple staff.
 - **Invite the rest of the staff** with appropriate roles (Platform → Settings →
-  Invites, or `scripts/invite-user.ts`; roles in `core.roles`).
+  Invites, or `scripts/invite-user.mts`; roles in `core.roles`).
 - **Custom domain** (optional) instead of `*.vercel.app`; update the Supabase Auth
   site URL + redirect allow-list to match.
 - **Compute sizing / backups.** Project is on `nano` compute in Seoul; review

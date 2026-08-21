@@ -55,7 +55,7 @@ Real administrators are invited from **Platform → Settings → Invites** (Supa
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | browser + server | publishable (anon) key |
 | `NEXT_PUBLIC_APP_URL` | server | canonical site URL (auth redirects) |
 | `NEXT_PUBLIC_APP_MODE` | browser + server | `demo` \| `shadow` \| `live` (PRD §12.9) |
-| `SUPABASE_SECRET_KEY` | **server only** | service-role key; admin invites and the corpus importer. Never `NEXT_PUBLIC_`. |
+| `SUPABASE_SECRET_KEY` | **server only** | service-role key; admin invites, user provisioning, and the corpus importer. Never `NEXT_PUBLIC_`. |
 | `TILE_CORPUS_ROOT` | corpus tooling only | Absolute path to `Discovery Corpus/_local`. Never defaulted — a wrong default would silently import the wrong tree. |
 
 Production has the five variables set; Preview does not yet, so preview deployments have
@@ -86,14 +86,39 @@ Settings that are not in migrations and must be checked in the dashboard:
 3. **Authentication → URL configuration** — site URL and `/auth/**` redirects for the
    Vercel domain plus `http://localhost:3000`.
 
-To invite an administrator:
-
-```bash
-SUPABASE_URL=… SUPABASE_SECRET_KEY=… APP_URL=… pnpm exec tsx scripts/invite-user.ts you@example.com
-```
-
 `scripts/cloud-bootstrap.sh` created the project originally and is kept for reference; it
 is not part of the normal workflow.
+
+## Adding people
+
+The app is invite-only: self-signup is disabled on the hosted project, and the "Email
+link" tab passes `shouldCreateUser: false`, so a magic link is only ever sent to an
+address that already exists in `auth.users`. There is no way to get in without being
+added first — that is deliberate.
+
+**Two routes in.** Both end at the same place: a pending row in
+`core.membership_invites`, which `core.handle_new_auth_user()` converts into a membership
+the moment the auth user appears.
+
+```bash
+# 1. Normal route — sends a Supabase Auth invitation email
+SUPABASE_URL=… SUPABASE_SECRET_KEY=… APP_URL=… pnpm exec tsx scripts/invite-user.mts you@example.com
+
+# 2. Direct route — creates the account and prints a one-time password
+SUPABASE_URL=… SUPABASE_SECRET_KEY=…   pnpm exec tsx scripts/provision-user.mts ops@example.com sales_rep
+```
+
+**Prefer route 2 until custom SMTP is configured.** The project has no SMTP server, so
+invitation emails go through Supabase's default service, which their docs describe as
+best-effort and intended for *"testing email templates with the members of the project's
+team"* — an invite to a staff address may simply never arrive. Route 2 provisions the
+same end state without depending on delivery: hand the printed password over out of band
+and have them change it at `/auth/set-password`.
+
+Neither route bypasses authorization. The role comes from `core.roles` and the membership
+from the invite; RLS is unchanged. Roles: `admin`, `management`, `sales_manager`,
+`sales_rep`, `showroom`, `marketing_coordinator`, `catalog_pricing`, `stock_coordinator`,
+`analyst` (`src/lib/rbac/matrix.ts` mirrors `core.role_permissions`).
 
 ## Corpus migration
 

@@ -36,4 +36,4 @@ echo "(remove 'public'); the app queries the api schema only."
 echo
 echo "Next: set Vercel env vars (NEXT_PUBLIC_SUPABASE_URL=https://${REF}.supabase.co, publishable + secret keys),"
 echo "set Auth → URL configuration (site URL + redirect https://<vercel-domain>/auth/**), then:"
-echo "  SUPABASE_URL=https://${REF}.supabase.co SUPABASE_SECRET_KEY=<secret> APP_URL=https://<vercel-domain> pnpm exec tsx scripts/invite-user.ts $ADMIN_EMAIL"
+echo "  SUPABASE_URL=https://${REF}.supabase.co SUPABASE_SECRET_KEY=<secret> APP_URL=https://<vercel-domain> pnpm exec tsx scripts/invite-user.mts $ADMIN_EMAIL"

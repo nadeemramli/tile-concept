@@ -1,6 +1,6 @@
 /**
  * Invite a user to the workspace via Supabase Auth (server-side only).
- * Usage: SUPABASE_URL=... SUPABASE_SECRET_KEY=... APP_URL=https://... pnpm exec tsx scripts/invite-user.ts m.nadeemramli@gmail.com
+ * Usage: SUPABASE_URL=... SUPABASE_SECRET_KEY=... APP_URL=https://... pnpm exec tsx scripts/invite-user.mts m.nadeemramli@gmail.com
  * The membership role comes from core.membership_invites (seeded: admin for the owner email);
  * for others, insert an invite row first (Platform → Settings → Invites does both).
  */
