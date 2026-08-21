@@ -9,46 +9,30 @@ The 2026-08-21 discovery corpus is **imported and fully reconciled on the hosted
 project** (`ewyiiematuuojlhpioqh`) as well as locally. See
 [Corpus Compatibility Map](architecture/Corpus%20Compatibility%20Map.md).
 
-### The real blocker now: the hosted project has no reference data
+### Reference data — done except price lists
 
-The corpus is in, but a reviewer cannot approve anything, because
-`api.approve_review_item` requires an explicit brand, category, selling unit and
-price list — and the hosted project has **zero** brands, categories, units of
-measure, and price lists. It has one contact and one membership; the synthetic
-seed was never applied there, correctly.
+Units of measure, the six PRD §7.5 categories, and 19 brands derived from the
+corpus folder labels are now on the hosted project. The brands are
+`review_state = 'unreviewed'` with the folder they came from recorded in
+`source_note`, because the Source Register is explicit that a folder label is a
+provenance hint and not a confirmed organization identity — the same label can
+mean the brand, the manufacturer, the supplier, or all three. Someone has to
+confirm each one, and split any that turn out to be two entities.
 
-So before the review queue is workable someone has to create:
+**Price lists are still missing, and nothing can be approved without one.**
+`api.approve_review_item` requires an explicit `price_list_id` and will not
+guess. Creating them is a commercial decision, not a mechanical one: which
+programmes exist, in which currency, at which tax basis, for which market. The
+corpus offers two obvious starting points and answers neither of them —
+White Horse's column is labelled `W.M Pallet/FOB Price` across 3,743 rows, and
+Belleza's workbook carries list / showroom / project tiers across 731 rows.
 
-1. **Units of measure** — piece, sheet, carton, square metre, and whatever else
-   the business actually sells in. Structural vocabulary, safe to create.
-2. **Product categories** — PRD §7.5 already names them: wall panel, tile, cut
-   tile, mosaic, finishing product, accessory.
-3. **Brands** — the corpus carries 19 folder labels (Alpha, Deer Tiles, Feruni,
-   Guocera, Johnson, Kimgres, MML, Niro, White Horse, Balena, Belleza, BMS,
-   Citigres, Muda Seramik, Super Ceramic, GNG, Jerry's Mosaic, Mosycle, Yidodo).
-   Per the Source Register these are provenance hints, not canonical identities,
-   so promoting them to `merch.brands` is a product decision rather than a
-   mechanical one.
-4. **Price lists** — definitionally a business decision. Which programmes exist,
-   in which currency, at which tax basis. Nothing can be approved into a price
-   list that does not exist.
-
-### Done 2026-08-21
-
-Global Storage limit raised to 536,870,912 via the Management API (`PATCH
-/v1/projects/{ref}/config/storage`) — **not** `supabase config push`, which would
-have overwritten the hosted auth `site_url` with `http://localhost:3000` from
-`config.toml` and broken sign-in on the deployed app.
-
-Seven migrations applied, 2,261 objects / 2.73 GB uploaded, every count
-reconciled, and all safety invariants verified on the hosted project: no public
-bucket, no object for either deferred binary, no row anywhere for the
-credentials document, and nothing approved or published.
-
-Advisors went from 114 findings (113 WARN + 1 INFO) to 124, no ERROR. Migration
-`…07_corpus_function_hardening` closed four of the ten new ones; the remaining
-six are the expected "SECURITY DEFINER function executable by authenticated"
-note, which is what those functions are for.
+Also still absent on hosted: `merch.attribute_definitions` and
+`merch.category_attribute_rules`. The local seed defines a full set (width_mm,
+thickness_mm, sheet/chip dimensions, pieces_per_carton, series, edge, grade …).
+They are not needed to approve anything — the gate asks for brand, category,
+selling unit and price list — but a catalog without them cannot express what a
+tile actually is. Worth porting the seed's vocabulary across.
 
 ### Review capacity, not engineering
 
@@ -73,6 +57,11 @@ Nothing commercial was published, deliberately. What is now waiting on a person:
 - **`candidate_facts` covers the publication-blocking fields only** (7 per price,
   7 per variant, 5 per certificate). Widening it to every observed field is
   cheap but was not needed for the gate.
+- **The review UI is built for the upload flow, not for corpus tasks.** A
+  `certificate_scope_review` or `duplicate_code_resolution` task renders with the
+  product/price correction fields, because `correctableFor()` keys off
+  `item_type`. The task types have readable labels and the queue is usable, but
+  each corpus task type deserves its own editor.
 
 ### Tooling follow-ups
 
