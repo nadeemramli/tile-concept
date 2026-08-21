@@ -9,30 +9,63 @@ The 2026-08-21 discovery corpus is **imported and fully reconciled on the hosted
 project** (`ewyiiematuuojlhpioqh`) as well as locally. See
 [Corpus Compatibility Map](architecture/Corpus%20Compatibility%20Map.md).
 
-### Reference data — done except price lists
+### Catalog and pricing are live (2026-08-21)
 
-Units of measure, the six PRD §7.5 categories, and 19 brands derived from the
-corpus folder labels are now on the hosted project. The brands are
-`review_state = 'unreviewed'` with the folder they came from recorded in
-`source_note`, because the Source Register is explicit that a folder label is a
-provenance hint and not a confirmed organization identity — the same label can
-mean the brand, the manufacturer, the supplier, or all three. Someone has to
-confirm each one, and split any that turn out to be two entities.
+Reference data and a first published catalog are on the hosted project:
 
-**Price lists are still missing, and nothing can be approved without one.**
-`api.approve_review_item` requires an explicit `price_list_id` and will not
-guess. Creating them is a commercial decision, not a mechanical one: which
-programmes exist, in which currency, at which tax basis, for which market. The
-corpus offers two obvious starting points and answers neither of them —
-White Horse's column is labelled `W.M Pallet/FOB Price` across 3,743 rows, and
-Belleza's workbook carries list / showroom / project tiers across 731 rows.
+| | |
+| --- | ---: |
+| Products / variants | 5,087 |
+| Live prices (`state = 'current'`) | 6,575 |
+| Price lists | 5 |
+| Brands (all `unreviewed`) | 19 |
+| Review tasks remaining | 2,435 |
+| Price candidates still pending | 3,482 |
 
-Also still absent on hosted: `merch.attribute_definitions` and
-`merch.category_attribute_rules`. The local seed defines a full set (width_mm,
-thickness_mm, sheet/chip dimensions, pieces_per_carton, series, edge, grade …).
-They are not needed to approve anything — the gate asks for brand, category,
-selling unit and price list — but a catalog without them cannot express what a
-tile actually is. Worth porting the seed's vocabulary across.
+Migration `…10_publish_corpus_priced_catalog` did the bulk approval. Four things
+no source states were decided by the business and are recorded on every row:
+currency **MYR**, tax **exclusive**, validity **from 2026-08-21**, and the unit
+basis per source label — White Horse **pallet** (its column reads `W.M
+Pallet/FOB Price`), Belleza **piece**, generic RM lines whatever unit the text
+itself stated. Each published price carries a `source_ref` saying so, and each
+has a `review_decision`, so these are findable and revisable rather than
+indistinguishable from source facts.
+
+**What that means for anyone reading the catalog now:** the *amounts* come from
+the documents; the *meaning* around them was supplied on 2026-08-21. If it later
+turns out White Horse quotes per square metre rather than per pallet, every
+affected row can be found by its price list and corrected.
+
+### Still pending, and why
+
+- **3,482 price candidates.** 2,794 carry no product code and 688 name a variant
+  that was never extracted as a candidate. Publishing either would create priced
+  products with no identity.
+- **885 variant candidates** with no price.
+- **62 certificates**, all `scope_type = 'unknown'`. A brand folder does not
+  establish scope.
+- **2,015 semantic visual labels** awaiting human confirmation, and **1,513**
+  same-document media links that cannot be approved as they stand.
+
+### Follow-ups this created
+
+1. **The 19 brands are unreviewed.** Each is a Drive folder label, which may name
+   the brand, the manufacturer, the supplier, or all three. Confirm each, and
+   split any that turn out to be two entities.
+2. **Every product is categorised `tile`.** The corpus never assigns a category;
+   this was a blanket decision to get a navigable catalog. Mosaic, wall panel,
+   cut tile and accessory products are in there miscategorised.
+3. **Products have no attributes.** `merch.attribute_definitions` and
+   `category_attribute_rules` exist locally via the seed (width_mm, thickness_mm,
+   sheet/chip dimensions, pieces_per_carton, series, edge, grade …) but were
+   never applied to hosted. Until they are, a product cannot express what a tile
+   actually is.
+4. **377 same-code collisions were collapsed.** 5,464 variant candidates became
+   5,087 products, because the same supplier code appeared under one brand in
+   more than one source. That is the right default, but the 238 unresolved
+   duplicate-code groups still deserve a look.
+5. **Only 13 of the 95 low-confidence price tasks were auto-resolved** — the ones
+   whose source document produced published prices. The rest still need a person.
 
 ### Review capacity, not engineering
 
