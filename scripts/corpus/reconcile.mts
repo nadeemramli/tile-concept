@@ -257,7 +257,12 @@ function printReport(report: ReconciliationReport): void {
 
   heading("Reconciliation");
   if (report.ok) {
-    console.log("  every count reconciles; nothing is published; the excluded and deferred sources are absent");
+    console.log(
+      "  every count reconciles; the excluded and deferred sources are absent; " +
+        (publishedNow > 0
+          ? "everything published has a recorded decision"
+          : "nothing is published"),
+    );
   } else {
     for (const e of report.exceptions) {
       console.log(`  EXCEPTION  ${e.scope}${e.sourceId ? ` [${e.sourceId}]` : ""}`);
