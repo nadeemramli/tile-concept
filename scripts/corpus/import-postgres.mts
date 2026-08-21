@@ -288,6 +288,49 @@ export async function importCorpus(
   };
 
   // ---------------------------------------------------------------------------
+  // 1b. Brands, from the corpus folder labels
+  //
+  // The Source Register is explicit that a Drive folder label is a provenance
+  // hint, not a canonical organization identity - the same name can mean the
+  // brand, the manufacturer, the supplier, or all three. So these are created
+  // `unreviewed`, with the folder they came from recorded, and a person decides
+  // what each one actually is. They exist at all because the review gate needs a
+  // brand to point at, and inventing them by hand would lose the provenance.
+  // ---------------------------------------------------------------------------
+  if (want("brands")) {
+    heading("Brands");
+    const hints = new Map<string, string>();
+    for await (const f of readJsonl<DriveFile>(corpusPath(cli, REL.driveInventory))) {
+      if (f.kind !== "file" || EXCLUDED_SOURCE_IDS.has(f.id)) continue;
+      const brand = brandHintFromPath(f.path);
+      if (brand && !hints.has(brand)) hints.set(brand, f.root_name);
+    }
+
+    // merch.brands is unique on a generated normalized_name, which cannot be an
+    // upsert conflict target, so diff against what is already there.
+    const existing = new Set(
+      (await selectAll(supabase, "brands", "id, name", workspaceId)).map((b) => normalizeName(String(b.name))),
+    );
+    const missing = [...hints.entries()].filter(([name]) => !existing.has(normalizeName(name)));
+
+    if (missing.length) {
+      const { error } = await supabase.from("brands").insert(
+        missing.map(([name, root]) => ({
+          workspace_id: workspaceId,
+          name,
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+          is_house_brand: false,
+          review_state: "unreviewed",
+          source_note: `Drive folder label under ${root} (2026-08-21 corpus); not a confirmed organization identity`,
+        })),
+      );
+      if (error) throw new Error(`brands: ${error.message}`);
+    }
+    counts.brands = hints.size;
+    counts.brands_created = missing.length;
+  }
+
+  // ---------------------------------------------------------------------------
   // 2. Shape profiles and clusters
   // ---------------------------------------------------------------------------
   if (want("shapes")) {
@@ -788,6 +831,9 @@ export async function importCorpus(
         external_key: t.task_id,
         import_run_id: importRunId,
         review_target_key: nz(t.target_id),
+        // Corpus tasks have no ingestion job, so they link to the document
+        // directly; without this api.review_queue cannot show them.
+        source_asset_id: sid ? assetId(sid) : null,
         proposed: { source_path: t.source_path, details: t.details, source_id: sid },
         conflicts: [],
         status: "pending",
@@ -795,6 +841,7 @@ export async function importCorpus(
     }
 
     for await (const t of readJsonl<Row>(corpusPath(cli, REL.visualReviewQueue))) {
+      const vsid = nz(t.source_id);
       tasks.push({
         workspace_id: workspaceId,
         item_type: String(t.task_type),
@@ -804,6 +851,7 @@ export async function importCorpus(
         import_run_id: importRunId,
         review_target_type: "media_asset",
         review_target_key: nz(t.media_asset_id),
+        source_asset_id: vsid ? assetId(vsid) : null,
         proposed: {
           source_path: t.source_path,
           page_number: t.page_number,
@@ -911,6 +959,16 @@ function classifyAsset(f: DriveFile): string {
   if (p.includes("catalog")) return "catalog";
   if (f.mime_type.includes("spreadsheet")) return "price_list";
   return "other";
+}
+
+/**
+ * Approximates core.normalize_text for de-duplication only.
+ *
+ * The database is still the authority - it has a unique index on the generated
+ * normalized_name - this just avoids sending inserts that would bounce.
+ */
+function normalizeName(v: string): string {
+  return v.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 /** Second path segment is the brand folder in all three roots. */

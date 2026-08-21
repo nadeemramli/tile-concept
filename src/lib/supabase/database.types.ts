@@ -464,7 +464,11 @@ export type Database = {
           name: string | null
           normalized_name: string | null
           owner_organization_id: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           slug: string | null
+          source_note: string | null
           supplier_id: string | null
           updated_at: string | null
           workspace_id: string | null
@@ -477,7 +481,11 @@ export type Database = {
           name?: string | null
           normalized_name?: string | null
           owner_organization_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug?: string | null
+          source_note?: string | null
           supplier_id?: string | null
           updated_at?: string | null
           workspace_id?: string | null
@@ -490,7 +498,11 @@ export type Database = {
           name?: string | null
           normalized_name?: string | null
           owner_organization_id?: string | null
+          review_state?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug?: string | null
+          source_note?: string | null
           supplier_id?: string | null
           updated_at?: string | null
           workspace_id?: string | null
@@ -6831,6 +6843,7 @@ export type Database = {
           review_target_type: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          source_asset_id: string | null
           status: string | null
           task_type: string | null
           workspace_id: string | null
@@ -6854,6 +6867,7 @@ export type Database = {
           review_target_type?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          source_asset_id?: string | null
           status?: string | null
           task_type?: string | null
           workspace_id?: string | null
@@ -6877,6 +6891,7 @@ export type Database = {
           review_target_type?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          source_asset_id?: string | null
           status?: string | null
           task_type?: string | null
           workspace_id?: string | null
@@ -6911,6 +6926,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "review_items_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "review_items_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_items_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "review_items_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -6940,9 +6976,12 @@ export type Database = {
           page_count: number | null
           page_no: number | null
           parser_version: string | null
+          priority: number | null
           proposed: Json | null
           published_object_id: string | null
           raw: Json | null
+          review_target_key: string | null
+          review_target_type: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           row_no: number | null
@@ -6953,6 +6992,7 @@ export type Database = {
           storage_bucket: string | null
           storage_path: string | null
           supplier_name: string | null
+          task_type: string | null
           workspace_id: string | null
         }
         Relationships: [

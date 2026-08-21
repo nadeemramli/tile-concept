@@ -40,6 +40,17 @@ export const ITEM_TYPE: StatusMap = {
   stock: { label: "Stock", tone: "info" },
   identity: { label: "Identity", tone: "info" },
   walkin_row: { label: "Walk-in", tone: "info" },
+
+  // Corpus import tasks. Unmapped values still render readably via statusMeta,
+  // but these are the ones an operator meets in bulk, so they get real labels.
+  certificate_scope_review: { label: "Certificate scope", tone: "warning" },
+  duplicate_code_resolution: { label: "Duplicate code", tone: "warning" },
+  low_confidence_price_source_review: { label: "Price source", tone: "destructive" },
+  representative_shape_review: { label: "Document shape", tone: "info" },
+  structured_price_scope_missing: { label: "Price scope missing", tone: "destructive" },
+  oversized_source_recovery: { label: "Source recovery", tone: "destructive" },
+  class_path_conflict: { label: "Document class", tone: "warning" },
+  semantic_visual_review: { label: "Visual review", tone: "ai" },
 };
 
 export const CONFLICT_LABEL: Record<string, string> = {
