@@ -3,6 +3,68 @@
 Non-blocking follow-ups. Product/feature backlog lives in the PRD; this file is
 for verification and technical debt we chose to defer.
 
+## Corpus migration — remaining steps
+
+The 2026-08-21 discovery corpus is fully imported and reconciled **against the
+local stack**. Everything below is what stands between that and the hosted
+project. See
+[Corpus Compatibility Map](architecture/Corpus%20Compatibility%20Map.md).
+
+### Blocked on a dashboard setting
+
+- **Raise the project-wide Storage file size limit to 512 MB** (Storage →
+  Settings on `ewyiiematuuojlhpioqh`). A bucket limit cannot exceed the global
+  one, so `20260821000005_corpus_storage.sql` raises `source-assets` to 512 MiB
+  but stays inert until this is done. 14 of the 154 staged catalogues exceed the
+  current 50 MB cap; the largest is 366,392,675 bytes. Without it those 14
+  uploads fail and the rest still succeed — the importer is resumable, so it can
+  be re-run after the limit is raised and will upload only what is missing.
+
+### Then
+
+1. `pnpm exec supabase db push --linked` — six migrations, verified against a
+   clean local reset and 56/56 pgTAP.
+2. `pnpm db:types:linked` and confirm no diff against the committed types.
+3. `TILE_CORPUS_ROOT=… SUPABASE_URL=… SUPABASE_SECRET_KEY=… pnpm corpus:linked --workspace 638c7f4d-39f2-420b-96d7-6e403cf51cc3`
+   — ~2.73 GB across 2,261 objects. Expect roughly the local timings.
+4. Re-run the same command and confirm it uploads 0 and inserts 0.
+5. Re-run the Supabase advisors and diff against the 113 WARN + 1 INFO baseline
+   recorded below.
+
+### Review capacity, not engineering
+
+Nothing commercial was published, deliberately. What is now waiting on a person:
+
+| Queue | Count | What unblocks it |
+| --- | ---: | --- |
+| Price candidates | 10,183 | Currency (5,936 missing), unit basis (7,235 missing), tax basis, price type, market, effective date. For White Horse, what `W.M Pallet/FOB Price` actually means across 3,743 rows |
+| Variant candidates | 6,011 | Brand, category, selling unit; and the 238 duplicate-code groups |
+| Certificates | 62 | Scope — all 62 are `unknown`, and a brand folder does not establish one |
+| Semantic visual labels | 2,015 | Human confirmation; machine passes are complete and pending |
+| Media-to-variant links | 3,344 | 1,513 are `same_source_document` and cannot be approved as they stand; they need an exact page/region, code, or manual match |
+
+### Known gaps in the corpus itself
+
+- **Alpha** (174,006,407 B) and **Bellezza** (382,335,899 B) catalogues are
+  recorded `binary_not_staged`. Recovering them means an approved local Drive
+  sync or a smaller source PDF; re-running the importer afterwards picks them up.
+- **White Horse catalogue imagery does not exist** in the corpus — the
+  catalogues are external website links that were not crawled. Crawl permission
+  and internal-use image rights are unresolved.
+- **`candidate_facts` covers the publication-blocking fields only** (7 per price,
+  7 per variant, 5 per certificate). Widening it to every observed field is
+  cheap but was not needed for the gate.
+
+### Tooling follow-ups
+
+- `severityLevel` in `import-postgres.mts` is not yet covered by a unit test;
+  the other pure mapping helpers are (`tests/unit/corpus-mapping.test.ts`).
+- The importer holds the whole candidate set in memory before batching (~62k
+  fact rows at peak). Fine at this size; stream it if the corpus grows.
+- `api.start_import_run` / `record_import_item` / `finish_import_run` exist for a
+  permissioned in-app import but have no UI and no pgTAP coverage yet. The CLI
+  writes the ledger directly because it has no user identity.
+
 ## Verification / E2E gaps
 
 The features below are typecheck-, lint-, unit-test- and build-clean, and their
