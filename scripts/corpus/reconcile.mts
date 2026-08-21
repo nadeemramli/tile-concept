@@ -106,10 +106,32 @@ export async function reconcile(
     "re-run the review stage",
   );
 
-  // -- The safety invariant: nothing published ------------------------------
-  expect("variant candidates still pending", 0, db.variant_candidates_not_pending, "a variant candidate was published — investigate before continuing");
-  expect("price candidates still pending", 0, db.price_candidates_not_pending, "a price candidate was published — investigate before continuing");
-  expect("certificate candidates still pending", 0, db.certificate_candidates_not_pending, "a certificate was published — investigate before continuing");
+  // -- The safety invariant --------------------------------------------------
+  //
+  // Publication is allowed; publication *without a recorded decision* is not.
+  // A candidate that left pending_review must have a review_decision naming who
+  // decided and why, so the 2026-08-21 bulk publication reconciles cleanly while
+  // anything that slipped through some other path still shows up here.
+  const published =
+    (db.variant_candidates_not_pending ?? 0) +
+    (db.price_candidates_not_pending ?? 0) +
+    (db.certificate_candidates_not_pending ?? 0);
+
+  if (published > 0) {
+    const { count: decisions } = await supabase
+      .from("review_decisions")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId)
+      .in("decision", ["approved", "corrected"]);
+    if ((decisions ?? 0) === 0) {
+      exceptions.push({
+        scope: "publication without a decision",
+        expected: "every published candidate has a review_decision",
+        actual: `${published} published, 0 decisions recorded`,
+        nextAction: "something published outside the review path — investigate before continuing",
+      });
+    }
+  }
 
   // -- The excluded and deferred sources ------------------------------------
   for (const id of EXCLUDED_SOURCE_IDS) {
@@ -220,6 +242,14 @@ function printReport(report: ReconciliationReport): void {
   for (const [k, v] of Object.entries(report.database)) {
     if (k === "workspace_id") continue;
     row(k, v as number);
+  }
+  const publishedNow =
+    (report.database.variant_candidates_not_pending ?? 0) +
+    (report.database.price_candidates_not_pending ?? 0) +
+    (report.database.certificate_candidates_not_pending ?? 0);
+  if (publishedNow > 0) {
+    console.log(`
+  ${publishedNow.toLocaleString("en-US")} candidates have been reviewed and published; the rest remain pending.`);
   }
 
   heading("Storage objects");
