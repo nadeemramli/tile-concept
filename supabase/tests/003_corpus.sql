@@ -16,23 +16,28 @@ $$;
 
 ------------------------------------------------------------------------------
 -- Fixtures, created as the migration owner before any role switch.
+--
+-- Every identifier here is synthetic and namespaced, so the suite passes both
+-- against a freshly seeded database and against one that already holds the
+-- imported discovery corpus. A real collection code such as `base_tiles_local`
+-- would collide with the latter.
 ------------------------------------------------------------------------------
 create or replace function pg_temp.ws() returns uuid language sql as $$
   select '11111111-1111-1111-1111-111111111111'::uuid
 $$;
 
 insert into ingest.source_collections (id, workspace_id, code, name, supply_model, external_folder_id)
-values ('cccccccc-0000-0000-0000-000000000001', pg_temp.ws(), 'base_tiles_local', 'Base Tiles (LOCAL)', 'local', 'drive-root-local');
+values ('cccccccc-0000-0000-0000-000000000001', pg_temp.ws(), 'corpus_test_root', 'Corpus test root', 'local', 'drive-root-test');
 
 insert into ingest.source_locations (id, workspace_id, source_collection_id, external_id, name, display_path, brand_hint)
 values ('cccccccc-0000-0000-0000-000000000002', pg_temp.ws(), 'cccccccc-0000-0000-0000-000000000001',
-        'drive-folder-1', 'Catalogue', 'Base Tiles (LOCAL)/Testbrand/Catalogue', 'Testbrand');
+        'corpus-test-folder-1', 'Catalogue', 'Base Tiles (LOCAL)/Testbrand/Catalogue', 'Testbrand');
 
 insert into ingest.source_assets (id, workspace_id, name, kind, provider, external_id, asset_class,
                                   source_location_id, checksum, storage_bucket, storage_path)
 values ('cccccccc-0000-0000-0000-000000000003', pg_temp.ws(), 'Testbrand catalogue.pdf', 'pdf',
-        'google_drive', 'drive-file-1', 'catalog', 'cccccccc-0000-0000-0000-000000000002',
-        'corpus-test-checksum-1', 'source-assets', pg_temp.ws() || '/drive/base_tiles_local/drive-file-1/abc/cat.pdf');
+        'google_drive', 'corpus-test-file-1', 'catalog', 'cccccccc-0000-0000-0000-000000000002',
+        'corpus-test-checksum-1', 'source-assets', pg_temp.ws() || '/drive/corpus_test_root/corpus-test-file-1/abc/cat.pdf');
 
 insert into ingest.source_asset_versions (id, workspace_id, source_asset_id, version_no, checksum, snapshot_state)
 values ('cccccccc-0000-0000-0000-000000000004', pg_temp.ws(), 'cccccccc-0000-0000-0000-000000000003',
@@ -43,12 +48,12 @@ insert into ingest.media_assets (id, workspace_id, source_asset_id, source_versi
 values ('cccccccc-0000-0000-0000-000000000005', pg_temp.ws(), 'cccccccc-0000-0000-0000-000000000003',
         'cccccccc-0000-0000-0000-000000000004', 'media_test_page_1', 'pdf_page_render',
         'corpus-test-render-1', 'image/jpeg', 1, 'product-media',
-        pg_temp.ws() || '/sources/drive-file-1/pages/page-0001.jpg');
+        pg_temp.ws() || '/sources/corpus-test-file-1/pages/page-0001.jpg');
 
 insert into ingest.variant_candidates (id, workspace_id, candidate_key, source_asset_id, external_source_id,
                                        brand_hint, supplier_code_raw)
 values ('cccccccc-0000-0000-0000-000000000006', pg_temp.ws(), 'variant_corpus_test_1',
-        'cccccccc-0000-0000-0000-000000000003', 'drive-file-1', 'Testbrand', 'TB-0001');
+        'cccccccc-0000-0000-0000-000000000003', 'corpus-test-file-1', 'Testbrand', 'TB-0001');
 
 insert into ingest.media_asset_variant_links (id, workspace_id, media_asset_id, external_key,
                                               variant_candidate_key, variant_candidate_id, link_basis, confidence)
@@ -59,7 +64,7 @@ values ('cccccccc-0000-0000-0000-000000000007', pg_temp.ws(), 'cccccccc-0000-000
 insert into ingest.certificate_candidates (id, workspace_id, candidate_key, source_asset_id,
                                            external_source_id, title_candidate)
 values ('cccccccc-0000-0000-0000-000000000008', pg_temp.ws(), 'certificate_corpus_test_1',
-        'cccccccc-0000-0000-0000-000000000003', 'drive-file-1', 'MS ISO 13006 test certificate');
+        'cccccccc-0000-0000-0000-000000000003', 'corpus-test-file-1', 'MS ISO 13006 test certificate');
 
 -- A price review item whose source establishes only an amount — the shape the
 -- corpus actually produces for 5,936 structured rows.
@@ -120,7 +125,7 @@ select throws_like(
 
 select throws_like(
   $$insert into ingest.variant_candidates (workspace_id, candidate_key, external_source_id, supplier_code_raw)
-    values ('11111111-1111-1111-1111-111111111111', 'variant_corpus_test_1', 'drive-file-1', 'TB-0001')$$,
+    values ('11111111-1111-1111-1111-111111111111', 'variant_corpus_test_1', 'corpus-test-file-1', 'TB-0001')$$,
   '%variant_candidates_workspace_id_candidate_key_key%',
   're-importing the same candidate key is a no-op, not a duplicate row');
 
