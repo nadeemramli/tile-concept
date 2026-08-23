@@ -19,7 +19,12 @@ Reference data and a first published catalog are on the hosted project:
 | Live prices (`state = 'current'`) | 6,575 |
 | Price lists | 5 |
 | Brands (all `unreviewed`) | 19 |
-| Review tasks remaining | 2,435 |
+| Attribute definitions / category rules | 22 / 28 |
+| Product attribute values | 10,889 |
+| Variants with a stated size | 960 |
+| Variants with stated packaging | 4,462 |
+| Packaging configurations | 8,816 |
+| Review tasks remaining | 2,785 |
 | Price candidates still pending | 3,482 |
 
 Migration `…10_publish_corpus_priced_catalog` did the bulk approval. Four things
@@ -35,6 +40,31 @@ indistinguishable from source facts.
 the documents; the *meaning* around them was supplied on 2026-08-21. If it later
 turns out White Horse quotes per square metre rather than per pallet, every
 affected row can be found by its price list and corrected.
+
+### A re-import used to un-decide everything (fixed 2026-08-23)
+
+Migration `…11_protect_review_decisions` closed a bug that had already fired
+once. The importer writes candidates with a PostgREST upsert, and an upsert
+writes every column in its payload on the update path too — including the
+literal `review_state = 'pending_review'` a *new* candidate needs. So each run
+silently un-decided every row it re-observed.
+
+On 2026-08-21 the bulk publication approved 6,701 price and 5,126 variant
+candidates at 01:53:39; a reconciliation re-import at 01:55:28 set all of them
+back to pending. Nothing was lost — the published catalog was untouched, and
+`review_decisions` is append-only — but for two days the review queue claimed
+10,183 prices and 6,011 variants needed a person when 11,827 of them were
+already decided, and `corpus:reconcile` printed *"nothing is published"* over a
+live catalog of 6,575 prices.
+
+The fix is a trigger on all 14 upserted `ingest.*` tables refusing exactly one
+transition — decided → pending — while letting the rest of the payload through.
+Restoring rather than raising is deliberate: the importer legitimately rewrites
+the source-derived columns of thousands of rows per batch, and an exception
+would make a re-import impossible instead of correct. The repair rebuilt each
+decision only from evidence that survived. `api.corpus_reconciliation` now also
+exposes what was *independently* published, and the reconciler raises an
+exception when the two disagree, so this class of drift cannot go quiet again.
 
 ### Still pending, and why
 
@@ -55,11 +85,22 @@ affected row can be found by its price list and corrected.
 2. **Every product is categorised `tile`.** The corpus never assigns a category;
    this was a blanket decision to get a navigable catalog. Mosaic, wall panel,
    cut tile and accessory products are in there miscategorised.
-3. **Products have no attributes.** `merch.attribute_definitions` and
-   `category_attribute_rules` exist locally via the seed (width_mm, thickness_mm,
-   sheet/chip dimensions, pieces_per_carton, series, edge, grade …) but were
-   never applied to hosted. Until they are, a product cannot express what a tile
-   actually is.
+3. **Products have attributes now, for the subset that stated them.**
+   `…12_catalog_attributes` installed the vocabulary on hosted (22 definitions,
+   28 category rules, including `cartons_per_pallet`, which the seed never had
+   and the White Horse list states for 3,743 variants) and filled it: 960
+   variants carry a size and 4,462 carry packaging, 10,889 values in all, plus
+   8,816 `packaging_configurations`.
+
+   What it deliberately did **not** fill: 350 variants whose source states a size
+   with no unit — a bare `306X 306X6` — or offers more than one size. Read as
+   millimetres the first is an ordinary tile and as centimetres it is absurd, so
+   mm is almost certainly right; almost certainly is a guess, and a guessed
+   millimetre is indistinguishable from a stated one once it is a number in a
+   column. They are `dimension_unit_unstated` review tasks instead.
+
+   Still empty: everything the corpus never stated — `edge`, `grade`,
+   `sqm_per_carton`, and the mosaic sheet/chip attributes.
 4. **377 same-code collisions were collapsed.** 5,464 variant candidates became
    5,087 products, because the same supplier code appeared under one brand in
    more than one source. That is the right default, but the 238 unresolved
@@ -69,12 +110,15 @@ affected row can be found by its price list and corrected.
 
 ### Review capacity, not engineering
 
-Nothing commercial was published, deliberately. What is now waiting on a person:
+The priced, identifiable portion of the corpus is published. What is left needs
+a person rather than more engineering — in every case because the source does
+not say the thing, not because nothing has parsed it:
 
 | Queue | Count | What unblocks it |
 | --- | ---: | --- |
-| Price candidates | 10,183 | Currency (5,936 missing), unit basis (7,235 missing), tax basis, price type, market, effective date. For White Horse, what `W.M Pallet/FOB Price` actually means across 3,743 rows |
-| Variant candidates | 6,011 | Brand, category, selling unit; and the 238 duplicate-code groups |
+| Price candidates | 3,482 | All are `generic_rm_line_candidate` — RM amounts found in catalogue prose, not a price table. 2,794 carry no product code at all and 688 name a variant never extracted, so there is nothing to attach them to. Needs better extraction or a person reading the page |
+| Variant candidates | 885 | Brand, category, selling unit; and the 238 duplicate-code groups |
+| Product sizes | 350 | The source states a size with no unit (`306X 306X6`) or offers several. Confirm the unit, or which size is the product |
 | Certificates | 62 | Scope — all 62 are `unknown`, and a brand folder does not establish one |
 | Semantic visual labels | 2,015 | Human confirmation; machine passes are complete and pending |
 | Media-to-variant links | 3,344 | 1,513 are `same_source_document` and cannot be approved as they stand; they need an exact page/region, code, or manual match |
