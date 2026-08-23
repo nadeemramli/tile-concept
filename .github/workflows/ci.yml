@@ -44,3 +44,45 @@ jobs:
           diff -q /tmp/db.types.ts src/lib/supabase/database.types.ts || (echo "database.types.ts is out of date — run pnpm db:types" && exit 1)
       - name: RLS / function tests (pgTAP)
         run: pnpm exec supabase test db
+
+  # End-to-end, against a real stack. This became possible when guest mode
+  # landed: it is the only way into the app that needs no credentials, so CI can
+  # drive it without a password living in the repository or in secrets.
+  #
+  # The guest tests are not only a smoke check. One of them asserts that a guest
+  # sees the demo brands and none of the seeded "real" workspace's — a regression
+  # that broke that isolation would be the most serious failure this system could
+  # have, and it would be invisible from the outside.
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:56321
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_MODE: demo
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start local Supabase and apply migrations + seed
+        run: pnpm exec supabase start -x vector,logflare,imgproxy,edge-runtime,studio
+      # Read from the running stack rather than hard-coded. The local keys are
+      # not secret — the stack they unlock lives and dies inside this job — but
+      # pinning them here would break the moment the CLI changed its defaults,
+      # and the failure would look like a broken app rather than a stale literal.
+      - name: Export the local stack's keys
+        run: |
+          eval "$(pnpm exec supabase status -o env)"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${PUBLISHABLE_KEY}" >> "$GITHUB_ENV"
+          echo "SUPABASE_SECRET_KEY=${SECRET_KEY}" >> "$GITHUB_ENV"
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test --reporter=list
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-trace
+          path: test-results/
+          retention-days: 7
