@@ -68,7 +68,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql", "./seeds/phase2to6.sql", "./seeds/local-users.sql"]
+sql_paths = ["./seed.sql", "./seeds/phase2to6.sql", "./seeds/local-users.sql", "./seeds/demo-guest.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -178,6 +178,11 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
+# Deliberately false. Guest mode does NOT use anonymous sign-in: GoTrue routes it
+# through /signup, so `enable_signup = false` above rejects it with "Signups not
+# allowed for this instance". Turning it on would mean turning signup back on,
+# reopening the self-signup gap closed on 2026-08-21. Guests sign in as one
+# provisioned demo account instead — see 20260823000001_guest_mode.sql.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
