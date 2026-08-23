@@ -56,8 +56,6 @@ Real administrators are invited from **Platform → Settings → Invites** (Supa
 | `NEXT_PUBLIC_APP_URL` | server | canonical site URL (auth redirects) |
 | `NEXT_PUBLIC_APP_MODE` | browser + server | `demo` \| `shadow` \| `live` (PRD §12.9) |
 | `SUPABASE_SECRET_KEY` | **server only** | service-role key; admin invites, user provisioning, and the corpus importer. Never `NEXT_PUBLIC_`. |
-| `DEMO_GUEST_EMAIL` | **server only** | The shared account behind "Enter as guest". Omit to disable the button. |
-| `DEMO_GUEST_PASSWORD` | **server only** | Its password, from `scripts/provision-demo-guest.mts`. Never `NEXT_PUBLIC_`. |
 | `TILE_CORPUS_ROOT` | corpus tooling only | Absolute path to `Discovery Corpus/_local`. Never defaulted — a wrong default would silently import the wrong tree. |
 
 Production has the five variables set; Preview does not yet, so preview deployments have

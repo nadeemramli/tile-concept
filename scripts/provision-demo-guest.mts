@@ -5,18 +5,18 @@
  *   SUPABASE_URL=… SUPABASE_SECRET_KEY=… pnpm exec tsx scripts/provision-demo-guest.mts
  *   …                                                                        --rotate
  *
- * Prints DEMO_GUEST_EMAIL and DEMO_GUEST_PASSWORD to put in the server
- * environment (Vercel → Settings → Environment Variables, all environments).
- * They are read only by `enterAsGuestAction` on the server and are never sent to
- * the browser.
+ * Nothing needs to go into the environment afterwards. The application finds this
+ * account by its guest membership and mints a one-time token for it with the
+ * service key, so the password set below never signs anyone in — it exists only
+ * because an account must have one.
  *
  * This does not bypass the authorization model. It creates an ordinary account
  * and an ordinary membership; core.enforce_guest_workspace() refuses the write
  * outright if that membership names anything but the demo workspace, or if this
  * account already holds a staff membership somewhere.
  *
- * `--rotate` sets a fresh password on an account that already exists, which is
- * what you want if the old one leaked or you are cycling it routinely.
+ * `--rotate` sets a fresh password on an account that already exists. The app does
+ * not use it, so this matters only if you also sign in as the guest by hand.
  */
 
 import { randomBytes } from "node:crypto";
@@ -103,9 +103,4 @@ if (!membership) die(`no membership appeared for ${userId} — check core.enforc
 const m = membership as { role_key: string; status: string };
 console.log(`  membership  ${m.role_key} / ${m.status}`);
 
-if (!createError || rotate) {
-  console.log(`\n  Set these in the server environment:\n`);
-  console.log(`    DEMO_GUEST_EMAIL=${GUEST_EMAIL}`);
-  console.log(`    DEMO_GUEST_PASSWORD=${password}\n`);
-  console.log("  They are read server-side only and never reach the browser.\n");
-}
+console.log("\n  Guest access is live. Nothing to add to the environment.\n");

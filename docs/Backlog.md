@@ -219,11 +219,25 @@ Playwright suite — see below):
 
 ## Automated E2E suite
 
-There is a `playwright.config.ts` and manual QA scripts (`scripts/_sources_*.mjs`)
-but no CI-runnable E2E suite. Stand one up covering the critical flows: walk-in
-capture (incl. tracker fields), workbook import, pipeline stage change (reason
-gates), scorecard target set, Accounts views/filters, and the sidebar collapse.
-Wire it into CI so these paths are guarded automatically.
+**Running in CI since 2026-08-23.** An `e2e` job starts the local stack, applies
+migrations and seed, and runs Playwright against it — 12 tests, 5 of the existing
+smoke checks plus 7 for guest mode.
+
+Guest mode is what made this possible: it is the only way into the app that needs
+no credentials, so CI can drive it without a password in the repository or in
+secrets. The keys are read from the running stack rather than pinned, so a change
+to the CLI's defaults cannot silently turn into a broken-looking app.
+
+One of the guest tests earns its place beyond smoke coverage: it asserts that a
+guest sees the demo brands and **none** of the seeded workspace's. A regression
+that broke that isolation would be the most serious failure this system could
+have, and it would be invisible from the outside.
+
+Still worth adding, in rough order of value: walk-in capture including the
+tracker fields, workbook import commit against a synthetic CSV, pipeline stage
+change with its reason gates, scorecard target set, and Accounts views/filters —
+the three paths listed under *Verification / E2E gaps* above are exactly the ones
+still driven by hand.
 
 ## Production security hardening
 
