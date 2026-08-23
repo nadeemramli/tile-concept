@@ -8,7 +8,7 @@
 -- changes nothing — including not un-deciding anything a reviewer decided.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(36);
+select plan(39);
 
 create or replace function pg_temp.act_as(uid text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, false);
@@ -352,6 +352,38 @@ where id = 'cccccccc-0000-0000-0000-000000000005';
 select is(
   (select usage_rights_state from ingest.media_assets where id = 'cccccccc-0000-0000-0000-000000000005'),
   'accepted', 'cleared image usage rights survive a re-import of the same file');
+
+------------------------------------------------------------------------------
+-- 37-39. The catalog has a vocabulary, and a dimension always states its unit.
+--
+-- The published catalog carried a name, a code, a brand and a price and nothing
+-- describing the product. The vocabulary is what lets a tile say what it is —
+-- and the one thing it must never do is record a length without saying in what.
+------------------------------------------------------------------------------
+select is(
+  (select count(*)::int from merch.attribute_definitions
+   where data_type = 'dimension' and unit is null),
+  0, 'no dimension attribute exists without a unit');
+
+select ok(
+  (select bool_and(required) from (
+     select bool_or(r.is_required) as required
+     from merch.category_attribute_rules r
+     join merch.attribute_definitions d on d.id = r.attribute_definition_id
+     join merch.product_categories c on c.id = r.category_id
+     where c.key = 'tile' and d.key in ('width_mm', 'length_mm')
+     group by d.key
+   ) t),
+  'a tile must state a width and a length');
+
+-- Stated by the White Horse price list for 3,743 variants, and the unit its
+-- prices are quoted in, so it is a commercial fact rather than a logistics one.
+-- Counted as distinct keys, not rows: the vocabulary is installed once per
+-- workspace, so the row count scales with however many exist.
+select is(
+  (select count(distinct key)::int from merch.attribute_definitions
+   where key in ('pieces_per_carton', 'cartons_per_pallet')),
+  2, 'the packaging vocabulary the sources actually fill is defined');
 
 select * from finish();
 rollback;

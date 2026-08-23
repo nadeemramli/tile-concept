@@ -51,6 +51,7 @@ export const ITEM_TYPE: StatusMap = {
   oversized_source_recovery: { label: "Source recovery", tone: "destructive" },
   class_path_conflict: { label: "Document class", tone: "warning" },
   semantic_visual_review: { label: "Visual review", tone: "ai" },
+  dimension_unit_unstated: { label: "Size unit", tone: "warning" },
 };
 
 export const CONFLICT_LABEL: Record<string, string> = {
