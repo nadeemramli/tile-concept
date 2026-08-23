@@ -40,6 +40,45 @@ export async function signInWithMagicLinkAction(_prev: AuthResult | null, formDa
   return { ok: true, message: "Check your inbox for a sign-in link. Only invited addresses can sign in." };
 }
 
+/**
+ * Enter the demo workspace without an account of your own.
+ *
+ * This is a real sign-in, not a bypass. The credentials are the shared demo
+ * account created by `scripts/provision-demo-guest.mts`; they live in server
+ * environment variables and are never sent to the browser. From the moment it
+ * succeeds the session is an ordinary session — RLS, the `api.*` views and every
+ * Server Action treat a guest exactly as they treat staff, and a guest's writes
+ * persist because they are ordinary writes.
+ *
+ * That account cannot reach real data even if this file is wrong:
+ * `core.enforce_guest_workspace()` refuses to let a guest membership name any
+ * workspace but the demo one, or to let a guest account hold a second, non-guest
+ * membership.
+ */
+export async function enterAsGuestAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
+  const email = process.env.DEMO_GUEST_EMAIL;
+  const password = process.env.DEMO_GUEST_PASSWORD;
+  if (!email || !password) {
+    return { ok: false, error: "Guest access is not configured in this environment." };
+  }
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { ok: false, error: "Guest access is unavailable right now." };
+
+  // Refuse to continue if the account this signed in as is not actually a guest.
+  // A misconfigured DEMO_GUEST_EMAIL pointing at a staff account would otherwise
+  // hand every visitor a real session.
+  const { data: membership } = await supabase.rpc("my_membership").maybeSingle();
+  if (!membership || membership.role_key !== "guest") {
+    await supabase.auth.signOut();
+    return { ok: false, error: "Guest access is not configured correctly in this environment." };
+  }
+
+  const next = String(formData.get("next") ?? "/");
+  redirect(next.startsWith("/") ? next : "/");
+}
+
 export async function updatePasswordAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
   const pw = z.string().min(10).safeParse(formData.get("password"));
   if (!pw.success) return { ok: false, error: "Password must be at least 10 characters." };

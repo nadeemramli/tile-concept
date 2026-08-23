@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { signInWithMagicLinkAction, signInWithPasswordAction, type AuthResult } from "@/server/commands/auth";
+import { enterAsGuestAction, signInWithMagicLinkAction, signInWithPasswordAction, type AuthResult } from "@/server/commands/auth";
 
 export function LoginForm({ next, demo }: { next: string; demo: boolean }) {
   const [pwState, pwAction, pwPending] = useActionState<AuthResult | null, FormData>(signInWithPasswordAction, null);
   const [mlState, mlAction, mlPending] = useActionState<AuthResult | null, FormData>(signInWithMagicLinkAction, null);
+  const [guestState, guestAction, guestPending] = useActionState<AuthResult | null, FormData>(enterAsGuestAction, null);
   const [email, setEmail] = useState(demo ? "demo.admin@tileconcept.test" : "");
 
   return (
+    <div className="w-full space-y-4">
     <Tabs defaultValue="password" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="password">Password</TabsTrigger>
@@ -55,5 +57,24 @@ export function LoginForm({ next, demo }: { next: string; demo: boolean }) {
         </form>
       </TabsContent>
     </Tabs>
+
+    <div className="flex items-center gap-3" aria-hidden="true">
+      <span className="h-px flex-1 bg-border" />
+      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">or</span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+
+    <form action={guestAction} className="space-y-2">
+      <input type="hidden" name="next" value={next} />
+      {guestState && !guestState.ok && <p className="text-sm text-destructive">{guestState.error}</p>}
+      <Button type="submit" variant="secondary" className="w-full" disabled={guestPending}>
+        {guestPending ? "Preparing your demo…" : "Enter as guest"}
+      </Button>
+      <p className="text-[11px] text-muted-foreground">
+        No account needed. You land in a shared demo workspace with sample data and can use every feature — anything you
+        create is saved. The demo is reset weekly, and it contains no real customer, supplier or price data.
+      </p>
+    </form>
+    </div>
   );
 }

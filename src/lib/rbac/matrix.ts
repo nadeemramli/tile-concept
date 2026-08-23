@@ -42,6 +42,9 @@ export const ROLES = [
   "catalog_pricing",
   "stock_coordinator",
   "analyst",
+  // Anonymous visitors in the demo workspace. Every permission except
+  // settings.manage, and the database confines them to that one workspace.
+  "guest",
 ] as const;
 
 export type RoleKey = (typeof ROLES)[number];
@@ -56,6 +59,7 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   catalog_pricing: "Catalog / pricing",
   stock_coordinator: "Stock coordinator",
   analyst: "Analyst (read-only)",
+  guest: "Guest (demo)",
 };
 
 export const PERMISSION_EXPLAINERS: Partial<Record<PermissionKey, string>> = {
