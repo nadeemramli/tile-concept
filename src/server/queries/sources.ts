@@ -144,6 +144,8 @@ export interface ReviewConflict {
 export interface ReviewItemRow {
   id: string;
   item_type: string;
+  /** Corpus task kind. Null for the upload flow, where item_type is the whole story. */
+  task_type: string | null;
   status: string;
   confidence: number | null;
   proposed: Record<string, unknown>;
@@ -181,7 +183,7 @@ export const listReviewQueue = cache(async (filters: ReviewFilters = {}): Promis
   const supabase = await createServerSupabase();
   let query = supabase
     .from("review_queue")
-    .select("id, item_type, status, confidence, proposed, conflicts, decision_note, reviewed_at, reviewed_by, published_object_id, created_at, job_id, job_type, parser_version, source_asset_id, source_name, source_kind, storage_bucket, storage_path, page_count, supplier_name, row_no, page_no, raw, fields")
+    .select("id, item_type, task_type, status, confidence, proposed, conflicts, decision_note, reviewed_at, reviewed_by, published_object_id, created_at, job_id, job_type, parser_version, source_asset_id, source_name, source_kind, storage_bucket, storage_path, page_count, supplier_name, row_no, page_no, raw, fields")
     .order("created_at", { ascending: true })
     .order("row_no", { ascending: true })
     .limit(500);
@@ -198,6 +200,7 @@ export const listReviewQueue = cache(async (filters: ReviewFilters = {}): Promis
     .map((r) => ({
       id: r.id!,
       item_type: r.item_type ?? "product",
+      task_type: r.task_type ?? null,
       status: r.status ?? "pending",
       confidence: r.confidence === null || r.confidence === undefined ? null : Number(r.confidence),
       proposed: (r.proposed ?? {}) as Record<string, unknown>,

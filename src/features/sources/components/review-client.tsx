@@ -17,7 +17,18 @@ import { EmptyState } from "@/components/patterns/states";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { EvidenceViewer } from "@/features/sources/components/evidence-viewer";
 import { CONFLICT_LABEL, ITEM_TYPE, REVIEW_ITEM_STATUS, confidenceLabel, confidenceTone } from "@/features/sources/status-maps";
-import { PRICE_TYPE_OPTIONS, TAX_BASIS_OPTIONS, correctableFor, unresolvedRequired, type CorrectableField } from "@/features/sources/schema";
+import {
+  DIMENSION_UNIT_OPTIONS,
+  DUPLICATE_RESOLUTION_OPTIONS,
+  OBSERVATION_VERDICT_OPTIONS,
+  PRICE_TYPE_OPTIONS,
+  SCOPE_TYPE_OPTIONS,
+  TAX_BASIS_OPTIONS,
+  correctableFor,
+  isRequiredFor,
+  unresolvedRequired,
+  type CorrectableField,
+} from "@/features/sources/schema";
 import { approveReviewItemAction, rejectReviewItemAction } from "@/server/commands/sources";
 import type { ExtractedFieldRow, ReviewItemRow } from "@/server/queries/sources";
 import { formatDateTime } from "@/lib/format";
@@ -69,7 +80,10 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
   const index = Math.max(0, items.findIndex((i) => i.id === current));
   const item: ReviewItemRow | undefined = items[index] ?? items[0];
   const itemId = item?.id;
-  const fields = useMemo(() => correctableFor(item?.item_type ?? "product"), [item?.item_type]);
+  const fields = useMemo(
+    () => correctableFor(item?.item_type ?? "product", item?.task_type),
+    [item?.item_type, item?.task_type],
+  );
 
   // Reset the working copy whenever the selected item changes — done during
   // render rather than in an effect so there is no cascading render.
@@ -77,7 +91,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
   if (itemId && itemId !== loadedFor) {
     setLoadedFor(itemId);
     const base: Record<string, string> = {};
-    for (const f of correctableFor(item?.item_type ?? "product")) base[f.key] = asText(item?.proposed?.[f.key]);
+    for (const f of correctableFor(item?.item_type ?? "product", item?.task_type)) base[f.key] = asText(item?.proposed?.[f.key]);
     setDraft(base);
     setNote("");
     setFocused(null);
@@ -91,7 +105,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
   // What the source never established. Approval is refused server-side until
   // each of these is answered, so say so before the click rather than after it.
   const blockers = useMemo(
-    () => (item ? unresolvedRequired(item.item_type, draft) : []),
+    () => (item ? unresolvedRequired(item.item_type, draft, item.task_type) : []),
     [draft, item],
   );
 
@@ -110,6 +124,14 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
           return TAX_BASIS_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
         case "priceType":
           return PRICE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+        case "scopeType":
+          return SCOPE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+        case "dimensionUnit":
+          return DIMENSION_UNIT_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+        case "duplicateResolution":
+          return DUPLICATE_RESOLUTION_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
+        case "observationVerdict":
+          return OBSERVATION_VERDICT_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
         default:
           return [];
       }
@@ -351,7 +373,7 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
               const changed = dirtyKeys.includes(f.key);
               const low = ext?.confidence != null && ext.confidence < 0.8;
               const blocking = blockers.some((b) => b.key === f.key);
-              const required = f.required?.includes(item.item_type as "product" | "price") ?? false;
+              const required = isRequiredFor(f, item.item_type, item.task_type);
               const hint = ext?.source_text ? `Read from: ${ext.source_text}` : f.hint;
               return (
                 <div

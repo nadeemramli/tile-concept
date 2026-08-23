@@ -63,7 +63,43 @@ export const PRICE_TYPE_OPTIONS = [
   { value: "other", label: "Other" },
 ] as const;
 
-export type CorrectableSource = "units" | "priceLists" | "brands" | "categories" | "taxBasis" | "priceType";
+/** Answers a corpus task asks for that are not drawn from a lookup table. */
+export const SCOPE_TYPE_OPTIONS = [
+  { value: "brand", label: "The whole brand" },
+  { value: "product", label: "One product" },
+  { value: "variant", label: "One variant" },
+  { value: "unresolved", label: "Still cannot tell" },
+] as const;
+
+export const DIMENSION_UNIT_OPTIONS = [
+  { value: "mm", label: "Millimetres" },
+  { value: "cm", label: "Centimetres" },
+  { value: "unresolved", label: "Cannot tell from the source" },
+] as const;
+
+export const DUPLICATE_RESOLUTION_OPTIONS = [
+  { value: "same_product", label: "Same product — collapse them" },
+  { value: "different_products", label: "Different products — keep both" },
+  { value: "unresolved", label: "Needs the documents side by side" },
+] as const;
+
+export const OBSERVATION_VERDICT_OPTIONS = [
+  { value: "confirmed", label: "Correct" },
+  { value: "rejected", label: "Wrong" },
+  { value: "unresolved", label: "Cannot tell from this image" },
+] as const;
+
+export type CorrectableSource =
+  | "units"
+  | "priceLists"
+  | "brands"
+  | "categories"
+  | "taxBasis"
+  | "priceType"
+  | "scopeType"
+  | "dimensionUnit"
+  | "duplicateResolution"
+  | "observationVerdict";
 
 export interface CorrectableField {
   key: string;
@@ -72,9 +108,9 @@ export interface CorrectableField {
   /** Where a select gets its options. */
   options?: CorrectableSource;
   /** Item types this field is shown for; omitted means both. */
-  appliesTo?: readonly ("product" | "price")[];
+  appliesTo?: readonly string[];
   /** Item types for which approval is refused without a value. */
-  required?: readonly ("product" | "price")[];
+  required?: readonly string[];
   hint?: string;
 }
 
@@ -109,14 +145,109 @@ export const CORRECTABLE_FIELDS: readonly CorrectableField[] = [
   { key: "source_ref", label: "Source reference", input: "text" },
 ];
 
-/** Fields for the given item type, in display order. */
-export function correctableFor(itemType: string): CorrectableField[] {
-  return CORRECTABLE_FIELDS.filter((f) => !f.appliesTo || f.appliesTo.includes(itemType as "product" | "price"));
+/**
+ * What each corpus review task actually asks.
+ *
+ * The upload flow has one question — "is this extracted product or price right?"
+ * — and `CORRECTABLE_FIELDS` above is its answer sheet. A corpus task asks
+ * something else entirely, and until this registry existed every one of them
+ * rendered the product/price form, because the fields were selected by
+ * `item_type` and a corpus task's item_type matches none of the `appliesTo`
+ * lists. A reviewer being asked for a currency when the question was "is this
+ * 306mm or 306cm?" cannot answer it, so 2,000-odd tasks sat unanswerable.
+ *
+ * A task type absent from this map falls back to the item-type fields, which is
+ * the right default for the upload flow and harmless for anything else: worst
+ * case a new task type shows a generic form until it is added here.
+ */
+export const TASK_TYPE_FIELDS: Record<string, readonly CorrectableField[]> = {
+  // A folder label is a provenance hint, never a scope. The reviewer states one.
+  certificate_scope_review: [
+    { key: "scope_type", label: "What does this certificate cover?", input: "select", options: "scopeType", required: ["certificate_scope_review"], hint: "The folder it was found in does not establish this." },
+    { key: "brand_id", label: "Brand", input: "select", options: "brands", hint: "Required when the scope is a brand." },
+    { key: "certificate_type", label: "Certificate type", input: "text", hint: "For example: product conformity, factory audit." },
+    { key: "issuer", label: "Issuer", input: "text" },
+    { key: "issued_on", label: "Issued", input: "date" },
+    { key: "expires_on", label: "Expires", input: "date" },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+
+  // The same supplier code under one brand in two documents.
+  duplicate_code_resolution: [
+    { key: "resolution", label: "Are these the same product?", input: "select", options: "duplicateResolution", required: ["duplicate_code_resolution"] },
+    { key: "keep_code", label: "Code to keep", input: "text", hint: "Leave blank to keep the code as extracted." },
+    { key: "distinguishing_attribute", label: "What tells them apart", input: "text", hint: "Only when they are different products — size, finish, series." },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+
+  // A size with no unit, or several sizes for one product.
+  dimension_unit_unstated: [
+    { key: "dimension_unit", label: "What unit is this size in?", input: "select", options: "dimensionUnit", required: ["dimension_unit_unstated"], hint: "The source states a bare number. Nothing is assumed from its magnitude." },
+    { key: "chosen_size", label: "Which size is the product", input: "text", hint: "Only when the source offered more than one." },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+
+  // A machine label on an image, awaiting a person.
+  semantic_visual_review: [
+    { key: "verdict", label: "Is the label correct?", input: "select", options: "observationVerdict", required: ["semantic_visual_review"] },
+    { key: "corrected_value", label: "Correct value", input: "text", hint: "Only when the label is wrong." },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+
+  // Is this document what the classifier thinks it is?
+  class_path_conflict: [
+    { key: "asset_class", label: "What kind of document is this?", input: "text", required: ["class_path_conflict"], hint: "For example: catalog, price list, certificate." },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+  representative_shape_review: [
+    { key: "asset_class", label: "What kind of document is this?", input: "text", required: ["representative_shape_review"] },
+    { key: "applies_to_cluster", label: "Applies to the whole cluster", input: "text", hint: "Yes or no, and why." },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+
+  // A price table whose scope the document never states.
+  structured_price_scope_missing: [
+    { key: "price_list_id", label: "Price list", input: "select", options: "priceLists", required: ["structured_price_scope_missing"], hint: "Which programme these prices belong to. Never auto-selected." },
+    { key: "market", label: "Market", input: "text", required: ["structured_price_scope_missing"] },
+    { key: "tax_basis", label: "Tax basis", input: "select", options: "taxBasis", required: ["structured_price_scope_missing"] },
+    { key: "unit_id", label: "Price basis", input: "select", options: "units", required: ["structured_price_scope_missing"] },
+    { key: "valid_from", label: "Valid from", input: "date", required: ["structured_price_scope_missing"] },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+
+  // A file too large to stage. The decision is how to recover it.
+  oversized_source_recovery: [
+    { key: "recovery_plan", label: "How will this be recovered?", input: "text", required: ["oversized_source_recovery"], hint: "A local Drive sync, a smaller source PDF, or a decision to leave it out." },
+    { key: "source_ref", label: "Source reference", input: "text" },
+  ],
+};
+
+/**
+ * Fields for a review item, in display order.
+ *
+ * `taskType` wins when it names a corpus task, because that is the more specific
+ * description of what is being asked. Everything else falls back to `itemType`.
+ */
+export function correctableFor(itemType: string, taskType?: string | null): CorrectableField[] {
+  const byTask = taskType ? TASK_TYPE_FIELDS[taskType] : undefined;
+  if (byTask) return [...byTask];
+  return CORRECTABLE_FIELDS.filter((f) => !f.appliesTo || f.appliesTo.includes(itemType));
 }
 
 /** Required keys still empty — the reviewer sees these before clicking approve. */
-export function unresolvedRequired(itemType: string, values: Record<string, string>): CorrectableField[] {
-  return correctableFor(itemType).filter(
-    (f) => f.required?.includes(itemType as "product" | "price") && !(values[f.key] ?? "").trim(),
+export function unresolvedRequired(
+  itemType: string,
+  values: Record<string, string>,
+  taskType?: string | null,
+): CorrectableField[] {
+  const key = taskType && TASK_TYPE_FIELDS[taskType] ? taskType : itemType;
+  return correctableFor(itemType, taskType).filter(
+    (f) => f.required?.includes(key) && !(values[f.key] ?? "").trim(),
   );
+}
+
+/** Whether a field is required for this item, so the label can say so. */
+export function isRequiredFor(field: CorrectableField, itemType: string, taskType?: string | null): boolean {
+  const key = taskType && TASK_TYPE_FIELDS[taskType] ? taskType : itemType;
+  return field.required?.includes(key) ?? false;
 }
