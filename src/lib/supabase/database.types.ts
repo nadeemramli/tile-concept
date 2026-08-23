@@ -2227,14 +2227,17 @@ export type Database = {
           media_assets: number | null
           media_links: number | null
           page_renders: number | null
+          price_approvals_recorded: number | null
           price_candidates: number | null
           price_candidates_not_pending: number | null
+          prices_live: number | null
           shape_profiles: number | null
           source_assets: number | null
           source_pdfs: number | null
           standalone_images: number | null
           variant_candidates: number | null
           variant_candidates_not_pending: number | null
+          variant_candidates_published: number | null
           versions_connector_only: number | null
           versions_deferred: number | null
           versions_excluded: number | null
@@ -2252,14 +2255,17 @@ export type Database = {
           media_assets?: never
           media_links?: never
           page_renders?: never
+          price_approvals_recorded?: never
           price_candidates?: never
           price_candidates_not_pending?: never
+          prices_live?: never
           shape_profiles?: never
           source_assets?: never
           source_pdfs?: never
           standalone_images?: never
           variant_candidates?: never
           variant_candidates_not_pending?: never
+          variant_candidates_published?: never
           versions_connector_only?: never
           versions_deferred?: never
           versions_excluded?: never
@@ -2277,14 +2283,17 @@ export type Database = {
           media_assets?: never
           media_links?: never
           page_renders?: never
+          price_approvals_recorded?: never
           price_candidates?: never
           price_candidates_not_pending?: never
+          prices_live?: never
           shape_profiles?: never
           source_assets?: never
           source_pdfs?: never
           standalone_images?: never
           variant_candidates?: never
           variant_candidates_not_pending?: never
+          variant_candidates_published?: never
           versions_connector_only?: never
           versions_deferred?: never
           versions_excluded?: never

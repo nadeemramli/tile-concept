@@ -5,10 +5,10 @@
 -- unreviewed candidates stay unpublished, a folder does not establish a
 -- certificate scope, pixels do not become dimensions, a same-document image
 -- association is not a product image, and re-importing an unchanged corpus
--- changes nothing.
+-- changes nothing — including not un-deciding anything a reviewer decided.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(36);
 
 create or replace function pg_temp.act_as(uid text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, false);
@@ -291,6 +291,67 @@ select is(
   core.storage_workspace_of('11111111-1111-1111-1111-111111111111/drive/base_tiles_local/f/abc/cat.pdf'),
   '11111111-1111-1111-1111-111111111111'::uuid,
   'object paths are resolved workspace-first');
+
+------------------------------------------------------------------------------
+-- 31-36. A re-import re-states the source, never the decision.
+--
+-- The importer upserts every candidate table, and a PostgREST upsert writes each
+-- column in the payload on the update path too — including the literal
+-- 'pending_review' a new candidate needs. On 2026-08-21 that reset 6,701 price
+-- and 5,126 variant candidates the bulk publication had just approved. The
+-- database now refuses that one transition, so no client can repeat it.
+------------------------------------------------------------------------------
+reset role;
+
+insert into ingest.price_candidates (id, workspace_id, candidate_key, source_asset_id, external_source_id,
+                                     amount_raw, amount_normalized, confidence, review_state)
+values ('cccccccc-0000-0000-0000-00000000000c', pg_temp.ws(), 'price_corpus_test_1',
+        'cccccccc-0000-0000-0000-000000000003', 'corpus-test-file-1', 'RM 12.50', 12.5, 0.4, 'approved');
+
+-- Exactly what the importer sends on its second pass: the same row, the same
+-- default state, and one source-derived column that genuinely did change.
+update ingest.price_candidates
+set review_state = 'pending_review', confidence = 0.9
+where candidate_key = 'price_corpus_test_1';
+
+select is(
+  (select review_state from ingest.price_candidates where candidate_key = 'price_corpus_test_1'),
+  'approved', 'a re-import cannot reset an approved price candidate to pending');
+select is(
+  (select confidence from ingest.price_candidates where candidate_key = 'price_corpus_test_1'),
+  0.9::numeric(5,4), 'the source-derived columns that re-import came to update still land');
+
+update ingest.variant_candidates set review_state = 'approved' where candidate_key = 'variant_corpus_test_1';
+update ingest.variant_candidates set review_state = 'pending_review' where candidate_key = 'variant_corpus_test_1';
+select is(
+  (select review_state from ingest.variant_candidates where candidate_key = 'variant_corpus_test_1'),
+  'approved', 'the same guard covers variant candidates');
+
+-- The guard refuses one transition, not all of them: a reviewer revisiting a
+-- decision must still be able to.
+update ingest.price_candidates set review_state = 'rejected' where candidate_key = 'price_corpus_test_1';
+select is(
+  (select review_state from ingest.price_candidates where candidate_key = 'price_corpus_test_1'),
+  'rejected', 'a reviewer can still move a decided candidate to another decision');
+
+-- Review item 000a was answered by the approval in 26-27 — 'corrected' rather
+-- than 'approved', because that call supplied the missing commercial semantics.
+-- Its status, the time it was answered and the note explaining it are one
+-- decision, and are restored together.
+update ingest.review_items
+set status = 'pending', reviewed_at = null, decision_note = null
+where external_key = 'review_corpus_test_1';
+select ok(
+  (select status = 'corrected' and reviewed_at is not null
+   from ingest.review_items where external_key = 'review_corpus_test_1'),
+  'an answered review task keeps its answer and the time it was given');
+
+-- Rights clearance is a judgement about a file, not a property of the file.
+update ingest.media_assets set usage_rights_state = 'unreviewed'
+where id = 'cccccccc-0000-0000-0000-000000000005';
+select is(
+  (select usage_rights_state from ingest.media_assets where id = 'cccccccc-0000-0000-0000-000000000005'),
+  'accepted', 'cleared image usage rights survive a re-import of the same file');
 
 select * from finish();
 rollback;
