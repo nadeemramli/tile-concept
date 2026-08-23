@@ -15,7 +15,13 @@ select throws_like($$select count(*) from api.contacts$$, '%permission denied%',
 reset role;
 
 -- 2. sales rep sees only own/unowned opportunities, manager sees all
-create temp table t_counts as select (select count(*) from sales.opportunities) as opps; grant select on t_counts to authenticated;
+-- Scoped to the workspace these users belong to. An unscoped count was correct
+-- only while exactly one workspace existed; the demo workspace added by guest
+-- mode made it count rows the manager cannot see, and should not see.
+create temp table t_counts as
+  select (select count(*) from sales.opportunities
+          where workspace_id = '11111111-1111-1111-1111-111111111111') as opps;
+grant select on t_counts to authenticated;
 set local role authenticated;
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
 select ok((select count(*) from api.opportunities) < (select opps from t_counts), 'sales rep is owner-scoped on opportunities');

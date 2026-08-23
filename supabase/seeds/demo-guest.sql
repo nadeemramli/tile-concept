@@ -46,4 +46,12 @@ begin
   on conflict (workspace_id, user_id) do nothing;
 
   update core.profiles set full_name = 'Guest' where user_id = v_user;
+
+  -- Rebuild the demo content now that a guest exists to own it. The migration
+  -- already built it once, but migrations run before seeds, so at that point
+  -- there was no guest account and every owner_id came out null — which would
+  -- leave the "assigned to me" views a visitor meets empty. The reset is the
+  -- same code path the weekly job uses, so this also exercises it on every
+  -- local db:reset.
+  perform core.reset_demo_workspace();
 end $$;
