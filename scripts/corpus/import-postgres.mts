@@ -48,7 +48,17 @@ export interface ImportCounts {
 
 type Row = Record<string, unknown>;
 
-/** Upsert in batches on the table's natural key. Retries only retryable errors. */
+/**
+ * Upsert in batches on the table's natural key. Retries only retryable errors.
+ *
+ * Every row carries the `review_state: 'pending_review'` a *new* candidate needs,
+ * and PostgREST writes the whole payload on the update path too — so on a second
+ * pass this statement asks to un-decide every row it re-observes. It is not fixed
+ * here, because the same hazard exists for any client that re-states a source:
+ * `ingest.preserve_review_decision()` (migration …11) refuses that one transition
+ * in the database and lets the rest of the payload through. Do not try to drop
+ * `review_state` from the payload to compensate — an insert still needs it.
+ */
 async function upsert(supabase: ApiClient, table: string, rows: Row[], onConflict: string): Promise<number> {
   return write(supabase, table, rows, onConflict, false);
 }
