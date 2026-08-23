@@ -152,14 +152,17 @@ begin
     (ws, 'pieces_per_carton', 'Pieces per carton', 'number', 'pc'), (ws, 'sheets_per_carton', 'Sheets per carton', 'number', 'sheet'), (ws, 'sqm_per_carton', 'Coverage per carton', 'number', 'sqm'),
     (ws, 'series', 'Series / profile', 'text', null), (ws, 'clip_system', 'Clip / system', 'text', null), (ws, 'edge', 'Edge', 'enum', null), (ws, 'grade', 'Grade', 'text', null),
     (ws, 'parent_tile', 'Parent / base tile', 'text', null), (ws, 'cut_pattern', 'Cut pattern', 'text', null), (ws, 'yield_rule', 'Yield / wastage rule', 'text', null),
-    (ws, 'compatible_system', 'Compatible product / system', 'text', null), (ws, 'pack_quantity', 'Pack quantity', 'number', 'pc')
+    (ws, 'compatible_system', 'Compatible product / system', 'text', null), (ws, 'pack_quantity', 'Pack quantity', 'number', 'pc'),
+    -- Kept identical to 20260821000012_catalog_attributes.sql, the way the units
+    -- and categories are, so a seeded database and a deployed one cannot drift.
+    (ws, 'cartons_per_pallet', 'Cartons per pallet', 'number', 'ctn')
   on conflict do nothing;
 
   insert into merch.category_attribute_rules (workspace_id, category_id, attribute_definition_id, is_required, position)
   select ws, c.id, d.id, r.req, r.pos from (values
     ('mosaic','sheet_width_mm',true,1),('mosaic','sheet_height_mm',true,2),('mosaic','chip_width_mm',false,3),('mosaic','chip_height_mm',false,4),('mosaic','chip_shape',false,5),('mosaic','sheets_per_carton',false,6),('mosaic','sqm_per_carton',false,7),
     ('wall_panel','series',true,1),('wall_panel','width_mm',true,2),('wall_panel','depth_mm',true,3),('wall_panel','length_mm',true,4),('wall_panel','clip_system',false,5),('wall_panel','pieces_per_carton',false,6),
-    ('tile','width_mm',true,1),('tile','length_mm',true,2),('tile','thickness_mm',false,3),('tile','edge',false,4),('tile','grade',false,5),('tile','pieces_per_carton',false,6),('tile','sqm_per_carton',false,7),
+    ('tile','width_mm',true,1),('tile','length_mm',true,2),('tile','thickness_mm',false,3),('tile','edge',false,4),('tile','grade',false,5),('tile','pieces_per_carton',false,6),('tile','sqm_per_carton',false,7),('tile','cartons_per_pallet',false,8),
     ('cut_tile','parent_tile',true,1),('cut_tile','width_mm',true,2),('cut_tile','length_mm',true,3),('cut_tile','cut_pattern',false,4),('cut_tile','yield_rule',false,5),
     ('accessory','compatible_system',false,1),('accessory','pack_quantity',false,2)
   ) as r(cat, attr, req, pos)

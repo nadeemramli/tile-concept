@@ -1,0 +1,11 @@
+-- Pin the search_path on the guard added in …11.
+--
+-- ingest.reject_mutation(), the append-only trigger beside it, is declared
+-- `set search_path = ''`; preserve_review_decision() was not, which is a fourth
+-- "Function Search Path Mutable" advisor warning and an inconsistency inside one
+-- pattern. The function resolves no table by name, so this changes no behaviour —
+-- it removes the warning and keeps the two triggers declared the same way.
+--
+-- Every unqualified operator it does use (jsonb ->, ->>, ||) lives in pg_catalog,
+-- which is always searched.
+alter function ingest.preserve_review_decision() set search_path = '';
