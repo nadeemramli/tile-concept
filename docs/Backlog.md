@@ -134,11 +134,14 @@ not say the thing, not because nothing has parsed it:
 - **`candidate_facts` covers the publication-blocking fields only** (7 per price,
   7 per variant, 5 per certificate). Widening it to every observed field is
   cheap but was not needed for the gate.
-- **The review UI is built for the upload flow, not for corpus tasks.** A
-  `certificate_scope_review` or `duplicate_code_resolution` task renders with the
-  product/price correction fields, because `correctableFor()` keys off
-  `item_type`. The task types have readable labels and the queue is usable, but
-  each corpus task type deserves its own editor.
+- ~~**The review UI is built for the upload flow, not for corpus tasks.**~~
+  **Fixed 2026-08-23.** `correctableFor()` now dispatches on `task_type` and falls
+  back to `item_type`, so each corpus task asks its own question — a certificate
+  task asks for a scope, a size task asks for a unit, a duplicate asks whether the
+  two are the same product — instead of asking every one of them for a currency
+  and a price list. `task_type` was not even selected by `listReviewQueue`, which
+  is why the dispatch had nothing to key on. Eight task types have field sets;
+  anything unregistered falls back to the item-type form.
 
 ### Authentication
 
@@ -170,6 +173,30 @@ not say the thing, not because nothing has parsed it:
 - `api.start_import_run` / `record_import_item` / `finish_import_run` exist for a
   permissioned in-app import but have no UI and no pgTAP coverage yet. The CLI
   writes the ledger directly because it has no user identity.
+
+## Guest mode and the demo workspace
+
+"Enter as guest" signs a visitor in as one provisioned demo account with a real
+membership in a workspace whose slug is `demo`. It is not a bypass: RLS, the
+`api.*` views and every Server Action treat a guest as they treat staff, and a
+guest's writes persist.
+
+Anonymous sign-in would have given each visitor a private sandbox, but GoTrue
+routes it through `/signup`, so `enable_signup = false` rejects it. Enabling that
+would re-open the self-signup gap closed on 2026-08-21, so guests share one
+account and one workspace instead.
+
+`core.build_demo_dataset()` fills that workspace — 44 products with attributes,
+packaging and three price tiers, 36 contacts, 22 opportunities across every
+stage, walk-ins, purchases, stock and marketing nominations, all synthetic.
+`core.reset_demo_workspace()` drops the workspace row (97 cascading foreign keys
+do the cleanup) and rebuilds it from the same function, so the weekly restore
+cannot drift from the original build. `pg_cron` runs it Sundays at 18:00 UTC,
+which is Monday 02:00 in Kuala Lumpur.
+
+**Still open:** guests share a workspace, so one visitor can undo another's work
+between resets — accepted deliberately. The reset is not yet monitored, so a
+failure would go unnoticed until someone looked at a stale demo.
 
 ## Verification / E2E gaps
 
