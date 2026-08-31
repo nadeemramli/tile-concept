@@ -3,9 +3,10 @@
 Internal, invite-only operating system for Tile Concept: lead and walk-in capture, identity resolution, contract-sales pipeline, purchases and repeat history, governed product catalog and effective-dated pricing, with audit and data-health throughout. Product definition: [`docs/prd`](docs/prd/).
 
 **Status:** deployed. Phase 1 slice (PRD §23) is implemented end-to-end on a full schema;
-Phases 2–6 have their database layer and working surfaces. The 2026-08-21 supplier
-discovery corpus is migrated into the hosted project as **evidence only** — nothing from
-it is published. Operating mode defaults to **Demo** for synthetic app data.
+Phases 2–6 have their database layer and working surfaces. The identifiable, priced part
+of the 2026-08-21 supplier corpus is published (5,087 products and 6,575 current prices);
+ambiguous remnants stay in the review queue. Operating mode defaults to **Demo** for
+synthetic app data.
 
 ## Stack
 
@@ -57,9 +58,12 @@ Real administrators are invited from **Platform → Settings → Invites** (Supa
 | `NEXT_PUBLIC_APP_MODE` | browser + server | `demo` \| `shadow` \| `live` (PRD §12.9) |
 | `SUPABASE_SECRET_KEY` | **server only** | service-role key; admin invites, user provisioning, and the corpus importer. Never `NEXT_PUBLIC_`. |
 | `TILE_CORPUS_ROOT` | corpus tooling only | Absolute path to `Discovery Corpus/_local`. Never defaulted — a wrong default would silently import the wrong tree. |
+| `TC_INTAKE_WORKSPACE_ID` | **server only** | Workspace written by inbound connectors; optional only when the database has exactly one workspace. |
+| `N8N_INTAKE_SECRET` | **server only** | HMAC secret shared only with the Hetzner n8n workflow for `/api/intake/automation`. |
+| `INTAKE_WEBSITE_SECRET` | **server only** | Separate HMAC secret for direct website submissions at `/api/intake/website`. |
 
-Production has the five variables set; Preview does not yet, so preview deployments have
-no database. Both are intended to point at separate Supabase projects; until a staging
+Production has the five core app/database variables set; connector secrets remain an
+explicit rollout step. Preview has no database. Both environments should use separate Supabase projects; until a staging
 project exists this is a documented deviation from PRD §12.6.
 
 ## Architecture at a glance
@@ -68,6 +72,54 @@ project exists this is a documented deviation from PRD §12.6.
 - `src/server/queries/*` (RSC reads) · `src/server/commands/*` (Server Actions: zod → authz → RPC/insert → audit → `ActionResult`).
 - `src/components/patterns/*` — DataTable, RecordDrawer, StatusPill, MetricCard (always with definition/source/freshness), Timeline, states.
 - `supabase/migrations` — private schemas (`core identity sales marketing merch stock ingest audit`), RLS on every table, `api.*` security-invoker views + SECURITY DEFINER business functions (walk-in, purchase, stage change, merge/unmerge, price publish, search, command-centre summary). `supabase/seed.sql` — synthetic fixtures only.
+
+## Product and price lookup
+
+`/merchandise/catalog` is the sales-facing **Product & Price Finder**. It opens on
+**Ready to quote**, searches the entire published corpus, and filters by brand, colour,
+finish, material, and category. Results are server-paginated and show the selected
+current reviewed price beside the product. `/merchandise/pricing` remains the operator
+surface for price-list maintenance and history.
+
+Publication controls still protect the catalog; ordinary lookup does not send sales
+staff back through the review queue. Products without a usable current price are
+isolated in **Missing price**.
+
+## n8n lead intake and WhatsApp handoff
+
+The Hetzner-hosted n8n workflow posts a normalized payload to
+`POST /api/intake/automation`. TikTok, Facebook, Instagram, Threads, Meta, and website
+forms use one contract:
+
+```json
+{
+  "submission_id": "provider-submission-id",
+  "source": "tiktok",
+  "name": "Example Lead",
+  "phone": "+60123456789",
+  "email": "example@example.invalid",
+  "interest": "kitchen tiles",
+  "product_interest": ["tile"],
+  "occurred_at": "2026-09-01T10:00:00+08:00",
+  "campaign_name": "Showroom September",
+  "form_name": "Tile Consultation"
+}
+```
+
+n8n must send `x-tc-timestamp` (Unix seconds) and `x-tc-signature`, where the
+signature is `sha256=` plus the lowercase HMAC-SHA256 of
+`<timestamp>.<exact raw JSON body>` using `N8N_INTAKE_SECRET`. Requests older than five
+minutes or with an invalid signature are rejected. `submission_id` makes retries
+idempotent; the existing intake function then deduplicates, matches exact phone/email,
+routes ownership, and starts the response SLA.
+
+A successful response includes `lead_url`, `whatsapp_url`, and `notification_text`.
+n8n sends `notification_text` to the configured sales WhatsApp group through the
+approved WhatsApp provider. The app itself does not silently send messages. In the
+inbox, staff with contact-reveal permission also get a one-click, pre-filled WhatsApp
+action; sending remains a deliberate human action and must be logged afterward.
+Facebook, Instagram, and Threads report under the stable `meta` channel while the exact
+platform, campaign, and form remain in source detail and the immutable intake payload.
 
 ## Hosted project
 

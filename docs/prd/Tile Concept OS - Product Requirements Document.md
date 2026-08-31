@@ -2,8 +2,8 @@
 title: Tile Concept OS - Product Requirements Document
 description: Comprehensive PRD for an internal sales lifecycle, identity resolution, catalog, pricing, and stock operating system.
 created: 2026-08-19
-updated: 2026-08-21
-status: proposed-v1
+updated: 2026-09-01
+status: active-v1
 owner: Nadeem / Tile Concept decision-maker
 review_date: 2026-08-26
 tags: [tile-concept, prd, crm, sales, inventory, catalog, pricing, ocr]
@@ -303,8 +303,12 @@ Required capabilities:
 - Paste text into an extraction helper that proposes fields; the user reviews before save.
 - Preserve form answers, campaign/form metadata, original timestamp, source ID, and consent/privacy evidence where provided.
 - Detect source retries and duplicate submissions idempotently.
+- Accept one signed, normalized automation contract from the Hetzner-hosted n8n workflow for TikTok, Facebook, Instagram, Threads, Meta, and website forms; retain the exact provider, campaign, ad, page, and form as provenance.
 - Route by location, product interest, source, language, workload, or explicit manager assignment.
 - Track first-response SLA, attempts, outcome, qualification, and disqualification reason.
+- Return a directly addressable lead URL and pre-filled WhatsApp URL to n8n so it can alert the approved sales group immediately; the app itself does not silently send messages.
+- Give authorized staff a one-click WhatsApp action in the inbox and lead drawer. Opening WhatsApp is not a logged response; the user records the outcome after sending.
+- Match accepted phone/email identities to existing contacts and later walk-in/purchase activity without collapsing uncertain name-only matches.
 - Saved views: New, Unassigned, My leads, No response, Follow-up due, Duplicate review, Qualified, Disqualified, All.
 - Bulk assignment and export are permissioned and preview affected records.
 
@@ -363,7 +367,10 @@ Implementation model: stable common columns plus versioned, category-specific at
 
 Catalog screens:
 
-- Searchable gallery and dense table with image, brand, code, name, current price, availability summary, and trust state.
+- A sales-facing **Product & Price Finder** opens on `Ready to quote`: active products with a current reviewed price. It searches the full published corpus by code, name, alias, brand, category, color, finish, material, family, and series.
+- Brand, color, finish, material, and category filters update the server query, counts, and pagination; filters must not merely hide or rearrange a previously capped client-side sample.
+- Searchable gallery and dense table show image, brand, code, name, dimensions, current approved price and unit basis, availability summary, and trust state.
+- Review and publication remain operator workflows, but an already published, usable product must not require another review step before Sales can find and quote it. Exceptions are isolated in `Missing price` and `Unreviewed` views.
 - Product drawer/detail with variants, structured specs, media, current and historic prices, stock by source, supplier/catalog references, aliases, and audit.
 - Side-by-side comparison for selected products using shared semantic attributes.
 - Duplicate-product suggestions based on brand/code/alias/dimensions, with human confirmation.
@@ -384,6 +391,7 @@ Required model:
 Required behaviors:
 
 - Search current approved prices without opening source files.
+- Select a deterministic, clearly labelled current price for finder results and link to price-list management for alternate tiers, history, and publication work.
 - Display price basis such as piece, sheet, carton, meter, or sqm.
 - Prevent overlapping active prices for the same exact scope unless an authorized override records a reason.
 - Never silently convert units or currencies. Conversions require explicit rates/rules and display the original.
@@ -900,6 +908,7 @@ Every connector implements:
 - `test`: authenticated health/capability check without mutation.
 - `pull` or `webhook`: idempotent ingestion with checkpoint and raw reference.
 - `normalize`: provider payload to versioned canonical contract.
+- `handoff`: return stable internal record URLs and approved next-action links without performing an unlogged customer interaction.
 - `reconcile`: source counts/IDs versus accepted records.
 - `retry`: reason-coded, bounded backoff and dead-letter/review state.
 - `rotate`: credential expiry/rotation procedure.
@@ -907,14 +916,17 @@ Every connector implements:
 
 ### 11.2 Lead sources
 
-#### Meta and TikTok forms
+#### Social forms through n8n
 
-- Official APIs/webhooks only.
+- n8n on the Tile Concept Hetzner server may poll or receive from official TikTok/Meta APIs and map every form into one versioned application contract. Browser scraping and personal-account automation are out of scope.
+- n8n signs `<timestamp>.<exact raw JSON body>` with a dedicated HMAC secret; the application rejects stale, unsigned, or replayed submissions and never exposes the secret to a browser.
+- `tiktok`, `website`, and `meta` remain stable reporting channels. Facebook, Instagram, and Threads normalize to `meta`, while the exact platform/provider, campaign, ad, page, and form remain in provenance and the immutable payload.
 - Verify signature/challenge requirements, account/form mapping, scopes, app review, token lifetime, rate limits, and permitted retention at implementation time.
 - Acknowledge webhook quickly, persist deduplication key/raw reference, then process asynchronously.
 - Reconciliation job fetches missed records within provider-supported windows.
 - Map form questions through versioned configuration; unknown questions remain visible for review.
 - Platform campaign/form/ad metadata is provenance, not proof of incrementality.
+- The application response includes the accepted lead ID, direct inbox URL, pre-filled prospect WhatsApp URL when a valid phone exists, and notification text. n8n owns delivery of that text to the approved sales WhatsApp group through an authorized provider and records delivery failure for retry/review.
 
 #### Website inquiry
 
@@ -1304,7 +1316,8 @@ Exit gate: a salesperson can nominate a real pilot project, Marketing can reserv
 Build:
 
 - Website signed intake.
-- Meta and TikTok lead-form connectors after app/scopes approval.
+- Hetzner n8n normalized intake for TikTok first, then Facebook, Instagram, Threads, Meta, and website using the same signed contract after each provider's access/scopes approval.
+- WhatsApp group alert from n8n plus a permission-gated, one-click prospect message from the app.
 - Mapping, assignment, retries, reconciliation, SLA views, duplicate review.
 - Manual DM/paste capture retained as fallback.
 
@@ -1318,6 +1331,7 @@ Build:
 - Review queue with field-level evidence/confidence.
 - Category attribute schemas, product/variant/alias/media model.
 - Effective-dated price lists, conflict detection, comparison, publish approval.
+- Browse-first Product & Price Finder with full-corpus search, brand/color/finish/material/category facets, exact counts, and server pagination.
 - Allowlisted source connector framework; one supplier source proven before expanding.
 
 Exit gate: a representative set across mosaic, wall panel, tile, and cut tile is imported, reviewed, searchable, and traceable to source.
@@ -1376,7 +1390,8 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 ### Catalog and pricing
 
 - Product records across initial categories share common semantics and validate category-specific attributes.
-- Search finds by code, alias, brand, name, color, and relevant dimensions.
+- Finder defaults to products that are active and have a current reviewed price; review exceptions remain accessible but do not dominate the sales workflow.
+- Search finds across the full published corpus by code, alias, brand, name, category, color, finish, material, family/series, and relevant dimensions, with server-backed facets and pagination.
 - Current price displays amount, currency, unit basis, scope, effective date, source, and review state.
 - Publishing a conflicting/overlapping price is blocked or explicitly overridden by an authorized user with reason.
 - A quote/purchase retains its price snapshot after master price changes.
@@ -1506,6 +1521,7 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 3. Privacy notice and consent wording/version at each source.
 4. Assignment rules, response-hours calendar, and SLA targets.
 5. Whether conversion outcomes may be posted back to advertising platforms and on what lawful/policy basis.
+6. n8n owner, Hetzner backup/monitoring, credential rotation, and which approved WhatsApp Business provider/account/group may receive lead alerts.
 
 ## 21. Definition of Ready
 
@@ -1541,7 +1557,7 @@ Build this thin but complete path before broad dashboards or automation:
 3. Exact-phone search plus reviewable identity candidates.
 4. Contact/account and project/opportunity creation.
 5. Stage, owner, next action, activity timeline, and task.
-6. Minimal governed product/price search using manually reviewed records.
+6. Browse-first governed Product & Price Finder over published records, with current price and practical brand/color/finish/category filters.
 7. Quote/external document reference and purchase capture.
 8. Repeat-customer signal and customer timeline.
 9. Audit, saved views, Excel import preview, and command-centre exceptions.

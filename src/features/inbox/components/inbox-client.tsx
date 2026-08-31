@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import { MetricCard } from "@/components/patterns/metric-card";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
 import { LEAD_STATUS, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
+import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
 import { ViewsBar } from "@/features/inbox/components/views-bar";
 import { LeadDrawer } from "@/features/inbox/components/lead-drawer";
@@ -53,12 +54,13 @@ interface Props {
 export function InboxClient({ view, leads, counts, members, locations, savedViews, selected, selectedIntake, selectedTimeline, selectedContact }: Props) {
   const router = useRouter();
   const { session, can } = useSession();
-  const [leadParam, setLeadParam] = useQueryState("lead");
+  const [leadParam, setLeadParam] = useQueryState("lead", { shallow: false });
   const [newParam, setNewParam] = useQueryState("new");
   const [suggestions, setSuggestions] = useState<Record<string, IdentityCandidate[]>>({});
   const [bulkOwner, setBulkOwner] = useState("");
   const [bulkRows, setBulkRows] = useState<LeadRow[] | null>(null);
   const [pending, start] = useTransition();
+  const canRevealContact = can("contact.reveal");
 
   const tabs = useMemo(() => {
     const countFor: Record<LeadView, number | undefined> = {
@@ -84,7 +86,16 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
   const columns = useMemo<ColumnDef<LeadRow, unknown>[]>(
     () => [
       { accessorKey: "created_at", header: "Received", cell: ({ row }) => <span className="tnum text-muted-foreground">{formatRelative(row.original.created_at)}</span> },
-      { accessorKey: "source_channel", header: "Source", cell: ({ row }) => <StatusPill map={SOURCE_CHANNEL} value={row.original.source_channel} /> },
+      {
+        accessorKey: "source_channel",
+        header: "Source",
+        cell: ({ row }) => (
+          <div>
+            <StatusPill map={SOURCE_CHANNEL} value={row.original.source_channel} />
+            {row.original.source_detail && <div className="mt-0.5 max-w-44 truncate text-[11px] text-muted-foreground" title={row.original.source_detail}>{row.original.source_detail}</div>}
+          </div>
+        ),
+      },
       {
         id: "name",
         header: "Name / company",
@@ -124,8 +135,30 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
       },
       { accessorKey: "contact_attempts", header: "Attempts", cell: ({ row }) => <span className="tnum">{row.original.contact_attempts}</span> },
       { accessorKey: "product_interest", header: "Products", cell: ({ row }) => <span className="text-muted-foreground">{row.original.product_interest.map(titleCase).join(", ") || "—"}</span> },
+      {
+        id: "whatsapp",
+        header: "",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          if (!canRevealContact) return null;
+          const lead = row.original;
+          const url = buildWhatsAppUrl(
+            lead.raw_phone_normalized ?? lead.raw_phone,
+            buildLeadWhatsAppMessage({ name: lead.raw_name, interest: lead.interest, source: lead.source_channel }),
+          );
+          if (!url) return null;
+          return (
+            <Button asChild variant="ghost" size="icon-sm">
+              <a href={url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} aria-label={`Message ${lead.raw_name ?? "lead"} on WhatsApp`} title="Open a pre-filled WhatsApp message">
+                <MessageCircle className="size-3.5" aria-hidden />
+              </a>
+            </Button>
+          );
+        },
+      },
     ],
-    [],
+    [canRevealContact],
   );
 
   const openNew = newParam === "1";

@@ -1050,6 +1050,13 @@ export type Database = {
             foreignKeyName: "catalog_entries_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1085,6 +1092,13 @@ export type Database = {
             foreignKeyName: "catalog_entries_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
@@ -1103,6 +1117,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      catalog_finder: {
+        Row: {
+          brand: string | null
+          brand_id: string | null
+          category: string | null
+          category_id: string | null
+          code: string | null
+          color: string | null
+          confidence: number | null
+          default_variant_id: string | null
+          dimensions: Json | null
+          finish: string | null
+          material: string | null
+          name: string | null
+          price_amount: number | null
+          price_currency: string | null
+          price_id: string | null
+          price_list_id: string | null
+          price_list_name: string | null
+          price_state: string | null
+          price_type: string | null
+          price_unit_code: string | null
+          price_valid_from: string | null
+          product_id: string | null
+          review_state: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          search_text: string | null
+          source_ref: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_finder_facets: {
+        Row: {
+          facet: string | null
+          item_count: number | null
+          label: string | null
+          value: string | null
+          workspace_id: string | null
+        }
+        Relationships: []
       }
       category_attribute_rules: {
         Row: {
@@ -1384,8 +1479,22 @@ export type Database = {
             foreignKeyName: "certificate_scopes_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "certificate_scopes_variant_id_fkey"
@@ -2414,6 +2523,13 @@ export type Database = {
             foreignKeyName: "product_variants_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -2423,6 +2539,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "price_lists"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "variant_prices_variant_id_fkey"
@@ -3537,6 +3660,13 @@ export type Database = {
             foreignKeyName: "inventory_item_mappings_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "inventory_item_mappings_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
@@ -3681,6 +3811,13 @@ export type Database = {
             foreignKeyName: "inventory_movements_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
@@ -3767,6 +3904,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_snapshots_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "inventory_snapshots_variant_id_fkey"
@@ -4086,6 +4230,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
+            columns: ["product_variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
@@ -5058,6 +5209,13 @@ export type Database = {
             foreignKeyName: "packaging_configurations_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "packaging_configurations_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
@@ -5106,6 +5264,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "price_approval_events_variant_price_id_fkey"
+            columns: ["variant_price_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["price_id"]
+          },
           {
             foreignKeyName: "price_approval_events_variant_price_id_fkey"
             columns: ["variant_price_id"]
@@ -5225,6 +5390,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "candidate_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_candidates_published_price_id_fkey"
+            columns: ["published_price_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["price_id"]
           },
           {
             foreignKeyName: "price_candidates_published_price_id_fkey"
@@ -5549,6 +5721,13 @@ export type Database = {
             foreignKeyName: "product_aliases_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_aliases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -5629,6 +5808,13 @@ export type Database = {
             foreignKeyName: "product_attribute_values_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -5645,6 +5831,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "product_attribute_values_variant_id_fkey"
@@ -5804,8 +5997,22 @@ export type Database = {
             foreignKeyName: "product_media_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_media_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "product_media_variant_id_fkey"
@@ -5893,6 +6100,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_status_history"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_status_history_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "product_status_history_variant_id_fkey"
@@ -5988,6 +6202,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
           {
             foreignKeyName: "product_variants_product_id_fkey"
             columns: ["product_id"]
@@ -8475,6 +8696,13 @@ export type Database = {
             foreignKeyName: "stock_reconciliation_cases_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "stock_reconciliation_cases_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
@@ -8551,6 +8779,13 @@ export type Database = {
             foreignKeyName: "supplier_availability_snapshots_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -8581,6 +8816,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "supplier_availability_snapshots_variant_id_fkey"
@@ -8918,6 +9160,13 @@ export type Database = {
             foreignKeyName: "unit_conversions_variant_fk"
             columns: ["context_variant_id"]
             isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "unit_conversions_variant_fk"
+            columns: ["context_variant_id"]
+            isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
@@ -9065,6 +9314,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "candidate_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_published_variant_id_fkey"
+            columns: ["published_variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "variant_candidates_published_variant_id_fkey"
@@ -9260,6 +9516,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
           },
           {
             foreignKeyName: "variant_prices_variant_id_fkey"

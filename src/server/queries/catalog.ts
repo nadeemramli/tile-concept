@@ -5,11 +5,16 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getBrands, getCategories, getMemberMap, getUnits } from "@/server/queries/reference";
 
 export interface CatalogFilters {
-  view?: string; // active | missing-price | unreviewed | all
+  view?: string; // ready | active | missing-price | unreviewed | all
   category?: string; // category id
   brand?: string; // brand id
+  color?: string;
+  finish?: string;
+  material?: string;
   status?: string;
   q?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface Dimensions {
@@ -65,6 +70,26 @@ export interface CatalogRow {
   updated_at: string | null;
 }
 
+export interface CatalogSearchResult {
+  rows: CatalogRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
+
+export interface CatalogFacetOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface CatalogFacets {
+  colors: CatalogFacetOption[];
+  finishes: CatalogFacetOption[];
+  materials: CatalogFacetOption[];
+}
+
 function pickCurrentPrice(rows: { id: string | null; variant_id: string | null; amount: number | null; currency: string | null; unit_code: string | null; price_list_name: string | null; price_type: string | null; valid_from: string | null; state: string | null }[], variantIds: string[]): CurrentPrice | null {
   const cands = rows.filter((r) => r.variant_id && variantIds.includes(r.variant_id) && r.state === "current");
   if (cands.length === 0) return null;
@@ -81,77 +106,102 @@ function pickCurrentPrice(rows: { id: string | null; variant_id: string | null; 
   };
 }
 
-export async function listProducts(filters: CatalogFilters): Promise<CatalogRow[]> {
+export async function searchCatalog(filters: CatalogFilters): Promise<CatalogSearchResult> {
   const supabase = await createServerSupabase();
+  const pageSize = Math.max(24, Math.min(filters.pageSize ?? 100, 200));
+  const page = Math.max(1, filters.page ?? 1);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let q = supabase
-    .from("products")
-    .select("id, code, name, brand_id, category_id, color, finish, material, status, review_state, reviewed_by, reviewed_at, source_ref, confidence, updated_at")
+    .from("catalog_finder")
+    .select("*", { count: "exact" })
     .order("name")
-    .limit(500);
+    .range(from, to);
 
   if (filters.view === "unreviewed") q = q.eq("review_state", "unreviewed").neq("status", "archived");
   else if (filters.view === "all") {
     /* no status filter */
   } else if (filters.view === "missing-price") q = q.eq("status", "active");
+  else if (filters.view === "ready") q = q.eq("status", "active").not("price_id", "is", null);
   else q = q.eq("status", "active");
   if (filters.category) q = q.eq("category_id", filters.category);
   if (filters.brand) q = q.eq("brand_id", filters.brand);
+  if (filters.color) q = q.ilike("color", filters.color);
+  if (filters.finish) q = q.ilike("finish", filters.finish);
+  if (filters.material) q = q.ilike("material", filters.material);
   if (filters.status) q = q.eq("status", filters.status);
 
-  let aliasProductIds: string[] | null = null;
   if (filters.q && filters.q.trim()) {
-    const term = filters.q.trim();
-    const key = term.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const { data: aliases } = await supabase.from("product_aliases").select("product_id").ilike("alias_key", `%${key}%`);
-    aliasProductIds = (aliases ?? []).map((a) => a.product_id!).filter(Boolean);
-    const ors = [`name.ilike.%${term}%`, key ? `code_key.ilike.%${key}%` : null, aliasProductIds.length ? `id.in.(${aliasProductIds.join(",")})` : null].filter(Boolean).join(",");
-    q = q.or(ors);
+    const term = filters.q.trim().replace(/[%_,()]/g, " ").replace(/\s+/g, " ");
+    if (term) q = q.ilike("search_text", `%${term}%`);
   }
 
-  const { data: products } = await q;
-  if (!products || products.length === 0) return [];
-  const ids = products.map((p) => p.id!);
+  if (filters.view === "missing-price") q = q.is("price_id", null);
 
-  const [{ data: variants }, { data: prices }, brands, categories, members] = await Promise.all([
-    supabase.from("product_variants").select("id, product_id, dimensions, is_default, created_at").in("product_id", ids),
-    supabase.from("current_variant_prices").select("id, variant_id, product_id, amount, currency, unit_code, price_list_name, price_type, valid_from, state").in("product_id", ids),
-    getBrands(),
-    getCategories(),
-    getMemberMap(),
-  ]);
-  const brandMap = new Map(brands.map((b) => [b.id, b.name]));
-  const catMap = new Map(categories.map((c) => [c.id, c.label]));
-
-  const rows: CatalogRow[] = products.map((p) => {
-    const vs = (variants ?? []).filter((v) => v.product_id === p.id);
-    const def = vs.find((v) => v.is_default) ?? vs[0];
-    const price = pickCurrentPrice(prices ?? [], vs.map((v) => v.id!));
+  const [{ data, count, error }, members] = await Promise.all([q, getMemberMap()]);
+  if (error) throw new Error(error.message);
+  const rows: CatalogRow[] = (data ?? []).map((r) => {
+    const dimensions = (r.dimensions as Dimensions | null) ?? null;
     return {
-      id: p.id!,
-      code: p.code,
-      name: p.name ?? "",
-      brand_id: p.brand_id,
-      brand: p.brand_id ? (brandMap.get(p.brand_id) ?? null) : null,
-      category_id: p.category_id,
-      category: p.category_id ? (catMap.get(p.category_id) ?? null) : null,
-      color: p.color,
-      finish: p.finish,
-      material: p.material,
-      status: p.status ?? "draft",
-      review_state: p.review_state ?? "unreviewed",
-      reviewed_by: p.reviewed_by,
-      reviewed_by_name: p.reviewed_by ? (members.get(p.reviewed_by)?.full_name ?? null) : null,
-      reviewed_at: p.reviewed_at,
-      source_ref: p.source_ref,
-      confidence: p.confidence,
-      default_variant_id: def?.id ?? null,
-      dimensions: (def?.dimensions as Dimensions | null) ?? null,
-      dimensions_label: formatDimensions(def?.dimensions as Dimensions | null),
-      price,
-      updated_at: p.updated_at,
+      id: r.product_id!,
+      code: r.code,
+      name: r.name ?? "",
+      brand_id: r.brand_id,
+      brand: r.brand,
+      category_id: r.category_id,
+      category: r.category,
+      color: r.color,
+      finish: r.finish,
+      material: r.material,
+      status: r.status ?? "draft",
+      review_state: r.review_state ?? "unreviewed",
+      reviewed_by: r.reviewed_by,
+      reviewed_by_name: r.reviewed_by ? (members.get(r.reviewed_by)?.full_name ?? null) : null,
+      reviewed_at: r.reviewed_at,
+      source_ref: r.source_ref,
+      confidence: r.confidence,
+      default_variant_id: r.default_variant_id,
+      dimensions,
+      dimensions_label: formatDimensions(dimensions),
+      price: r.price_id
+        ? {
+            id: r.price_id,
+            amount: Number(r.price_amount),
+            currency: r.price_currency ?? "MYR",
+            unit_code: r.price_unit_code,
+            price_list_name: r.price_list_name ?? "",
+            price_type: r.price_type ?? "",
+            valid_from: r.price_valid_from ?? "",
+            state: r.price_state ?? "current",
+          }
+        : null,
+      updated_at: r.updated_at,
     };
   });
-  return filters.view === "missing-price" ? rows.filter((r) => !r.price) : rows;
+  const total = count ?? 0;
+  return { rows, total, page, pageSize, pageCount: Math.max(1, Math.ceil(total / pageSize)) };
+}
+
+export async function getCatalogSummary() {
+  const supabase = await createServerSupabase();
+  const head = () => supabase.from("catalog_finder").select("product_id", { count: "exact", head: true });
+  const [active, ready, missing, unreviewed] = await Promise.all([
+    head().eq("status", "active"),
+    head().eq("status", "active").not("price_id", "is", null),
+    head().eq("status", "active").is("price_id", null),
+    head().eq("review_state", "unreviewed").neq("status", "archived"),
+  ]);
+  return { active: active.count ?? 0, ready: ready.count ?? 0, missing: missing.count ?? 0, unreviewed: unreviewed.count ?? 0 };
+}
+
+export async function getCatalogFacets(): Promise<CatalogFacets> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.from("catalog_finder_facets").select("facet, value, label, item_count").order("item_count", { ascending: false });
+  if (error) throw new Error(error.message);
+  const pick = (facet: string) =>
+    (data ?? []).filter((r) => r.facet === facet).map((r) => ({ value: r.value!, label: r.label!, count: Number(r.item_count ?? 0) }));
+  return { colors: pick("color"), finishes: pick("finish"), materials: pick("material") };
 }
 
 export const getSuppliers = cache(async () => {
