@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Check, ExternalLink, Search, UserPlus, X } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, MessageCircle, Search, UserPlus, X } from "lucide-react";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Field } from "@/components/patterns/field";
 import { CandidateList } from "@/features/inbox/components/candidate-list";
 import { formatDateTime, formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
+import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
 import type { IdentityCandidate, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { ProfileRef } from "@/server/queries/reference";
@@ -67,6 +68,12 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
 
   const terminal = ["converted", "disqualified", "duplicate"].includes(lead.status);
   const slaOverdue = !lead.first_response_at && isOverdue(lead.first_response_due_at);
+  const whatsappUrl = can("contact.reveal")
+    ? buildWhatsAppUrl(
+        lead.raw_phone_normalized ?? lead.raw_phone,
+        buildLeadWhatsAppMessage({ name: lead.raw_name, interest: lead.interest, source: lead.source_channel }),
+      )
+    : null;
 
   return (
     <>
@@ -83,8 +90,15 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
       >
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
+          {whatsappUrl && (
+            <Button asChild size="sm" className="h-7">
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" title="Opens a pre-filled message; log the response after sending">
+                <MessageCircle className="size-3.5" aria-hidden /> WhatsApp
+              </a>
+            </Button>
+          )}
           {!terminal && can("sales.write") && (
-            <Button size="sm" className="h-7" onClick={() => setPanel("respond")}>
+            <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-7" onClick={() => setPanel("respond")}>
               Log response
             </Button>
           )}

@@ -10,6 +10,8 @@ import {
   verifyTimestampedSignature,
 } from "@/integrations/signature";
 import { applyMappings, flatten } from "@/integrations/mapping";
+import { buildAutomationSourceDetail, buildLeadAlertText, buildLeadInboxUrl, sourceChannelFor } from "@/integrations/automation-intake";
+import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 
 const SECRET = "test-secret-value";
 
@@ -181,5 +183,53 @@ describe("provider payload mapping", () => {
     ]);
     expect(fields.name).toBe("Aisyah");
     expect(unmapped.internal_ref).toBeUndefined();
+  });
+});
+
+describe("normalized automation intake", () => {
+  it("keeps social reporting stable while preserving the exact Meta platform", () => {
+    expect(sourceChannelFor("facebook")).toBe("meta");
+    expect(sourceChannelFor("instagram")).toBe("meta");
+    expect(sourceChannelFor("threads")).toBe("meta");
+    expect(sourceChannelFor("tiktok")).toBe("tiktok");
+    expect(
+      buildAutomationSourceDetail({
+        source: "instagram",
+        campaign_name: "Showroom September",
+        form_name: "Tile Consultation",
+      }),
+    ).toBe("Instagram · Campaign: Showroom September · Form: Tile Consultation");
+  });
+
+  it("builds a directly addressable inbox URL for n8n alerts", () => {
+    expect(buildLeadInboxUrl("https://os.tileconcept.example", "lead-123")).toBe(
+      "https://os.tileconcept.example/sales/inbox?view=all&lead=lead-123",
+    );
+  });
+
+  it("builds a WhatsApp deep link with a pre-filled, editable message", () => {
+    const message = buildLeadWhatsAppMessage({ name: "Aisyah Rahman", interest: "kitchen tiles", source: "TikTok" });
+    const url = buildWhatsAppUrl("012-345 6789", message);
+    expect(message).toContain("Hi Aisyah");
+    expect(message).toContain("kitchen tiles");
+    expect(url).toMatch(/^https:\/\/wa\.me\/60123456789\?text=/);
+    expect(decodeURIComponent(url!.split("text=")[1])).toBe(message);
+  });
+
+  it("returns no WhatsApp action when a lead has no valid phone", () => {
+    expect(buildWhatsAppUrl(null, "Hello")).toBeNull();
+  });
+
+  it("returns alert text that n8n can send to the sales group", () => {
+    const text = buildLeadAlertText({
+      source: "tiktok",
+      name: "Aisyah",
+      interest: "mosaic",
+      leadUrl: "https://os.tileconcept.example/sales/inbox?lead=lead-123",
+      whatsappUrl: "https://wa.me/60123456789",
+    });
+    expect(text).toContain("New TikTok lead: Aisyah — mosaic");
+    expect(text).toContain("Open lead:");
+    expect(text).toContain("Message on WhatsApp:");
   });
 });

@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/api/health"];
+// These server-to-server routes authenticate with provider/HMAC signatures,
+// not a staff Supabase session. Their handlers still reject unsigned traffic.
+const PUBLIC_PATHS = ["/login", "/auth", "/api/health", "/api/intake", "/api/webhooks"];
 
 /**
  * Refreshes the Supabase session cookie on every request and redirects
