@@ -45,6 +45,7 @@ export function LoginForm({ next, demo }: { next: string; demo: boolean }) {
       </TabsContent>
       <TabsContent value="magic">
         <form action={mlAction} className="space-y-3 rounded-lg border bg-card p-4">
+          <input type="hidden" name="next" value={next} />
           <div className="space-y-1.5">
             <Label htmlFor="ml-email">Email</Label>
             <Input id="ml-email" name="email" type="email" autoComplete="email" required />
@@ -54,6 +55,7 @@ export function LoginForm({ next, demo }: { next: string; demo: boolean }) {
           <Button type="submit" variant="outline" className="w-full" disabled={mlPending}>
             {mlPending ? "Sending…" : "Send sign-in link"}
           </Button>
+          <p className="text-[11px] text-muted-foreground">Use this if your invitation expired or you have not set a password yet.</p>
         </form>
       </TabsContent>
     </Tabs>

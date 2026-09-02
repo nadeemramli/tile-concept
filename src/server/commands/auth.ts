@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/env";
+import { emailLinkErrorMessage, safeAuthNext, shouldResendSignupConfirmation } from "@/lib/auth-links";
 
 export type AuthResult = { ok: true; message?: string } | { ok: false; error: string };
 
@@ -17,8 +18,7 @@ export async function signInWithPasswordAction(_prev: AuthResult | null, formDat
   const supabase = await createServerSupabase();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { ok: false, error: error.message };
-  const next = String(formData.get("next") ?? "/");
-  redirect(next.startsWith("/") ? next : "/");
+  redirect(safeAuthNext(formData.get("next")));
 }
 
 async function siteOrigin() {
@@ -34,11 +34,47 @@ export async function signInWithMagicLinkAction(_prev: AuthResult | null, formDa
   const supabase = await createServerSupabase();
   const origin = await siteOrigin();
   const { error } = await supabase.auth.signInWithOtp({
-    email: email.data,
+    email: email.data.toLowerCase(),
     options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=/` },
   });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, message: "Check your inbox for a sign-in link. Only invited addresses can sign in." };
+  if (!error) {
+    return { ok: true, message: "Check your inbox for your secure access link." };
+  }
+
+  // Invited users are deliberately unconfirmed until they use their first
+  // email. GoTrue treats their magic-link request as signup, which is blocked
+  // in this invite-only project. Resending an existing confirmation is the
+  // supported path and cannot create an account for an unknown address.
+  if (shouldResendSignupConfirmation(error)) {
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: email.data.toLowerCase(),
+      options: { emailRedirectTo: `${origin}/auth/set-password` },
+    });
+    if (!resendError) {
+      return { ok: true, message: "If this address has Tile Concept access, a new setup link is on its way." };
+    }
+    return { ok: false, error: emailLinkErrorMessage(resendError) };
+  }
+
+  return { ok: false, error: emailLinkErrorMessage(error) };
+}
+
+const emailLink = z.object({
+  token_hash: z.string().min(16),
+  type: z.enum(["email", "invite", "recovery"]),
+});
+
+export async function acceptEmailLinkAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
+  const parsed = emailLink.safeParse({ token_hash: formData.get("token_hash"), type: formData.get("type") });
+  if (!parsed.success) return { ok: false, error: "This access link is incomplete. Request a new one." };
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.auth.verifyOtp(parsed.data);
+  if (error) return { ok: false, error: "This access link is invalid or has expired. Request a new one from the sign-in page." };
+
+  const fallback = parsed.data.type === "invite" || parsed.data.type === "recovery" ? "/auth/set-password" : "/";
+  redirect(safeAuthNext(formData.get("next"), fallback));
 }
 
 /**
@@ -114,8 +150,7 @@ export async function enterAsGuestAction(_prev: AuthResult | null, formData: For
     return { ok: false, error: "Guest access is not configured correctly in this environment." };
   }
 
-  const next = String(formData.get("next") ?? "/");
-  redirect(next.startsWith("/") ? next : "/");
+  redirect(safeAuthNext(formData.get("next")));
 }
 
 export async function updatePasswordAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
