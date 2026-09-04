@@ -6,6 +6,7 @@
 export const PERMISSIONS = [
   "sales.read",
   "sales.read_all",
+  "sales.leads.read_all",
   "sales.write",
   "sales.assign",
   "contact.reveal",
@@ -64,6 +65,7 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
 
 export const PERMISSION_EXPLAINERS: Partial<Record<PermissionKey, string>> = {
   "sales.read": "Viewing leads, accounts, projects and opportunities needs a sales role.",
+  "sales.leads.read_all": "Sales representatives, managers and administrators share visibility of every Enquiry Box lead.",
   "sales.assign": "Only sales managers and administrators can assign leads.",
   "identity.merge": "Confirming an identity merge is restricted to sales managers and administrators.",
   "price.publish": "Publishing prices is restricted to catalog/pricing operators.",
