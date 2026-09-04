@@ -17,7 +17,7 @@ interface RecordDrawerProps {
 export function RecordDrawer({ open, onOpenChange, title, description, children, width = "lg", actions }: RecordDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className={cn("flex w-full flex-col gap-0 overflow-y-auto p-0", width === "md" && "sm:max-w-xl", width === "lg" && "sm:max-w-2xl", width === "xl" && "sm:max-w-4xl")}>
+      <SheetContent className={cn("flex w-full flex-col gap-0 overflow-y-auto p-0", width === "md" && "data-[side=right]:sm:max-w-xl", width === "lg" && "data-[side=right]:sm:max-w-2xl", width === "xl" && "data-[side=right]:sm:max-w-4xl")}>
         <SheetHeader className="border-b px-5 py-4">
           <div className="flex items-start justify-between gap-3 pr-8">
             <div className="min-w-0">

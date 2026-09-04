@@ -56,3 +56,29 @@ export function classifyIntakePayload(payload: Record<string, unknown>): Classif
   technical.sort((x, y) => x.key.localeCompare(y.key));
   return { answers, technical };
 }
+
+/** Keys the contact card already shows, or contact points that must stay masked. */
+const CONTACT_KEY = /^(?:name|full_name|first_name|last_name|nama|company|company_name|syarikat)$|phone|mobile|whatsapp|telefon|e[_-]?mail/;
+
+/**
+ * The questionnaire as a salesperson should read it: one merged list across
+ * every submission (oldest first, so the original wording wins and later
+ * re-submissions only add new questions), without contact fields, technical
+ * keys, or an answer that is already displayed as the lead's request text.
+ */
+export function mergeFormAnswers(
+  events: { payload: Record<string, unknown> }[],
+  alreadyShown: { interest: string | null; notes: string | null },
+): PayloadEntry[] {
+  const seen = new Set<string>();
+  const out: PayloadEntry[] = [];
+  for (const e of [...events].reverse()) {
+    for (const a of classifyIntakePayload(e.payload).answers) {
+      if (seen.has(a.key) || CONTACT_KEY.test(a.key)) continue;
+      if (a.value === alreadyShown.interest?.trim() || a.value === alreadyShown.notes?.trim()) continue;
+      seen.add(a.key);
+      out.push(a);
+    }
+  }
+  return out;
+}

@@ -37,6 +37,7 @@ export function formatRelative(value: string | Date | null | undefined) {
   const d = toDate(value);
   if (!d) return "—";
   const diff = d.getTime() - Date.now();
+  if (Math.abs(diff) < 45_000) return "just now";
   const s = formatDistanceToNowStrict(d, { addSuffix: false });
   return diff < 0 ? `${s} ago` : `in ${s}`;
 }

@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { classifyIntakePayload } from "./payload";
+import { classifyIntakePayload, mergeFormAnswers } from "./payload";
+
+describe("mergeFormAnswers", () => {
+  it("merges submissions oldest-first, drops contact fields, ids, and text already shown", () => {
+    const events = [
+      // newest first, as the query returns them
+      { payload: { name: "Aisha", phone: "+60123456789", budget: "RM20k", timeline: "3 months", ad_id: "1" } },
+      { payload: { name: "Aisha", email: "a@example.test", budget: "RM10k", message: "Need mosaic for a pool", campaign_id: "c-8" } },
+    ];
+    const answers = mergeFormAnswers(events, { interest: "Need mosaic for a pool", notes: null });
+    expect(answers.map((a) => [a.key, a.value])).toEqual([
+      ["budget", "RM10k"],
+      ["timeline", "3 months"],
+    ]);
+  });
+
+  it("returns nothing for leads without a payload", () => {
+    expect(mergeFormAnswers([], { interest: null, notes: null })).toEqual([]);
+    expect(mergeFormAnswers([{ payload: {} }], { interest: null, notes: null })).toEqual([]);
+  });
+});
 
 describe("classifyIntakePayload", () => {
   it("separates Meta field_data answers from ad metadata and keeps __unmapped questions", () => {

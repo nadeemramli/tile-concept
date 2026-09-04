@@ -4,22 +4,24 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Check, ExternalLink, MessageCircle, Search, UserPlus, X } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, MessageCircle, MoreHorizontal, Search, UserPlus, X } from "lucide-react";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
-import { LEAD_STATUS, LIFECYCLE_STATE } from "@/lib/domain/status-maps";
+import { LEAD_STATUS } from "@/lib/domain/status-maps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Field } from "@/components/patterns/field";
 import { CandidateList } from "@/features/inbox/components/candidate-list";
-import { IntakeAnswers } from "@/features/inbox/components/intake-answers";
+import { FormAnswers } from "@/features/inbox/components/form-answers";
+import { mergeFormAnswers } from "@/features/inbox/lib/payload";
 import { FOLLOW_UP_OPTIONS, followUpDueAt, followUpTaskTitle } from "@/features/inbox/lib/follow-up";
-import { formatDateTime, formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
+import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
@@ -49,13 +51,17 @@ interface Props {
 
 type Panel = null | "respond" | "disqualify" | "matches" | "convert" | "assign";
 
+const TIMELINE_PREVIEW = 5;
+
 export function LeadDrawer({ lead, intake, timeline, contact, members, initialSuggestions, onClose }: Props) {
   const router = useRouter();
   const { can } = useSession();
   const [pending, start] = useTransition();
   const [panel, setPanel] = useState<Panel>(null);
   const [candidates, setCandidates] = useState<IdentityCandidate[] | null>(initialSuggestions ?? null);
-  const [followUpPromptLeadId, setFollowUpPromptLeadId] = useState<string | null>(null);
+  // Set after a quick log so the follow-up card draws the eye; keyed by lead so it resets on switch.
+  const [nudgeFollowUpFor, setNudgeFollowUpFor] = useState<string | null>(null);
+  const [showAllActivity, setShowAllActivity] = useState(false);
 
   if (!lead) return null;
 
@@ -71,224 +77,270 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
       }
     });
 
+  const canWrite = can("sales.write");
+  const canReveal = can("contact.reveal");
   const terminal = ["converted", "disqualified", "duplicate"].includes(lead.status);
   const slaOverdue = !lead.first_response_at && isOverdue(lead.first_response_due_at);
-  const whatsappUrl = can("contact.reveal")
+  const whatsappUrl = canReveal
     ? buildWhatsAppUrl(
         lead.raw_phone_normalized ?? lead.raw_phone,
         buildLeadWhatsAppMessage({ name: lead.raw_name, interest: lead.interest, source: lead.source_channel }),
       )
     : null;
 
-  // Prefer the human form/campaign name from the latest intake event over the
+  // Prefer the human form/campaign name from the latest submission over the
   // concatenated source_detail string.
   const latestPayload = intake[0]?.payload;
   const sourceContext =
     (typeof latestPayload?.form_name === "string" && latestPayload.form_name) ||
     (typeof latestPayload?.campaign_name === "string" && latestPayload.campaign_name) ||
     lead.source_detail;
+  const responseLine = lead.first_response_at
+    ? `first contacted ${formatRelative(lead.first_response_at)}`
+    : lead.contact_attempts > 0
+      ? `${lead.contact_attempts} attempt${lead.contact_attempts === 1 ? "" : "s"}, no reply yet`
+      : "not contacted yet";
+
+  const answers = mergeFormAnswers(intake, { interest: lead.interest, notes: lead.notes });
+  const nothingAsked = !lead.interest && !lead.notes && lead.product_interest.length === 0 && answers.length === 0;
+  const openMatches = () => {
+    setPanel("matches");
+    if (!candidates)
+      start(async () => {
+        const r = await findLeadMatchesAction(lead.id);
+        if (r.ok) setCandidates(r.data);
+        else toast.error(r.error);
+      });
+  };
+  const followUpOverdue = isOverdue(lead.next_follow_up_at);
+  const visibleActivity = showAllActivity ? timeline : timeline.slice(0, TIMELINE_PREVIEW);
 
   return (
     <>
       <RecordDrawer
         open={!!lead}
         onOpenChange={(o) => !o && onClose()}
-        width="lg"
+        width="xl"
         title={
           <span className="flex flex-wrap items-center gap-2">
             {lead.raw_name ?? lead.raw_company ?? "Inquiry"} <StatusPill map={LEAD_STATUS} value={lead.status} size="md" />
           </span>
         }
-        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)}`}
+        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)} · ${responseLine}`}
       >
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2">
+        {/* Primary actions: what a rep does most, in the order they do it. */}
+        <div className="flex flex-wrap items-center gap-2">
           {whatsappUrl && (
-            <Button asChild size="sm" className="h-7">
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" title="Opens a pre-filled message; use Done WhatsApp after sending">
+            <Button asChild size="sm" className="h-8">
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" title="Opens a pre-filled message; tap Done WhatsApp after sending">
                 <MessageCircle className="size-3.5" aria-hidden /> WhatsApp
               </a>
             </Button>
           )}
-          {whatsappUrl && !terminal && can("sales.write") && (
+          {whatsappUrl && !terminal && canWrite && (
             <Button
               size="sm"
               variant="outline"
-              className="h-7"
+              className="h-8"
               disabled={pending}
-              title="One click: logs a WhatsApp attempt in the timeline under your name"
+              title="One tap: records that you messaged this customer, under your name"
               onClick={() =>
                 run(
                   () => logLeadResponseAction({ lead_id: lead.id, kind: "message", channel: "whatsapp", reached: false, body: "WhatsApp message sent" }),
-                  () => setFollowUpPromptLeadId(lead.id),
+                  () => setNudgeFollowUpFor(lead.id),
                 )
               }
             >
               <Check className="size-3.5" aria-hidden /> Done WhatsApp
             </Button>
           )}
-          {!terminal && can("sales.write") && (
-            <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-7" onClick={() => setPanel("respond")}>
-              Log response
-            </Button>
-          )}
-          {!terminal && can("sales.assign") && (
-            <Button size="sm" variant="outline" className="h-7" onClick={() => setPanel("assign")}>
-              Assign
-            </Button>
-          )}
-          {!terminal && can("sales.write") && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7"
-              onClick={() => {
-                setPanel("matches");
-                if (!candidates) start(async () => {
-                  const r = await findLeadMatchesAction(lead.id);
-                  if (r.ok) setCandidates(r.data);
-                  else toast.error(r.error);
-                });
-              }}
-            >
-              <Search className="size-3.5" aria-hidden /> Find matches
-            </Button>
-          )}
-          {!terminal && lead.status !== "qualified" && can("sales.write") && (
-            <Button size="sm" variant="outline" className="h-7" disabled={pending} onClick={() => run(() => qualifyLeadAction(lead.id))}>
-              <Check className="size-3.5" aria-hidden /> Qualify
-            </Button>
-          )}
-          {!terminal && can("sales.write") && (
-            <Button size="sm" variant="outline" className="h-7" onClick={() => setPanel("convert")} disabled={!lead.contact_id} title={lead.contact_id ? undefined : "Link a contact first"}>
-              <ArrowRight className="size-3.5" aria-hidden /> Convert
-            </Button>
-          )}
-          {!terminal && can("sales.write") && (
-            <Button size="sm" variant="ghost" className="h-7 text-destructive" onClick={() => setPanel("disqualify")}>
-              <X className="size-3.5" aria-hidden /> Disqualify
+          {!terminal && canWrite && (
+            <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-8" onClick={() => setPanel("respond")}>
+              Log a call or email
             </Button>
           )}
           {lead.converted_opportunity_id && (
-            <Button asChild size="sm" variant="outline" className="h-7">
+            <Button asChild size="sm" variant="outline" className="h-8">
               <Link href={`/sales/pipeline?opportunity=${lead.converted_opportunity_id}`}>
                 Open opportunity <ExternalLink className="size-3.5" aria-hidden />
               </Link>
             </Button>
           )}
+          {!terminal && (canWrite || can("sales.assign")) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="ghost" className="h-8" aria-label="More actions">
+                  <MoreHorizontal className="size-4" aria-hidden /> More
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {can("sales.assign") && <DropdownMenuItem onSelect={() => setPanel("assign")}>Assign to a salesperson</DropdownMenuItem>}
+                {canWrite && (
+                  <DropdownMenuItem onSelect={openMatches}>
+                    <Search className="size-3.5" aria-hidden /> Link to a customer record
+                  </DropdownMenuItem>
+                )}
+                {canWrite && lead.status !== "qualified" && (
+                  <DropdownMenuItem onSelect={() => run(() => qualifyLeadAction(lead.id))}>
+                    <Check className="size-3.5" aria-hidden /> Mark as qualified
+                  </DropdownMenuItem>
+                )}
+                {canWrite && (
+                  <DropdownMenuItem disabled={!lead.contact_id} onSelect={() => setPanel("convert")} title={lead.contact_id ? undefined : "Link a customer record first"}>
+                    <ArrowRight className="size-3.5" aria-hidden /> Convert to opportunity
+                  </DropdownMenuItem>
+                )}
+                {canWrite && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onSelect={() => setPanel("disqualify")}>
+                      <X className="size-3.5" aria-hidden /> Disqualify
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
-        {/* Follow-up chips, shown right after a quick log */}
-        {followUpPromptLeadId === lead.id && !terminal && (
-          <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-muted/30 px-3 py-2 text-xs">
-            <span className="text-muted-foreground">Follow up:</span>
-            {FOLLOW_UP_OPTIONS.map((o) => (
-              <Button
-                key={o.key}
-                size="sm"
-                variant={o.emphasized ? "default" : "outline"}
-                className="h-6 px-2 text-xs"
-                disabled={pending}
-                onClick={() =>
-                  run(
-                    () => scheduleLeadFollowUpAction({ lead_id: lead.id, due_at: followUpDueAt(o.days), title: followUpTaskTitle(lead) }),
-                    () => setFollowUpPromptLeadId(null),
-                  )
-                }
-              >
-                {o.label}
-              </Button>
-            ))}
-            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={pending} onClick={() => setFollowUpPromptLeadId(null)}>
-              No follow-up
-            </Button>
-          </div>
-        )}
-
         {slaOverdue && (
-          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            First-response SLA overdue — due {formatRelative(lead.first_response_due_at)}. Log a response attempt.
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            This customer has been waiting {formatRelative(lead.first_response_due_at).replace(" ago", "")} past the 4-hour reply target. Message them now.
           </p>
         )}
+        {lead.disqualified_reason && <p className="text-sm text-destructive">Disqualified: {lead.disqualified_reason}</p>}
 
-        <DrawerSection title="Contact & follow-up">
-          <FactList
-            items={[
-              { label: "Name", value: lead.raw_name },
-              { label: "Phone", value: can("contact.reveal") ? lead.raw_phone : maskValue(lead.raw_phone_normalized ?? lead.raw_phone, "phone"), mono: true },
-              { label: "Email", value: can("contact.reveal") ? lead.raw_email : maskValue(lead.raw_email, "email"), mono: true },
-              { label: "Company", value: lead.raw_company },
-              { label: "Owner", value: lead.owner_name ?? "Unassigned" },
-              {
-                label: "Next follow-up",
-                value: lead.next_follow_up_at ? (
-                  <Link
-                    href={lead.next_follow_up_task_id ? `/sales/tasks?task=${lead.next_follow_up_task_id}` : "/sales/tasks"}
-                    className={cn("hover:underline", isOverdue(lead.next_follow_up_at) && "font-medium text-destructive")}
-                  >
-                    due {formatRelative(lead.next_follow_up_at)}
-                  </Link>
-                ) : (
-                  "None scheduled"
-                ),
-              },
-              { label: "Attempts", value: String(lead.contact_attempts) },
-              { label: "First response due", value: lead.first_response_due_at ? formatDateTime(lead.first_response_due_at) : "—" },
-              { label: "First responded", value: lead.first_response_at ? formatDateTime(lead.first_response_at) : "Not yet" },
-            ]}
-          />
-        </DrawerSection>
-
-        <DrawerSection title={`Form answers (${intake.length})`}>
-          <IntakeAnswers intake={intake} maskContacts={!can("contact.reveal")} />
-        </DrawerSection>
-
-        <DrawerSection title="Identity">
-          {contact ? (
-            <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
-              <div className="min-w-0">
-                <Link href={`/sales/contacts/${contact.id}`} className="text-sm font-medium hover:underline">
-                  {contact.display_name}
-                </Link>
-                <div className="flex gap-1.5 pt-0.5">
-                  <StatusPill map={LIFECYCLE_STATE} value={contact.lifecycle_state} />
-                  {contact.customer_type && <TonePill tone="neutral" dot={false} label={titleCase(contact.customer_type)} />}
+        <div className="@container">
+          <div className="grid gap-5 @3xl:grid-cols-[3fr_2fr]">
+            {/* Left: who they are and what they want */}
+            <div className="space-y-5">
+              <DrawerSection title="Contact">
+                <FactList
+                  className="sm:grid-cols-3"
+                  items={[
+                    { label: "Phone", value: canReveal ? lead.raw_phone : maskValue(lead.raw_phone_normalized ?? lead.raw_phone, "phone"), mono: true },
+                    { label: "Email", value: canReveal ? lead.raw_email : maskValue(lead.raw_email, "email"), mono: true },
+                    { label: "Company", value: lead.raw_company },
+                  ]}
+                />
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+                  <span>
+                    <span className="text-muted-foreground">Salesperson </span>
+                    {lead.owner_name ?? <span className="text-warning">Unassigned</span>}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="text-muted-foreground">Customer record </span>
+                    {contact ? (
+                      <>
+                        <Link href={`/sales/contacts/${contact.id}`} className="font-medium hover:underline" title="Open the customer 360">
+                          {contact.display_name}
+                        </Link>
+                        <span className="text-muted-foreground">
+                          {" · "}
+                          {titleCase(contact.lifecycle_state)}
+                          {contact.customer_type ? `, ${titleCase(contact.customer_type).toLowerCase()}` : ""}
+                        </span>
+                      </>
+                    ) : canWrite && !terminal ? (
+                      <button type="button" className="text-info hover:underline" onClick={openMatches}>
+                        Not linked yet — find or create
+                      </button>
+                    ) : (
+                      "Not linked"
+                    )}
+                  </span>
                 </div>
-              </div>
-              <Button asChild size="sm" variant="ghost" className="h-7">
-                <Link href={`/sales/contacts/${contact.id}`}>Open 360</Link>
-              </Button>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Not linked to a contact yet. Use <em>Find matches</em> to resolve safely or create a new contact.</p>
-          )}
-          {initialSuggestions && initialSuggestions.length > 0 && !contact && (
-            <div className="space-y-1">
-              <p className="text-[11px] text-muted-foreground">Suggested matches from capture (not auto-linked):</p>
-              <CandidateList candidates={initialSuggestions} filter="contact" pickLabel="Link" busy={pending} onPick={(c) => run(() => linkLeadIdentityAction({ lead_id: lead.id, contact_id: c.entity_id }))} />
-            </div>
-          )}
-        </DrawerSection>
+                {initialSuggestions && initialSuggestions.length > 0 && !contact && (
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-muted-foreground">Possible existing customers (not linked automatically):</p>
+                    <CandidateList candidates={initialSuggestions} filter="contact" pickLabel="Link" busy={pending} onPick={(c) => run(() => linkLeadIdentityAction({ lead_id: lead.id, contact_id: c.entity_id }))} />
+                  </div>
+                )}
+              </DrawerSection>
 
-        <DrawerSection title="Details">
-          <FactList
-            items={[
-              { label: "Product interest", value: lead.product_interest.length ? lead.product_interest.map(titleCase).join(", ") : "—" },
-              { label: "Qualified", value: lead.qualified_at ? formatDateTime(lead.qualified_at) : "—" },
-            ]}
-          />
-          {lead.interest && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{lead.interest}</p>}
-          {lead.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{lead.notes}</p>}
-          {lead.disqualified_reason && <p className="text-sm text-destructive">Disqualified: {lead.disqualified_reason}</p>}
-        </DrawerSection>
+              <DrawerSection title="What they asked for">
+                {lead.interest && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{lead.interest}</p>}
+                {lead.product_interest.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {lead.product_interest.map((p) => (
+                      <TonePill key={p} tone="neutral" dot={false} label={titleCase(p)} />
+                    ))}
+                  </div>
+                )}
+                {lead.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{lead.notes}</p>}
+                <FormAnswers answers={answers} />
+                {nothingAsked && <p className="text-sm text-muted-foreground">Nothing captured yet.</p>}
+              </DrawerSection>
+            </div>
 
-        <DrawerSection title="Timeline">
-          <Timeline items={timeline} emptyText="No responses or notes yet." />
-        </DrawerSection>
+            {/* Right: what happens next and what has happened */}
+            <div className="space-y-5">
+              <DrawerSection title="Follow-up">
+                <div className={cn("rounded-md border px-3 py-2.5 text-sm transition-shadow", nudgeFollowUpFor === lead.id && !lead.next_follow_up_at && "ring-2 ring-brand")}>
+                  {lead.next_follow_up_at ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={cn(followUpOverdue && "font-medium text-destructive")}>
+                        {followUpOverdue ? "Overdue — was due" : "Due"} {formatRelative(lead.next_follow_up_at)}
+                      </span>
+                      <Link href={lead.next_follow_up_task_id ? `/sales/tasks?task=${lead.next_follow_up_task_id}` : "/sales/tasks"} className="shrink-0 text-xs text-info hover:underline">
+                        Open task
+                      </Link>
+                    </div>
+                  ) : terminal ? (
+                    <span className="text-muted-foreground">No follow-up needed.</span>
+                  ) : canWrite ? (
+                    <div className="space-y-1.5">
+                      <p className="text-muted-foreground">{nudgeFollowUpFor === lead.id ? "Logged. When should we remind you?" : "No reminder set. Remind me:"}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {FOLLOW_UP_OPTIONS.map((o) => (
+                          <Button
+                            key={o.key}
+                            size="sm"
+                            variant={o.emphasized ? "default" : "outline"}
+                            className="h-7"
+                            disabled={pending}
+                            onClick={() =>
+                              run(
+                                () => scheduleLeadFollowUpAction({ lead_id: lead.id, due_at: followUpDueAt(o.days), title: followUpTaskTitle(lead) }),
+                                () => setNudgeFollowUpFor(null),
+                              )
+                            }
+                          >
+                            {o.label}
+                          </Button>
+                        ))}
+                        {nudgeFollowUpFor === lead.id && (
+                          <Button size="sm" variant="ghost" className="h-7" onClick={() => setNudgeFollowUpFor(null)}>
+                            Not needed
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">No reminder set.</span>
+                  )}
+                </div>
+              </DrawerSection>
+
+              <DrawerSection
+                title="Activity"
+                action={
+                  timeline.length > TIMELINE_PREVIEW ? (
+                    <button type="button" className="text-[11px] text-info hover:underline" onClick={() => setShowAllActivity((v) => !v)}>
+                      {showAllActivity ? "Show recent" : `Show all (${timeline.length})`}
+                    </button>
+                  ) : undefined
+                }
+              >
+                <Timeline items={visibleActivity} emptyText="No messages or calls logged yet." />
+              </DrawerSection>
+            </div>
+          </div>
+        </div>
       </RecordDrawer>
 
       {/* Log response */}
-      <LogResponseDialog open={panel === "respond"} onOpenChange={(o) => !o && setPanel(null)} leadId={lead.id} onDone={() => { setPanel(null); refresh(); }} />
+      <LogResponseDialog open={panel === "respond"} onOpenChange={(o) => !o && setPanel(null)} leadId={lead.id} onDone={() => { setPanel(null); setNudgeFollowUpFor(lead.id); refresh(); }} />
 
       {/* Assign */}
       <Dialog open={panel === "assign"} onOpenChange={(o) => !o && setPanel(null)}>
@@ -316,7 +368,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
       <Dialog open={panel === "matches"} onOpenChange={(o) => !o && setPanel(null)}>
         <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Resolve identity</DialogTitle>
+            <DialogTitle>Link to a customer record</DialogTitle>
             <DialogDescription>Exact phone/email matches are high confidence; names alone are never enough. Pick the right record or create a new one.</DialogDescription>
           </DialogHeader>
           {candidates === null ? (
@@ -431,8 +483,8 @@ function LogResponseDialog({ open, onOpenChange, leadId, onDone }: { open: boole
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Log response</DialogTitle>
-          <DialogDescription>Records the attempt, updates first-response time and lead status.</DialogDescription>
+          <DialogTitle>Log a call or email</DialogTitle>
+          <DialogDescription>Records the attempt under your name and updates the lead status.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Kind">
@@ -499,7 +551,7 @@ function CreateContactInline({ defaultName, pending, onCreate }: { defaultName: 
   return (
     <div className="rounded-md border border-dashed p-3">
       <div className="mb-2 flex items-center gap-1.5 text-xs font-medium">
-        <UserPlus className="size-3.5" aria-hidden /> Create a new contact from this inquiry
+        <UserPlus className="size-3.5" aria-hidden /> Create a new customer record from this inquiry
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
         <Input className="h-8" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
