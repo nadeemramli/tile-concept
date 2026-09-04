@@ -6,7 +6,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { requirePermission } from "@/server/session";
 import { fail, ok, type ActionResult } from "@/server/action-result";
 import { normalizePhone, normalizeEmail } from "@/lib/identity/normalize";
-import { convertLeadSchema, logResponseSchema, newInquirySchema, type NewInquiryInput } from "@/features/inbox/schema";
+import { convertLeadSchema, leadFollowUpSchema, logResponseSchema, newInquirySchema, type NewInquiryInput } from "@/features/inbox/schema";
 import type { IdentityCandidate } from "@/features/inbox/types";
 
 const INBOX = "/sales/inbox";
@@ -270,6 +270,45 @@ export async function convertLeadAction(input: z.input<typeof convertLeadSchema>
     revalidatePath("/sales/projects");
     revalidatePath("/");
     return ok(r, "Lead converted to opportunity.");
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/**
+ * One-click follow-up scheduling from the inbox: creates an open sales.tasks
+ * row assigned to the caller. The lead's contact_id is attached server-side so
+ * completing the task lands on the contact timeline too. Not createTaskAction:
+ * that one does not revalidate the inbox and trusts a client-sent contact_id.
+ */
+export async function scheduleLeadFollowUpAction(input: z.input<typeof leadFollowUpSchema>): Promise<ActionResult<{ task_id: string }>> {
+  const parsed = leadFollowUpSchema.safeParse(input);
+  if (!parsed.success) return fail("Check the follow-up details.");
+  const v = parsed.data;
+  try {
+    const session = await requirePermission("sales.write");
+    const supabase = await createServerSupabase();
+    const { data: lead } = await supabase.from("leads").select("contact_id").eq("id", v.lead_id).maybeSingle();
+    if (!lead) return fail("Lead not found");
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert({
+        workspace_id: session.workspaceId,
+        title: v.title,
+        priority: "normal",
+        due_at: new Date(v.due_at).toISOString(),
+        assignee_id: session.userId,
+        lead_id: v.lead_id,
+        contact_id: lead.contact_id,
+        created_by: session.userId,
+      })
+      .select("id")
+      .single();
+    if (error || !data) return fail(error ?? "Could not schedule the follow-up");
+    revalidatePath(INBOX);
+    revalidatePath("/sales/tasks");
+    revalidatePath("/");
+    return ok({ task_id: String(data.id) }, "Follow-up scheduled.");
   } catch (e) {
     return fail(e);
   }

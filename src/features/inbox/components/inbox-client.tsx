@@ -31,7 +31,8 @@ const VIEW_MAP: Record<string, LeadView> = {
   Unassigned: "unassigned",
   "My leads": "mine",
   "No response": "no-response",
-  "Follow-up due": "follow-up",
+  "SLA overdue": "follow-up",
+  "Follow-ups due": "follow-ups-due",
   "Duplicate review": "duplicates",
   Qualified: "qualified",
   Disqualified: "disqualified",
@@ -69,6 +70,7 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
       mine: counts.mine,
       "no-response": counts.noResponse,
       "follow-up": counts.followUp,
+      "follow-ups-due": counts.followUpsDue,
       duplicates: counts.duplicates,
       qualified: undefined,
       disqualified: undefined,
@@ -133,6 +135,17 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
           return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")}>{l.first_response_due_at ? `due ${formatRelative(l.first_response_due_at)}` : "no SLA"}</span>;
         },
       },
+      {
+        id: "next_follow_up",
+        header: "Next follow-up",
+        accessorFn: (r) => r.next_follow_up_at ?? "",
+        cell: ({ row }) => {
+          const at = row.original.next_follow_up_at;
+          if (!at) return <span className="text-muted-foreground">—</span>;
+          const over = isOverdue(at);
+          return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")}>due {formatRelative(at)}</span>;
+        },
+      },
       { accessorKey: "contact_attempts", header: "Attempts", cell: ({ row }) => <span className="tnum">{row.original.contact_attempts}</span> },
       { accessorKey: "product_interest", header: "Products", cell: ({ row }) => <span className="text-muted-foreground">{row.original.product_interest.map(titleCase).join(", ") || "—"}</span> },
       {
@@ -165,11 +178,12 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-7">
         <MetricCard compact label="New" value={counts.new} href="/sales/inbox?view=new" info={{ definition: "Leads in status New.", grain: "Lead", source: "sales.leads" }} />
         <MetricCard compact label="Unassigned" value={counts.unassigned} tone={counts.unassigned ? "warning" : "neutral"} href="/sales/inbox?view=unassigned" info={{ definition: "Active leads with no owner.", grain: "Lead", source: "sales.leads" }} />
         <MetricCard compact label="No response" value={counts.noResponse} tone={counts.noResponse ? "warning" : "neutral"} href="/sales/inbox?view=no-response" info={{ definition: "New leads with no logged response.", grain: "Lead", source: "sales.leads" }} />
         <MetricCard compact label="SLA overdue" value={counts.followUp} tone={counts.followUp ? "destructive" : "neutral"} href="/sales/inbox?view=follow-up" info={{ definition: "Active leads whose first-response due time has passed without a response.", grain: "Lead", source: "sales.leads" }} />
+        <MetricCard compact label="Follow-ups due" value={counts.followUpsDue} tone={counts.followUpsDue ? "warning" : "neutral"} href="/sales/inbox?view=follow-ups-due" info={{ definition: "Leads with an open follow-up task due today or overdue (tasks visible to you).", grain: "Lead", source: "sales.tasks" }} />
         <MetricCard compact label="Aging (>2d)" value={counts.aging} tone={counts.aging ? "warning" : "neutral"} href="/sales/inbox?view=aging" info={{ definition: "Leads still New/Contact attempted more than 2 days after creation.", grain: "Lead", source: "sales.leads" }} />
         <MetricCard compact label="Duplicate review" value={counts.duplicates} href="/sales/inbox?view=duplicates" info={{ definition: "Leads marked duplicate or linked to another lead.", grain: "Lead", source: "sales.leads" }} />
       </div>

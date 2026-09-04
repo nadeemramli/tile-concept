@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getMemberMap } from "@/server/queries/reference";
+import { endOfTodayKualaLumpur } from "@/lib/format";
 import type { AppSession } from "@/server/session";
 import type { InboxCounts, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { LeadView } from "@/features/inbox/schema";
@@ -11,8 +12,14 @@ const LEAD_COLUMNS =
   "id, status, source_channel, source_detail, contact_id, account_id, raw_name, raw_phone, raw_phone_normalized, raw_email, raw_company, interest, product_interest, location_id, owner_id, assigned_at, first_response_due_at, first_response_at, contact_attempts, qualified_at, disqualified_reason, converted_opportunity_id, duplicate_of_lead_id, notes, created_at, updated_at";
 
 type RawLead = Record<string, unknown>;
+type Supa = Awaited<ReturnType<typeof createServerSupabase>>;
 
-function mapLead(r: RawLead, ownerName: string | null): LeadRow {
+interface LeadFollowUp {
+  id: string;
+  due_at: string;
+}
+
+function mapLead(r: RawLead, ownerName: string | null, followUp: LeadFollowUp | null = null): LeadRow {
   return {
     id: String(r.id),
     status: String(r.status ?? "new"),
@@ -38,6 +45,8 @@ function mapLead(r: RawLead, ownerName: string | null): LeadRow {
     disqualified_reason: (r.disqualified_reason as string | null) ?? null,
     converted_opportunity_id: (r.converted_opportunity_id as string | null) ?? null,
     duplicate_of_lead_id: (r.duplicate_of_lead_id as string | null) ?? null,
+    next_follow_up_at: followUp?.due_at ?? null,
+    next_follow_up_task_id: followUp?.id ?? null,
     notes: (r.notes as string | null) ?? null,
     created_at: String(r.created_at),
     updated_at: String(r.updated_at ?? r.created_at),
@@ -46,8 +55,33 @@ function mapLead(r: RawLead, ownerName: string | null): LeadRow {
 
 const ACTIVE = ["new", "contact_attempted", "contacted", "qualified"];
 
+/**
+ * Earliest open follow-up task per lead, in one bounded query. PostgREST has no
+ * group-by, so the min() per lead happens here: tasks arrive ordered by due_at
+ * and the first row per lead wins. RLS on sales.tasks scopes rows to the viewer
+ * (own, created, or unassigned tasks unless sales.read_all), so a rep sees
+ * their own follow-ups while managers see them all — intended.
+ */
+async function getOpenLeadFollowUps(supabase: Supa): Promise<Map<string, LeadFollowUp>> {
+  const { data } = await supabase
+    .from("tasks")
+    .select("id, lead_id, due_at")
+    .eq("status", "open")
+    .not("lead_id", "is", null)
+    .not("due_at", "is", null)
+    .order("due_at", { ascending: true })
+    .limit(1000);
+  const map = new Map<string, LeadFollowUp>();
+  for (const t of data ?? []) {
+    if (!t.lead_id || map.has(String(t.lead_id))) continue;
+    map.set(String(t.lead_id), { id: String(t.id), due_at: String(t.due_at) });
+  }
+  return map;
+}
+
 export async function listLeads(view: LeadView, session: AppSession): Promise<LeadRow[]> {
   const supabase = await createServerSupabase();
+  const [followUps, members] = await Promise.all([getOpenLeadFollowUps(supabase), getMemberMap()]);
   let q = supabase.from("leads").select(LEAD_COLUMNS).order("created_at", { ascending: false }).limit(500);
   const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
   const now = new Date().toISOString();
@@ -67,6 +101,15 @@ export async function listLeads(view: LeadView, session: AppSession): Promise<Le
     case "follow-up":
       q = q.in("status", ["new", "contact_attempted", "contacted"]).lt("first_response_due_at", now).is("first_response_at", null);
       break;
+    case "follow-ups-due": {
+      // Only leads whose earliest open task is due today (KL) or earlier — a
+      // bounded id list, never the full 500-row scan.
+      const dueEnd = Date.parse(endOfTodayKualaLumpur());
+      const dueLeadIds = [...followUps.entries()].filter(([, f]) => Date.parse(f.due_at) <= dueEnd).map(([leadId]) => leadId);
+      if (dueLeadIds.length === 0) return [];
+      q = q.in("id", dueLeadIds.slice(0, 500));
+      break;
+    }
     case "duplicates":
       q = q.or("status.eq.duplicate,duplicate_of_lead_id.not.is.null");
       break;
@@ -83,15 +126,20 @@ export async function listLeads(view: LeadView, session: AppSession): Promise<Le
     default:
       break;
   }
-  const [{ data }, members] = await Promise.all([q, getMemberMap()]);
-  return (data ?? []).map((r) => mapLead(r as RawLead, r.owner_id ? (members.get(r.owner_id)?.full_name ?? null) : null));
+  const { data } = await q;
+  return (data ?? []).map((r) => mapLead(r as RawLead, r.owner_id ? (members.get(r.owner_id)?.full_name ?? null) : null, followUps.get(String(r.id)) ?? null));
 }
 
 export async function getLead(id: string): Promise<LeadRow | null> {
   const supabase = await createServerSupabase();
-  const [{ data }, members] = await Promise.all([supabase.from("leads").select(LEAD_COLUMNS).eq("id", id).maybeSingle(), getMemberMap()]);
+  const [{ data }, members, { data: openTasks }] = await Promise.all([
+    supabase.from("leads").select(LEAD_COLUMNS).eq("id", id).maybeSingle(),
+    getMemberMap(),
+    supabase.from("tasks").select("id, due_at").eq("lead_id", id).eq("status", "open").not("due_at", "is", null).order("due_at", { ascending: true }).limit(1),
+  ]);
   if (!data) return null;
-  return mapLead(data as RawLead, data.owner_id ? (members.get(data.owner_id)?.full_name ?? null) : null);
+  const t = openTasks?.[0];
+  return mapLead(data as RawLead, data.owner_id ? (members.get(data.owner_id)?.full_name ?? null) : null, t ? { id: String(t.id), due_at: String(t.due_at) } : null);
 }
 
 export async function getInboxCounts(session: AppSession): Promise<InboxCounts> {
@@ -99,7 +147,7 @@ export async function getInboxCounts(session: AppSession): Promise<InboxCounts> 
   const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
   const now = new Date().toISOString();
   const head = () => supabase.from("leads").select("id", { count: "exact", head: true });
-  const [n, u, m, nr, fu, d, a] = await Promise.all([
+  const [n, u, m, nr, fu, d, a, ft] = await Promise.all([
     head().eq("status", "new"),
     head().is("owner_id", null).in("status", ["new", "contact_attempted", "contacted"]),
     head().eq("owner_id", session.userId).in("status", ACTIVE),
@@ -107,8 +155,19 @@ export async function getInboxCounts(session: AppSession): Promise<InboxCounts> 
     head().in("status", ["new", "contact_attempted", "contacted"]).lt("first_response_due_at", now).is("first_response_at", null),
     head().or("status.eq.duplicate,duplicate_of_lead_id.not.is.null"),
     head().in("status", ["new", "contact_attempted"]).lt("created_at", twoDaysAgo),
+    // Distinct-lead count so the card matches the "Follow-ups due" view rows.
+    supabase.from("tasks").select("lead_id").eq("status", "open").not("lead_id", "is", null).lte("due_at", endOfTodayKualaLumpur()).limit(1000),
   ]);
-  return { new: n.count ?? 0, unassigned: u.count ?? 0, mine: m.count ?? 0, noResponse: nr.count ?? 0, followUp: fu.count ?? 0, duplicates: d.count ?? 0, aging: a.count ?? 0 };
+  return {
+    new: n.count ?? 0,
+    unassigned: u.count ?? 0,
+    mine: m.count ?? 0,
+    noResponse: nr.count ?? 0,
+    followUp: fu.count ?? 0,
+    duplicates: d.count ?? 0,
+    aging: a.count ?? 0,
+    followUpsDue: new Set((ft.data ?? []).map((t) => String(t.lead_id))).size,
+  };
 }
 
 export async function getLeadIntakeEvents(leadId: string): Promise<IntakeEventRow[]> {

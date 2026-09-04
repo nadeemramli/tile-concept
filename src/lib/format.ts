@@ -68,3 +68,10 @@ export function maskValue(value: string | null | undefined, kind: "phone" | "ema
   if (kind === "email") return value.replace(/^(.).*(@.*)$/, "$1•••$2");
   return "•••";
 }
+
+/** End of the current day in Asia/Kuala_Lumpur (fixed UTC+8, no DST) as an ISO string. */
+export function endOfTodayKualaLumpur(now: Date = new Date()): string {
+  const KL_OFFSET_MS = 8 * 3_600_000;
+  const klDayEnd = (Math.floor((now.getTime() + KL_OFFSET_MS) / 86_400_000) + 1) * 86_400_000;
+  return new Date(klDayEnd - KL_OFFSET_MS).toISOString();
+}

@@ -23,6 +23,8 @@ export interface LeadRow {
   disqualified_reason: string | null;
   converted_opportunity_id: string | null;
   duplicate_of_lead_id: string | null;
+  next_follow_up_at: string | null;
+  next_follow_up_task_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -60,4 +62,5 @@ export interface InboxCounts {
   followUp: number;
   duplicates: number;
   aging: number;
+  followUpsDue: number;
 }

@@ -8,7 +8,7 @@ import { ArrowRight, Check, ExternalLink, MessageCircle, Search, UserPlus, X } f
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
-import { LEAD_STATUS, LIFECYCLE_STATE, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
+import { LEAD_STATUS, LIFECYCLE_STATE } from "@/lib/domain/status-maps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,9 +17,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Switch } from "@/components/ui/switch";
 import { Field } from "@/components/patterns/field";
 import { CandidateList } from "@/features/inbox/components/candidate-list";
+import { IntakeAnswers } from "@/features/inbox/components/intake-answers";
+import { FOLLOW_UP_OPTIONS, followUpDueAt, followUpTaskTitle } from "@/features/inbox/lib/follow-up";
 import { formatDateTime, formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
+import { cn } from "@/lib/utils";
 import type { IdentityCandidate, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { ProfileRef } from "@/server/queries/reference";
 import {
@@ -31,6 +34,7 @@ import {
   linkLeadIdentityAction,
   logLeadResponseAction,
   qualifyLeadAction,
+  scheduleLeadFollowUpAction,
 } from "@/server/commands/leads";
 
 interface Props {
@@ -51,6 +55,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
   const [pending, start] = useTransition();
   const [panel, setPanel] = useState<Panel>(null);
   const [candidates, setCandidates] = useState<IdentityCandidate[] | null>(initialSuggestions ?? null);
+  const [followUpPromptLeadId, setFollowUpPromptLeadId] = useState<string | null>(null);
 
   if (!lead) return null;
 
@@ -75,6 +80,14 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
       )
     : null;
 
+  // Prefer the human form/campaign name from the latest intake event over the
+  // concatenated source_detail string.
+  const latestPayload = intake[0]?.payload;
+  const sourceContext =
+    (typeof latestPayload?.form_name === "string" && latestPayload.form_name) ||
+    (typeof latestPayload?.campaign_name === "string" && latestPayload.campaign_name) ||
+    lead.source_detail;
+
   return (
     <>
       <RecordDrawer
@@ -86,15 +99,32 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
             {lead.raw_name ?? lead.raw_company ?? "Inquiry"} <StatusPill map={LEAD_STATUS} value={lead.status} size="md" />
           </span>
         }
-        description={`${titleCase(lead.source_channel)}${lead.source_detail ? ` · ${lead.source_detail}` : ""} · received ${formatRelative(lead.created_at)}`}
+        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)}`}
       >
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
           {whatsappUrl && (
             <Button asChild size="sm" className="h-7">
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" title="Opens a pre-filled message; log the response after sending">
+              <a href={whatsappUrl} target="_blank" rel="noreferrer" title="Opens a pre-filled message; use Done WhatsApp after sending">
                 <MessageCircle className="size-3.5" aria-hidden /> WhatsApp
               </a>
+            </Button>
+          )}
+          {whatsappUrl && !terminal && can("sales.write") && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7"
+              disabled={pending}
+              title="One click: logs a WhatsApp attempt in the timeline under your name"
+              onClick={() =>
+                run(
+                  () => logLeadResponseAction({ lead_id: lead.id, kind: "message", channel: "whatsapp", reached: false, body: "WhatsApp message sent" }),
+                  () => setFollowUpPromptLeadId(lead.id),
+                )
+              }
+            >
+              <Check className="size-3.5" aria-hidden /> Done WhatsApp
             </Button>
           )}
           {!terminal && can("sales.write") && (
@@ -148,11 +178,70 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
           )}
         </div>
 
+        {/* Follow-up chips, shown right after a quick log */}
+        {followUpPromptLeadId === lead.id && !terminal && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+            <span className="text-muted-foreground">Follow up:</span>
+            {FOLLOW_UP_OPTIONS.map((o) => (
+              <Button
+                key={o.key}
+                size="sm"
+                variant={o.emphasized ? "default" : "outline"}
+                className="h-6 px-2 text-xs"
+                disabled={pending}
+                onClick={() =>
+                  run(
+                    () => scheduleLeadFollowUpAction({ lead_id: lead.id, due_at: followUpDueAt(o.days), title: followUpTaskTitle(lead) }),
+                    () => setFollowUpPromptLeadId(null),
+                  )
+                }
+              >
+                {o.label}
+              </Button>
+            ))}
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={pending} onClick={() => setFollowUpPromptLeadId(null)}>
+              No follow-up
+            </Button>
+          </div>
+        )}
+
         {slaOverdue && (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             First-response SLA overdue — due {formatRelative(lead.first_response_due_at)}. Log a response attempt.
           </p>
         )}
+
+        <DrawerSection title="Contact & follow-up">
+          <FactList
+            items={[
+              { label: "Name", value: lead.raw_name },
+              { label: "Phone", value: can("contact.reveal") ? lead.raw_phone : maskValue(lead.raw_phone_normalized ?? lead.raw_phone, "phone"), mono: true },
+              { label: "Email", value: can("contact.reveal") ? lead.raw_email : maskValue(lead.raw_email, "email"), mono: true },
+              { label: "Company", value: lead.raw_company },
+              { label: "Owner", value: lead.owner_name ?? "Unassigned" },
+              {
+                label: "Next follow-up",
+                value: lead.next_follow_up_at ? (
+                  <Link
+                    href={lead.next_follow_up_task_id ? `/sales/tasks?task=${lead.next_follow_up_task_id}` : "/sales/tasks"}
+                    className={cn("hover:underline", isOverdue(lead.next_follow_up_at) && "font-medium text-destructive")}
+                  >
+                    due {formatRelative(lead.next_follow_up_at)}
+                  </Link>
+                ) : (
+                  "None scheduled"
+                ),
+              },
+              { label: "Attempts", value: String(lead.contact_attempts) },
+              { label: "First response due", value: lead.first_response_due_at ? formatDateTime(lead.first_response_due_at) : "—" },
+              { label: "First responded", value: lead.first_response_at ? formatDateTime(lead.first_response_at) : "Not yet" },
+            ]}
+          />
+        </DrawerSection>
+
+        <DrawerSection title={`Form answers (${intake.length})`}>
+          <IntakeAnswers intake={intake} maskContacts={!can("contact.reveal")} />
+        </DrawerSection>
 
         <DrawerSection title="Identity">
           {contact ? (
@@ -181,17 +270,9 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
           )}
         </DrawerSection>
 
-        <DrawerSection title="Captured details">
+        <DrawerSection title="Details">
           <FactList
             items={[
-              { label: "Name", value: lead.raw_name },
-              { label: "Phone", value: can("contact.reveal") ? lead.raw_phone : maskValue(lead.raw_phone_normalized ?? lead.raw_phone, "phone"), mono: true },
-              { label: "Email", value: can("contact.reveal") ? lead.raw_email : maskValue(lead.raw_email, "email"), mono: true },
-              { label: "Company", value: lead.raw_company },
-              { label: "Owner", value: lead.owner_name ?? "Unassigned" },
-              { label: "Attempts", value: String(lead.contact_attempts) },
-              { label: "First response due", value: lead.first_response_due_at ? formatDateTime(lead.first_response_due_at) : "—" },
-              { label: "First responded", value: lead.first_response_at ? formatDateTime(lead.first_response_at) : "Not yet" },
               { label: "Product interest", value: lead.product_interest.length ? lead.product_interest.map(titleCase).join(", ") : "—" },
               { label: "Qualified", value: lead.qualified_at ? formatDateTime(lead.qualified_at) : "—" },
             ]}
@@ -199,35 +280,6 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
           {lead.interest && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{lead.interest}</p>}
           {lead.notes && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{lead.notes}</p>}
           {lead.disqualified_reason && <p className="text-sm text-destructive">Disqualified: {lead.disqualified_reason}</p>}
-        </DrawerSection>
-
-        <DrawerSection title={`Source evidence (${intake.length})`}>
-          {intake.length === 0 && <p className="text-sm text-muted-foreground">No intake events recorded.</p>}
-          <ul className="space-y-2">
-            {intake.map((e) => (
-              <li key={e.id} className="rounded-md border px-3 py-2 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill map={SOURCE_CHANNEL} value={e.source_channel} />
-                  <span className="text-muted-foreground">{e.provider ?? "manual"}{e.external_id ? ` · ${e.external_id}` : ""}</span>
-                  <span className="ml-auto tnum text-muted-foreground">{formatDateTime(e.received_at)}</span>
-                </div>
-                {Object.keys(e.payload).length > 0 && (
-                  <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
-                    {Object.entries(e.payload)
-                      .filter(([, v]) => v !== null && v !== "")
-                      .slice(0, 10)
-                      .map(([k, v]) => (
-                        <div key={k} className="min-w-0">
-                          <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</dt>
-                          <dd className="truncate">{typeof v === "string" ? v : JSON.stringify(v)}</dd>
-                        </div>
-                      ))}
-                  </dl>
-                )}
-                {e.raw_text && <p className="mt-1.5 line-clamp-4 whitespace-pre-wrap text-muted-foreground">{e.raw_text}</p>}
-              </li>
-            ))}
-          </ul>
         </DrawerSection>
 
         <DrawerSection title="Timeline">
@@ -503,4 +555,3 @@ function ConvertForm({ lead, pending, onSubmit }: { lead: LeadRow; pending: bool
     </div>
   );
 }
-

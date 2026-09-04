@@ -16,6 +16,7 @@ export interface CommandCentreSummary {
   quotes_expiring: number;
   my_open_tasks: number;
   my_overdue_tasks: number;
+  lead_followups_due: number;
   duplicate_candidates: number;
   visits_today: number;
   purchases_7d: number;
@@ -77,6 +78,7 @@ export async function getAttentionItems(session: AppSession): Promise<AttentionI
   if (!s) return [];
   const items: AttentionItem[] = [];
   if (s.my_overdue_tasks > 0) items.push({ id: "tasks", title: `${s.my_overdue_tasks} overdue task${s.my_overdue_tasks > 1 ? "s" : ""}`, href: "/sales/tasks?view=overdue", tone: "destructive" });
+  if (s.lead_followups_due > 0) items.push({ id: "lead-followups", title: `${s.lead_followups_due} lead follow-up${s.lead_followups_due > 1 ? "s" : ""} due`, href: "/sales/inbox?view=follow-ups-due", tone: "warning" });
   if (s.overdue_followups > 0) items.push({ id: "followups", title: `${s.overdue_followups} opportunit${s.overdue_followups > 1 ? "ies" : "y"} with overdue next action`, href: "/sales/pipeline?view=overdue", tone: "warning" });
   if (s.unassigned_leads > 0 && session.permissions.includes("sales.assign")) items.push({ id: "unassigned", title: `${s.unassigned_leads} unassigned inquir${s.unassigned_leads > 1 ? "ies" : "y"}`, href: "/sales/inbox?view=unassigned", tone: "warning" });
   if (s.no_response_leads > 0) items.push({ id: "noresponse", title: `${s.no_response_leads} new inquir${s.no_response_leads > 1 ? "ies" : "y"} without a response`, href: "/sales/inbox?view=no-response", tone: "warning" });
