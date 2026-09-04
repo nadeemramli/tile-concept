@@ -24,6 +24,16 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Validate self-hosted n8n infrastructure
+        run: |
+          node --test infra/n8n/relay/server.test.mjs
+          shellcheck infra/n8n/ops/*.sh
+          cp infra/n8n/.env.example infra/n8n/.env
+          install -d -m 0700 infra/n8n/secrets
+          printf 'ci-placeholder-secret' > infra/n8n/secrets/postgres_password
+          printf 'ci-placeholder-secret' > infra/n8n/secrets/n8n_encryption_key
+          printf 'ci-placeholder-secret' > infra/n8n/secrets/tc_intake_secret
+          docker compose --env-file infra/n8n/.env -f infra/n8n/compose.yaml config --quiet
       - run: pnpm build
 
   database:

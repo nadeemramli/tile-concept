@@ -211,6 +211,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
         <div className="flex gap-2">
           <Button onClick={reset}><Plus className="size-3.5" aria-hidden /> Record another walk-in</Button>
           <Button asChild variant="outline"><Link href={`/sales/contacts/${contact?.id}`}>Go to contact</Link></Button>
+          {result.purchase_id ? <Button asChild variant="outline"><Link href={`/sales/feedback/new?purchase=${result.purchase_id}`}>Request feedback</Link></Button> : null}
         </div>
       </Card>
     );

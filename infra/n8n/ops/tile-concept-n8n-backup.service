@@ -1,0 +1,12 @@
+[Unit]
+Description=Back up the Tile Concept n8n PostgreSQL database
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+Environment=N8N_PROJECT_DIR=/opt/tile-concept-automation
+ExecStart=/opt/tile-concept-automation/ops/backup.sh
+Nice=10
+IOSchedulingClass=idle
+

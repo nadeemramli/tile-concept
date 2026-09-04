@@ -57,6 +57,9 @@ Real administrators are invited from **Platform → Settings → Invites** (Supa
 | `NEXT_PUBLIC_APP_URL` | server | canonical site URL (auth redirects) |
 | `NEXT_PUBLIC_APP_MODE` | browser + server | `demo` \| `shadow` \| `live` (PRD §12.9) |
 | `SUPABASE_SECRET_KEY` | **server only** | service-role key; admin invites, user provisioning, and the corpus importer. Never `NEXT_PUBLIC_`. |
+| `TC_GOOGLE_REVIEW_URL` | **server only** | Owner-verified Google Business Profile “Ask for reviews” HTTPS URL. The app opens it only after the customer confirms their private feedback. |
+| `AI_GATEWAY_API_KEY` | **server only** | Optional Vercel AI Gateway credential for improving a customer-owned review draft. If absent, a deterministic draft is used. |
+| `TC_REVIEW_MODEL` | **server only** | Optional AI Gateway model override; defaults to `openai/gpt-5.4-mini`. |
 | `TILE_CORPUS_ROOT` | corpus tooling only | Absolute path to `Discovery Corpus/_local`. Never defaulted — a wrong default would silently import the wrong tree. |
 | `TC_INTAKE_WORKSPACE_ID` | **server only** | Workspace written by inbound connectors; optional only when the database has exactly one workspace. |
 | `N8N_INTAKE_SECRET` | **server only** | HMAC secret shared only with the Hetzner n8n workflow for `/api/intake/automation`. |
@@ -120,6 +123,21 @@ inbox, staff with contact-reveal permission also get a one-click, pre-filled Wha
 action; sending remains a deliberate human action and must be logged afterward.
 Facebook, Instagram, and Threads report under the stable `meta` channel while the exact
 platform, campaign, and form remain in source detail and the immutable intake payload.
+
+## Customer feedback and Google handoff
+
+After a purchase, staff can open **Sales → Customer Feedback**, record the customer's
+answers to five neutral questions, add an optional permitted photo, and create a secure
+WhatsApp handoff. The customer checks or edits the draft on their own page before the
+app offers an optional link to Google. Google receives no pre-filled text or uploaded
+photo, and the app records only that the handoff link was opened—not that a review was
+posted.
+
+Any approved benefit must be for completing the private feedback step, regardless of
+sentiment and regardless of whether the customer leaves, changes, or removes a Google
+review. The module records the approved policy/reference but does not calculate or apply
+a discount. Configure `TC_GOOGLE_REVIEW_URL` from the Business Profile owner's official
+“Ask for reviews” link before rollout.
 
 ## Hosted project
 

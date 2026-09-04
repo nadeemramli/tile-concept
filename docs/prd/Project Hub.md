@@ -2,8 +2,8 @@
 title: Tile Concept OS - Project Hub
 description: Entry point for the Tile Concept sales, product, pricing, catalog, and stock operating system.
 created: 2026-08-19
-updated: 2026-08-21
-status: proposed
+updated: 2026-09-01
+status: active
 tags: [tile-concept, internal-application, crm, inventory, catalog, pricing]
 ---
 
@@ -18,31 +18,34 @@ Tile Concept OS is an internal, multi-user command centre that turns fragmented 
 - Product definition: **complete proposed v1**
 - Platform decision: **GitHub + Vercel + Supabase accepted**
 - Recommended application stack: **documented in PRD section 12**
-- Application: **built and deployed.** `nadeemramli/tile-concept` runs on Vercel against
-  the hosted Supabase project `ewyiiematuuojlhpioqh` (Seoul). Phase 1 is implemented
-  end to end; Phases 2-6 have their database layer and working surfaces.
-- Build authorization: **recorded 2026-08-20**; the application repository exists and
-  this `docs/prd/` directory is a dated snapshot inside it
-- Design-system rights gate: **closed by re-creation.** The UI was rebuilt rather than
-  copied; brand is navy `#093248` and amber `#eda537`, sampled from the logo
+- Application repository: **[nadeemramli/tile-concept](https://github.com/nadeemramli/tile-concept), located and inspected on 2026-09-01**
+- Build authorization: **customer-feedback/review feature requested on 2026-09-01 and implemented locally in the dedicated application repository; hosted rollout is not yet authorized or applied**
+- Design-system rights gate: **open**
 - SQL Account access and behavior validation: **open**
-- Google Drive source roots: **supplied; read access verified 2026-08-21**
-- Representative source files: **supplied.** The 2026-08-21 discovery corpus covers 242
-  Drive files across the three accepted roots - see [Discovery Corpus](../discovery/README.md)
-- Corpus migration: **complete.** Source records, immutable versions, media evidence,
-  and 16,509 commercial candidates are in Supabase, all `pending_review` - see
-  [Corpus Compatibility Map](../architecture/Corpus%20Compatibility%20Map.md)
+- Google Drive source roots: **supplied and read access verified on 2026-08-21**
+- Recursive metadata inventory: **complete; 373 items across 134 traversed folders with zero traversal errors**
+- Current Drive corpus extraction: **242 file profiles complete; 239 readable content sources; one credentials record excluded; two oversized catalogs intentionally deferred**
+- Provisional merchandise extraction: **35 shape clusters; 6,011 variant candidates; 10,183 price candidates; 62 certificate candidates; all remain unreviewed**
+- Visual corpus extraction: **154 source PDFs and 76 standalone images staged; 2,022 relevant pages rendered; 2,098 pixel observations; 3,344 provisional media-to-variant links; semantic labels await human approval**
 - Production customer data: **must not enter the repository or this vault**
+- Catalog discovery direction: **Obsidian-first soft-schema ingestion accepted on 2026-08-21; raw/confidential corpus remains local and Git-ignored**
+- Future merchandise authority: **Supabase and the Tile Concept app after schema freeze and reconciled migration**
+- Customer feedback and Google review handoff: **implemented locally on 2026-09-01 with private schema/RLS, five-question staff capture, optional private photo, deterministic/LLM draft, expiring customer link, WhatsApp handoff, customer confirmation, and click-only Google tracking**
+- Existing walk-in UI contract: **preserve the current one-by-one phone lookup, identity review, and manual entry path; feedback remains optional and post-purchase**
 
 ## Start here
 
 - [Product Requirements Document](<./Tile Concept OS - Product Requirements Document.md>)
 - [Source Register](<./Source Register.md>)
-- [Catalog Ingestion Architecture](../architecture/Catalog%20Ingestion%20Architecture.md)
-- [Canonical Merchandise Schema](../architecture/Canonical%20Merchandise%20Schema.md)
-- [Corpus Compatibility Map](../architecture/Corpus%20Compatibility%20Map.md)
-- [Discovery Corpus](../discovery/README.md)
-- [Engineering backlog](../Backlog.md)
+- [Catalog Ingestion Architecture](<./Catalog Ingestion Architecture.md>)
+- [Canonical Merchandise Schema](<./Canonical Merchandise Schema.md>)
+- [White Horse Ingestion Pilot](<./White Horse Ingestion Pilot.md>)
+- [Obsidian Discovery Corpus](<./Discovery Corpus/README.md>)
+- [Discovery Inventory Summary](<./Discovery Corpus/Inventory Summary.md>)
+- [Corpus Extraction Report](<./Discovery Corpus/Corpus Extraction Report.md>)
+- [Field Observation Registry](<./Discovery Corpus/Field Observation Registry.md>)
+- [Provisional Record Extraction Report](<./Discovery Corpus/Provisional Record Extraction Report.md>)
+- [Visual Corpus Extraction Report](<./Discovery Corpus/Visual Corpus Extraction Report.md>)
 
 ## Working product name
 
@@ -57,11 +60,7 @@ Tile Concept OS is an internal, multi-user command centre that turns fragmented 
 - Tailwind CSS 4, owned shadcn/Radix components, Geist Sans/Mono, Lucide, TanStack Table/Virtual, and FullCalendar Standard for the EFFEN-derived command-centre UI.
 - Server-first reads and commands, explicit RLS/authorization, private originals, durable background jobs, and human-reviewed OCR/import publication.
 
-This directory now lives **inside** the application repository `nadeemramli/tile-concept`
-as a dated snapshot; the canonical copies remain in the Obsidian Build Vault, which is
-still where product decisions are made. The earlier note that the PRD folder "is not
-itself a Next.js application repository" described the vault before 2026-08-20 and no
-longer applies.
+The current folder remains the product source of truth inside the broader `nadeemramli/build-blog` knowledge-vault repository. Application code lives separately in `nadeemramli/tile-concept` at `/home/nadeemramli/workspace/github.com/nadeemramli/tile-concept`; production data must not be copied back into this vault.
 
 ## Core modules
 
@@ -70,29 +69,20 @@ longer applies.
 3. Accounts, Contacts, Projects, and Opportunities
 4. Walk-in Registration and Purchase Capture
 5. Marketing Opportunities and Shoot Calendar
-6. Product Catalog and Asset Library
-7. Pricing and Price History
-8. Stock and Supplier Availability
-9. Imports, OCR, and Review Queue
-10. Integrations and Data Health
-11. Reports, Audit, and Administration
+6. Customer Feedback and Google Review Handoff
+7. Product Catalog and Asset Library
+8. Pricing and Price History
+9. Stock and Supplier Availability
+10. Imports, OCR, and Review Queue
+11. Integrations and Data Health
+12. Reports, Audit, and Administration
 
-## Immediate decision needed
+## Immediate rollout decision needed
 
-The first vertical slice is built and live:
+The application repository and first vertical slice now exist. Before the feedback module goes live, complete the PRD launch gates, approve the private-feedback benefit policy, add the owner-verified Google Business Profile review URL, approve the LLM/privacy configuration, apply the migration to the hosted Supabase project, and deploy the reviewed branch through Vercel. The established core slice is:
 
 > Capture or register an inquiry → resolve the customer safely → create a project opportunity → search a governed product and price → record or link a quote/purchase → retain the history for repeat purchase.
 
-What is now blocking is **review capacity, not engineering**. The corpus migration
-deliberately published nothing: 6,011 variant candidates, 10,183 price candidates, 62
-certificates, and 2,015 semantic visual labels are all waiting on decisions only the
-business can make. The eight open questions are listed in
-[Corpus Compatibility Map §7](../architecture/Corpus%20Compatibility%20Map.md#7-open-decisions-inherited-from-v03);
-the two most load-bearing are:
+The implemented additive slice is:
 
-1. **What does the White Horse price column mean?** `W.M Pallet/FOB Price` covers 3,743
-   rows and the source states no currency, unit basis, tax basis, or effective date.
-   Approval is refused until each is answered explicitly.
-2. **Who reviews certificates, and at what scope?** All 62 arrive with `scope_type =
-   'unknown'`. A certificate in a brand folder does not certify every SKU of that brand,
-   and the schema will not let one pretend to.
+> Existing purchase succeeds unchanged → staff optionally records five neutral answers and photo permission → customer receives one secure WhatsApp link → customer confirms/edits their own draft → customer may voluntarily open the correct Google review form.

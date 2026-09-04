@@ -18,11 +18,11 @@ tags: [tile-concept, prd, crm, sales, inventory, catalog, pricing, ocr]
 | Product | Tile Concept OS, working title |
 | Product type | Invite-only internal web application |
 | Primary business | Contract/project sales with walk-in and repeat-purchase flows |
-| Status | Proposed v1; ready for stakeholder discovery and scope approval |
-| Evidence date | 2026-08-20 |
+| Status | Active v1; customer-feedback slice implemented locally on 2026-09-01 and pending hosted rollout approval |
+| Evidence date | 2026-09-01 |
 | Source register | [Source Register](<./Source Register.md>) |
 | Accepted platform | GitHub source control, Vercel hosting, and Supabase backend |
-| Implementation repository | A dedicated Tile Concept application repository is recommended. As of 2026-08-20, this PRD folder contains documents only and is an untracked directory inside the broader `nadeemramli/build-blog` repository; it is not an application scaffold. |
+| Implementation repository | [nadeemramli/tile-concept](https://github.com/nadeemramli/tile-concept), local checkout `/home/nadeemramli/workspace/github.com/nadeemramli/tile-concept`; this PRD folder remains the separate knowledge authority. |
 | Production-data rule | Real customer, price, supplier, credential, and stock data must not be committed to source control or copied into the Build Vault |
 
 ### Statement labels
@@ -36,13 +36,14 @@ All performance targets in this document are proposed SLOs, not historical facts
 
 ## 1. Executive summary
 
-Tile Concept currently has five connected operating problems:
+Tile Concept currently has six connected operating problems:
 
 1. Customer inquiries arrive through multiple channels and are not resolved into one durable customer and project history.
 2. Walk-in sales and purchases are keyed into Excel after the fact, separating the customer, salesperson, source, payment, and purchase from the wider sales lifecycle.
 3. Product and pricing knowledge is fragmented across PDFs, screenshots, Excel files, shared-drive folders, and supplier websites, which makes quoting slow and error-prone.
 4. Stock visibility differs by source: in-house wall-panel stock is represented in SQL Account/SQL Connect, while supplier stock is obtained periodically through calls or WhatsApp and is not consistently visible to the team.
 5. Sales staff identify completed or nearly completed customer projects that could become testimonials, interviews, before/after content, or site shoots, but customer permission, tentative dates, crew availability, location planning, and final assets are coordinated in WhatsApp rather than a shared project-linked workflow.
+6. A completed walk-in purchase has no governed, low-friction path for staff to capture private experience feedback, return it to the resolved customer for confirmation, and offer every eligible customer the same voluntary Google review handoff without losing provenance or pressuring the customer.
 
 The proposed product is an internal operating system with a CRM spine and a governed merchandise spine. It does not attempt to become Salesforce, an accounting ledger, a full warehouse management system, or an autonomous scraper. It creates one place to answer:
 
@@ -52,6 +53,7 @@ The proposed product is an internal operating system with a CRM spine and a gove
 - Which product, code, image, dimensions, packaging, and price are approved?
 - Where did that price or catalog fact come from, and when was it last reviewed?
 - What stock or supplier availability is known, from which source, and how stale is it?
+- What did this customer say about the completed experience, did they confirm the notes or optional draft, and was a neutral review invitation prepared without treating a Google review as purchased proof?
 
 The first release should replace the active walk-in spreadsheet workflow and prove the lead-to-purchase lifecycle before adding broad automation.
 
@@ -59,7 +61,7 @@ The first release should replace the active walk-in spreadsheet workflow and pro
 
 ### 2.1 Product promise
 
-An authorized employee can capture any inquiry or walk-in once, resolve the identity safely, work the project sale through quote and purchase, and retrieve the customer's complete repeat history together with governed product, price, catalog, and availability evidence.
+An authorized employee can capture any inquiry or walk-in once, resolve the identity safely, work the project sale through quote and purchase, optionally request customer-confirmed experience feedback, and retrieve the customer's complete repeat history together with governed product, price, catalog, and availability evidence.
 
 ### 2.2 Product principles
 
@@ -69,10 +71,11 @@ An authorized employee can capture any inquiry or walk-in once, resolve the iden
 4. **Effective dates beat overwritten values.** Prices, supplier snapshots, product specifications, and catalog versions keep history.
 5. **Source and freshness are visible.** Every important operational value exposes origin, last refresh, confidence, and review state.
 6. **Manual fallback is a feature.** If a platform API or supplier automation fails, staff can still capture a complete record without returning to an uncontrolled spreadsheet.
-7. **AI/OCR proposes; a human publishes.** Extracted fields remain staged until reviewed.
-8. **Exception first.** The home screen leads with stale stock, aging leads, overdue follow-ups, unreviewed imports, price conflicts, and sync failures.
-9. **Dense, not cramped.** The system favors fast desktop operations, searchable tables, drawers, keyboard flows, and compact mobile capture.
-10. **No second undocumented brain.** Transactional facts live in the app; accepted product decisions and learning live in this project folder.
+7. **AI/OCR proposes; a human publishes.** Extracted fields remain staged until reviewed. A customer-facing review draft remains a suggestion until the customer confirms or edits it; the system never posts it.
+8. **The customer owns the public review.** Staff may request honest feedback, but cannot buy, gate, prescribe, submit, revise, or remove a Google review. Public-review choice never changes an earned private-feedback benefit.
+9. **Exception first.** The home screen leads with stale stock, aging leads, overdue follow-ups, unreviewed imports, price conflicts, and sync failures.
+10. **Dense, not cramped.** The system favors fast desktop operations, searchable tables, drawers, keyboard flows, and compact mobile capture.
+11. **No second undocumented brain.** Transactional facts live in the app; accepted product decisions and learning live in this project folder.
 
 ## 3. Scope and outcomes
 
@@ -84,6 +87,8 @@ An authorized employee can capture any inquiry or walk-in once, resolve the iden
 | Replace walk-in Excel entry | A walk-in can be resolved or registered and a purchase recorded in one guided flow; the spreadsheet is no longer the live ledger |
 | Make contract sales manageable | Every active opportunity has stage, owner, project/site, estimated value, next action, due date, quote history, and loss/win reason |
 | Make repeat purchase visible | A new purchase links to the existing identity and updates repeat status without destroying the original acquisition source |
+| Request feedback without changing walk-in entry | After an accepted purchase, staff can start an optional five-question feedback session from the existing customer/purchase record; no feedback field or prompt is inserted into the manual walk-in fast path |
+| Create a safe review handoff | The customer receives one secure WhatsApp link, confirms or edits their own notes/draft, and may voluntarily open the correct location's Google review form; benefit, sentiment, and public-review choice remain independent |
 | Coordinate customer-project content | Sales can nominate a suitable project, record customer media permission, propose dates, reserve marketing capacity, confirm a shoot, and attach outputs without losing the customer/project context |
 | Centralize governed product knowledge | Staff can search by brand, code, name, category, color, dimensions, finish, image, or aliases and see category-relevant attributes |
 | Reduce price lookup friction | A user sees the current approved price and its basis, currency, effective date, source, and history without opening multiple supplier files |
@@ -99,6 +104,8 @@ An authorized employee can capture any inquiry or walk-in once, resolve the iden
 - Opportunity and quote aging; overdue next-action rate.
 - Walk-in registration completeness and time-to-complete.
 - New versus existing/repeat customer purchases and repeat interval.
+- Eligible purchases, private-feedback requests prepared, WhatsApp actions opened, customer links opened, feedback confirmed, and Google handoffs opened. Do not report `review posted` from a link click.
+- Feedback completion and review invitation coverage by eligible cohort to detect selective solicitation; sentiment or rating is not a staff KPI and no review quota is permitted.
 - Customer projects nominated for content, permission completion rate, nomination-to-confirmed-shoot time, shoot completion/postponement rate, and usable assets per completed shoot.
 - Revenue or collection amount by acquisition source, customer type, salesperson, and product category, subject to finance definitions.
 - Product records with approved current price and complete minimum attributes.
@@ -116,6 +123,10 @@ No target percentages are accepted until at least one representative baseline pe
 - Automatically scraping personal WhatsApp groups or bypassing platform permissions.
 - Allowing a language model or OCR engine to publish prices, merge identities, commit stock, send messages, or mark an opportunity won without human ownership.
 - Autonomous quoting, discount approval, contract signature, payment collection, or customer communication.
+- Offering a discount, free product/service, payment, or any benefit in exchange for posting, changing, or removing a Google review.
+- Showing the Google invitation only to satisfied customers, suppressing it after criticism, requesting a particular rating/content, or setting staff review quotas.
+- Staff or AI posting in the customer's name, automatically filling Google's review composer, automatically attaching a photo to Google, or treating a handoff click as a completed review.
+- Using image analysis to invent product, service, quality, or experience claims for a review draft.
 - Full procurement, purchase-order, manufacturing, delivery-route, installation, or warehouse-management functionality.
 - Full creative production management, social publishing, ad buying, or digital-asset-management replacement; the initial shoot module coordinates opportunity, permission, booking, outputs, and handoff.
 - Cross-supplier price optimization or margin advice until landed-cost and commercial rules are accepted.
@@ -127,7 +138,7 @@ No target percentages are accepted until at least one representative baseline pe
 
 | Persona | Jobs to be done |
 | --- | --- |
-| Sales representative | Capture inquiries and walk-ins, qualify, manage tasks, create projects/opportunities, prepare quote context, record outcomes and purchases |
+| Sales representative | Capture inquiries and walk-ins, qualify, manage tasks, create projects/opportunities, prepare quote context, record outcomes and purchases, and optionally start a post-purchase feedback handoff |
 | Sales manager | Assign leads, inspect pipeline, review aging, approve merges or sensitive changes, coach follow-up, analyze conversion |
 | Showroom/walk-in staff | Find or register a customer quickly, capture visit and purchase details, connect the transaction to a salesperson and source |
 | Marketing coordinator/content producer | Review projects nominated by Sales, validate permission and readiness, place tentative holds, assign crew, confirm or reschedule shoots, and attach resulting assets |
@@ -147,6 +158,8 @@ Permissions are action-based and optionally scoped by team, branch/location, bra
 | View all sales records | Scoped | Yes | No by default | No by default | Yes |
 | Create/update lead, project, opportunity, task | Yes | Yes | No | No | Yes |
 | Record walk-in/purchase | Yes | Yes | No | No | Yes |
+| Start post-purchase feedback request | Scoped | Yes | No | No | Yes |
+| Configure questions, benefit policy, destination, or AI prompt | No | Approval/read | No | No | Yes; business-owner approval required |
 | Confirm identity merge | No; suggest only | Yes | No | No | Yes |
 | Publish product/attribute change | No | Read | Yes | Read | Yes |
 | Publish price | No | Read | Yes; approval policy applies | Read | Yes |
@@ -162,6 +175,13 @@ Marketing-coordination permissions overlay the core table:
 - Marketing coordinators/content producers can review nominations, place internal holds, accept assignments, update checklists, record outcomes, and attach outputs within their scope.
 - A designated marketing scheduler or manager confirms crew capacity, reschedules/cancels confirmed bookings, and approves conflict overrides.
 - Media-permission approval and asset usability may require a separate manager/authorized reviewer even when a producer attended the shoot.
+
+Customer-feedback permissions overlay the core table:
+
+- Sales staff may start a request only from a resolved contact plus eligible visit or purchase, record the customer's words as heard, request separate photo permission, and prepare the WhatsApp handoff.
+- Staff cannot mark a Google review complete, choose invite eligibility from feedback sentiment, edit a customer-confirmed public draft, or make a benefit depend on public-review behavior.
+- Only an authorized owner may activate a versioned question set, benefit policy, Google Business Profile destination, retention rule, customer notice, or LLM prompt/model configuration.
+- A customer using the secure handoff link sees only that request's minimum data and may confirm, edit, decline, delete where policy permits, or continue to Google without an employee account.
 
 Discovery gate: confirm real staff roles, branch/location scope, price sensitivity, discount authority, and whether management should see all customer contact details.
 
@@ -238,6 +258,8 @@ The walk-in flow must not force staff through a long CRM wizard.
 7. Show the next action or mark the interaction complete.
 
 The original spreadsheet columns remain importable, but boolean columns such as `Online Enquiry?`, `Walk in?`, and payment flags are normalized into channel and payment records rather than copied as permanent schema design.
+
+The post-purchase feedback workflow is deliberately outside this fast path. It appears only as an optional action after the visit/purchase save succeeds. It adds no required field, modal, click, or validation to steps 1-7 above, and can be disabled independently by feature flag.
 
 ## 6. Identity resolution
 
@@ -322,6 +344,19 @@ Required capabilities:
 - Mandatory next action and due date for active opportunities after the first accepted qualification stage.
 - Quote revisions, expected close, amount/currency, product interest, competitor/loss notes, and manager review.
 - Timeline is append-oriented; edits create audit events rather than rewriting history invisibly.
+
+#### Project progress documentation and media library
+
+The project record is the operational proof of work, not only a sales container. Authorized staff can append dated progress updates for consultation/showroom visit, selection and design, purchase, delivery, site measurement, installation, completion, aftercare, rectification/issues, design references, and general events. Each update records a title, notes, site, progress state, occurrence time, author, and zero or more images.
+
+- Batch image intake supports browse and drag/drop, visible per-file progress, partial failure, and safe retry without duplicate app records.
+- The project page shows an owner-readable visual chronology, image count, latest evidence, progress exceptions, and marketing-candidate count before secondary CRM detail.
+- Staff may share selected images into a workspace media library for design inspiration, sales proof, and cross-team reference. Search covers project, area, progress moment, update title, caption, and original filename.
+- Image bytes live in the approved Microsoft 365 SharePoint/OneDrive location. Supabase stores only project relationships, provider IDs, file metadata, visibility, marketing nomination, and audit state. Product/catalog media remains in its governed catalog store.
+- In-app previews are authenticated; opening or downloading redirects to the Microsoft file so Microsoft access, retention, recovery, and download behavior remain authoritative.
+- Removing an image from the app archives its metadata and does not silently delete the Microsoft original.
+- “Marketing candidate” is not publishing permission. Existing customer media-permission scope, restrictions, expiry/revocation, and asset review remain the gate for marketing use.
+- Workspace membership and existing `sales.read` / `sales.write` permissions govern access; no public image URL or parallel customer/project identity is created.
 
 ### 7.4 Walk-ins and Purchases
 
@@ -574,80 +609,65 @@ Required calendar views:
 - Publishing execution and public-channel scheduling are outside the initial module; the app may link to a published URL later.
 - External calendar synchronization is optional and never replaces the app's booking, permission, or project authority.
 
-### 7.12 Visual ingestion and product media
+### 7.12 Customer Feedback and Google Review Handoff
 
-*Added 2026-08-21, from the discovery corpus.* This section is an acceptance boundary,
-not an aspiration: each rule below is enforced by a constraint or a function and covered
-by `supabase/tests/003_corpus.sql`.
+This module is an additive post-purchase action. It does not replace, shorten, automate, or add required steps to the accepted one-by-one walk-in phone lookup and identity-resolution UI. It reuses the resolved contact, visit, purchase, location, salesperson, and customer timeline after save.
 
-#### What is preserved
+#### Policy boundary
 
-- **Source originals.** Supplier PDFs and images are stored privately and immutably,
-  keyed by workspace, source id, and content checksum. A source whose binary was not
-  staged is recorded as such (`binary_not_staged`, `connector_text_only`) rather than
-  quietly missing.
-- **Page renders.** Visually relevant catalogue, price-list, and technical pages are
-  rendered and kept as derived media assets, each retaining its parent document and page
-  number. A crop retains its page; a page retains its document.
-- **Region provenance.** `page_number` and `region` are evidence locators. They are never
-  product attributes.
+- A Google review is voluntary and must reflect the customer's genuine experience. The business does not offer a discount, payment, free item/service, or other benefit in exchange for posting, changing, or removing a Google review.
+- If the business approves a benefit for completing the separate private five-question feedback activity, the same written rule applies to every eligible customer regardless of positive or negative answers, Google rating, review text, decision not to review, later revision, or removal. The benefit is decided and recorded before the Google invitation and is never revoked for declining it.
+- The invitation is not sentiment-gated. Eligible customers receive the same neutral Google option even when their private feedback includes criticism. Staff cannot suppress, delay, or change the invitation based on answers, LLM output, or a satisfaction score.
+- Staff must not require the review while the customer is on premises, ask for a specific star rating or wording, identify an employee as required content, set review quotas, or observe the customer's Google submission. The WhatsApp handoff is designed for the customer to complete later and privately.
+- The official Google review URL can open the review surface, but this product does not claim that it can inject text, transfer a photo, choose a rating, or submit on the customer's behalf. Those actions remain inside Google's UI under the customer's control.
 
-#### Three kinds of knowing, kept apart
+#### Staff-assisted feedback workflow
 
-Every visual observation records *how* it was learned, because the difference decides
-what may be published:
+1. After a visit or purchase is saved, show an optional `Request feedback` action in the success state and customer/purchase action rail. The existing `Done` path remains unchanged.
+2. Confirm the resolved customer, phone number, purchase/visit, business location, eligible feedback-program version, and whether the customer agreed to receive the handoff by WhatsApp.
+3. Display one approved, versioned neutral question at a time. The salesperson records the answer substantially verbatim and may mark `customer skipped`; the UI does not score positivity.
+4. Proposed initial question set, subject to business-owner approval and pilot wording review:
+   - What did you come in looking for today?
+   - What part of the service or advice was useful, if any?
+   - Which product or option did you choose, and what influenced that choice?
+   - How would you describe the overall experience in your own words?
+   - What could we improve for your next visit?
+5. A photo is optional and requires a separate, visible permission choice covering private storage and whether the customer may retrieve it for their own public upload. Declining a photo never blocks feedback, a benefit, or the Google invitation.
+6. On `Prepare handoff`, persist the raw answers and create a short customer-facing draft with a bounded low-cost LLM only when there is enough customer-authored substance. The model receives structured answers and accepted purchase/product labels only; it does not infer experience claims from the image.
+7. Generate an opaque, revocable, expiring customer URL and a pre-filled neutral WhatsApp message. The salesperson presses one `Open WhatsApp` action, reviews the destination and message, and sends from the approved account. Opening WhatsApp records `handoff_prepared/opened`, not delivery, reading, or review completion.
 
-| Basis | What it is | Publishable as a product fact |
-| --- | --- | --- |
-| `pixel_measurement` | Reproducible image statistics: palette, brightness, saturation, edge density | **No** |
-| `ocr_or_supplier_text` | A size, finish, colour name, code, or claim printed by the supplier | After review |
-| `machine_visual_classification` | A proposed colour family, pattern, texture, shape, scene, or swatch | **No**, until a human confirms it |
-| `human_visual_review` | A reviewer-confirmed description | Yes |
+Proposed message template:
 
-A pixel palette is not a product colour. A photographed room or a page background can
-dominate it, so an observation may only reach `approved` when its basis is
-`human_visual_review`.
+> Thank you for visiting Tile Concept. We wrote down the feedback you shared. Please use this private link to check or edit it: {secure_link}. If you want, you can then open Google to leave an honest review. A Google review is optional and does not affect your purchase or any feedback benefit.
 
-#### Candidate semantics
+#### Customer handoff page
 
-Machine passes may propose colour family, pattern, texture, finish, shape, application
-context, and whether an image is a scene or a swatch. These arrive as candidates in
-`machine_visual_review_complete_human_approval_pending` and are never written into a
-product's own colour, finish, or pattern columns.
+- The tokenized page is mobile-first, does not require an employee login, and reveals only the business name/location, the customer's first name or neutral greeting, the relevant visit date, their answers, the optional draft, and permitted photo preview.
+- Before any Google action, the customer can correct or remove answers, edit the draft freely, decline the draft, choose `Not now`, and confirm that any text they use reflects their own experience.
+- The optional LLM draft preserves meaning, criticism, uncertainty, and the customer's language. It may improve clarity and brevity but cannot add praise, products, results, staff names, comparative claims, promotional text, star ratings, or facts absent from the accepted inputs.
+- The primary completion is `Confirm private feedback`. After that, offer separate actions: `Copy my draft` and `Open Google to leave an honest review`. Where photo permission allows, `Save my photo` may provide a short-lived download for manual upload in Google.
+- The Google action uses the owner-verified direct review URL configured for the purchase location. It opens in a new context and never embeds, scripts, or automates the Google form.
+- `Not now` completes the private feedback without recording a negative outcome. Expired or revoked links show a safe recovery message and do not reveal whether a phone number or customer record exists.
 
-#### Mapping an image to a product
+#### Benefit handling
 
-`media_asset_variant_link.link_basis` records the strength of the association:
+- A feedback benefit is optional, versioned, and disabled by default until the business owner approves eligibility, terms, accounting treatment, expiry, authority, and customer wording.
+- An eligible benefit may be granted only for completion of the private feedback activity. Its state is independent from `review_invitation_opened`; the database and UI must make it impossible to condition benefit grant, amount, reversal, or eligibility on Google behavior.
+- The salesperson may verbally explain the approved private-feedback benefit, but the customer handoff page must repeat the written separation: the benefit is earned without leaving a Google review.
+- The module does not autonomously calculate or apply a discount. It may link to an authorized discount/reference already recorded in the purchase system and audit who granted it under which policy version.
 
-- `exact_supplier_code`, `exact_ocr_code` - a code matched exactly;
-- `same_catalog_page` - the image and the code share a page;
-- `manual_match` - a human decided;
-- `same_source_document` - the image and the code appeared in the same PDF.
+#### LLM and failure behavior
 
-**A same-document link is discovery context only.** It cannot be approved and cannot
-become published media; re-link it to an exact page, region, code, or a manual decision
-first. Otherwise one catalogue page would become the published image for every variant
-in that catalogue.
+- Store model provider, model/version, prompt version, generated time, input hash, output, and safety/result code. Do not send phone number, address, account identifiers, image bytes, or unrelated customer history to the model.
+- If the model is unavailable, slow, unsafe, or returns unsupported content, the handoff remains usable with the customer's raw answers and a deterministic sentence template; sending is never blocked by AI.
+- The model cannot choose eligibility, infer sentiment for routing, generate a star rating, send WhatsApp, open Google, or mark a review complete.
+- Re-generation, if enabled later, may change length or language only. It cannot offer `more positive`, `five-star`, `remove criticism`, or similar controls.
 
-#### Image usage rights
+#### Status and measurement contract
 
-Rights are a separate gate from correctness: an image may be correctly matched to a
-variant and still not be ours to display. `media_assets.usage_rights_state` is
-`unreviewed` on import, and `merch.product_media` cannot be marked `reviewed` unless
-rights are `accepted`.
-
-#### Never infer dimensions from pixels
-
-A dimension becomes a product fact only when it is printed in supplier text, drawn in a
-technical drawing, supplied in structured data, or confirmed by a reviewer. Deriving it
-from image scale is prohibited, and
-`visual_observations.physical_size_inferred_from_pixels` is CHECK-constrained to `false`
-so such a row cannot be stored at all.
-
-#### Delivery
-
-All buckets are private. Originals and derivatives are served through signed or
-authenticated URLs; a public URL is never used for supplier material.
+- Separate private-feedback states (`draft`, `awaiting_customer`, `confirmed`, `declined`, `expired`, `revoked`) from invitation events (`prepared`, `whatsapp_opened`, `customer_link_opened`, `google_handoff_opened`).
+- The application never derives `review_posted` from an open/click event. Public-review reconciliation or response management requires a separate official Google Business Profile integration, privacy assessment, and identity-matching decision.
+- Managers may inspect aggregate funnel and eligibility coverage. They do not receive a list of customers who failed to post a review, a staff quota dashboard, or sentiment-based invite controls.
 
 ## 8. Information architecture and screen inventory
 
@@ -657,7 +677,7 @@ Always visible on desktop:
 
 - Workspace and optional location/team scope.
 - Global search.
-- Create menu: inquiry, walk-in, contact/account, project/opportunity, content opportunity/shoot request, activity/task, supplier snapshot, import.
+- Create menu: inquiry, walk-in, contact/account, project/opportunity, content opportunity/shoot request, activity/task, supplier snapshot, import. Feedback requests begin only from an accepted visit/purchase context and are not a global create shortcut.
 - Freshness/data-health indicator.
 - Notifications and assigned-work inbox.
 - Theme, user, role, and environment menu.
@@ -671,6 +691,7 @@ Always visible on desktop:
    - Accounts & Contacts
    - Projects
    - Walk-ins & Purchases
+   - Customer Feedback
    - Tasks
 3. **Marketing Coordination**
    - Content Opportunities
@@ -695,7 +716,7 @@ Always visible on desktop:
 - Index pages: page header, compact KPI/exception strip, saved views, sticky filters, dense table or board, bulk-action preview.
 - Record detail: identity/header, state and owner, next action, key facts, linked objects, evidence timeline, source IDs, audit, right-side action rail or drawer.
 - Review queue: source preview on the left, proposed normalized record on the right, field confidence and conflicts inline, approve/correct/reject controls.
-- Mobile: quick inquiry/walk-in/supplier snapshot capture, content-opportunity nomination, shoot-agenda access, search, task completion, and record summary. Full bulk operations remain desktop-first.
+- Mobile: quick inquiry/walk-in/supplier snapshot capture, post-purchase feedback questions, content-opportunity nomination, shoot-agenda access, search, task completion, and record summary. Full bulk operations remain desktop-first.
 
 ## 9. EFFEN-derived design system
 
@@ -756,6 +777,7 @@ Proposed PostgreSQL logical schemas:
 | `core` | Workspace, memberships, locations, accounts, contacts, projects, products, reference data | Private operational tables |
 | `sales` | Intake, leads, opportunities, stages, activities, tasks, quotes, visits, purchases | Private operational tables |
 | `marketing` | Customer-project content opportunities, media permission, shoot bookings, assignments, outputs, and status history | Private operational tables; project/contact access remains scoped |
+| `feedback` | Post-purchase question programs, requests, answers, customer confirmations, optional drafts/media, benefit references, review destinations, and handoff events | Strict/private customer-data boundary; token redemption only through narrow server endpoints |
 | `merch` | Brands, suppliers, categories, attributes, variants, price lists/prices, catalog records | Private operational tables |
 | `stock` | Sources, locations, snapshots, reservations/references, supplier availability, reconciliation | Private operational tables |
 | `ingest` | Source assets, jobs, raw records, extracted fields, review items, checkpoints, errors | Strict/private; raw payload retention controlled |
@@ -828,6 +850,22 @@ The application may implement these as table prefixes initially, but ownership a
 - `content_asset_reviews`
 - `external_calendar_links`
 
+#### Customer feedback and review handoff
+
+- `feedback_programs`
+- `feedback_question_sets`
+- `feedback_questions`
+- `feedback_requests`
+- `feedback_answers`
+- `feedback_status_events`
+- `feedback_media`
+- `feedback_drafts`
+- `feedback_benefit_policies`
+- `feedback_benefit_events`
+- `review_destinations`
+- `review_handoff_events`
+- `customer_access_tokens`
+
 #### Merchandise and pricing
 
 - `suppliers`
@@ -888,6 +926,10 @@ The application may implement these as table prefixes initially, but ownership a
 - Store booking timestamps in UTC with an explicit IANA timezone; display `Asia/Kuala_Lumpur` by default and preserve local-time intent for all-day/date-window records.
 - Tentative holds and confirmed bookings remain different states. Prevent or explicitly override conflicting confirmed assignments; do not treat a tentative customer window as confirmed crew capacity.
 - Partial unique indexes enforce one current record per exact price/scope or external mapping where applicable.
+- Customer access tokens are high-entropy, single-purpose, expiring, revocable, stored only as keyed hashes, and never written to analytics or application logs. A token resolves exactly one feedback request through a rate-limited server boundary.
+- A request references the resolved `contact_id` plus at least one accepted `visit_id` or `purchase_id`; it never creates another customer record. Question-set, notice, benefit-policy, prompt, model, destination, and message-template versions are immutable references on the request.
+- Raw staff-entered answers, generated draft, customer-edited draft, and customer confirmation are separate fields/versions. Customer edits never overwrite the captured source answers invisibly.
+- Private-feedback completion, benefit grant, Google handoff opening, and any later verified public-review fact are different events. No trigger, function, policy, report, or UI condition may make a benefit depend on a Google event or feedback sentiment.
 - Index foreign keys and common filters: workspace, owner, stage, next-action date, normalized phone/email hash, account, product code, brand/category, source, effective date, freshness, and external ID.
 - Use keyset/cursor pagination for large timelines and operational tables; avoid deep offset pagination.
 
@@ -896,6 +938,9 @@ The application may implement these as table prefixes initially, but ownership a
 - Store normalized searchable values only where required; consider keyed hashes for exact phone/email matching plus separately encrypted display values.
 - Raw lead and message payloads receive minimal retention and restricted access.
 - Product/supplier documents and customer documents use separate private storage buckets and policies.
+- Feedback photos use a dedicated private bucket with file-type/size limits, scoped upload/read policies, retention, malware/content validation where accepted, and short-lived server-issued access. Storage metadata is not edited directly.
+- Tokenized customer pages are `Cache-Control: no-store`, redact identifiers from URLs and errors, and never expose raw contact points, internal notes, benefit logic, model prompts, or unrelated timeline data.
+- The LLM payload contains the minimum versioned question/answer text and permitted product labels; contact data, address, token, private photo, and unrelated history are excluded.
 - Reports should use masked/scoped views rather than granting broad table access.
 
 ## 11. Integration requirements
@@ -951,17 +996,6 @@ Every connector implements:
 - No writes until shadow reconciliation passes, business ownership is clear, idempotency/concurrency is tested, and a separate approval is recorded.
 - Do not assume document semantics. Test which SQL document or status changes available stock.
 
-#### 11.3.1 Deferred until SQL Account is connected
-
-The Command Centre sales scorecard (`api.sales_scorecard`, the "Annual target coverage" card) ships against app-recorded data only. The following are intentionally deferred until the read-only SQL Account connector (§7.7, Phase 5) is live and shadow reconciliation passes:
-
-- **Delivered vs collected split.** Today "YTD collection" is the sum of app-recorded purchases and is labelled as such. Once SQL Account is authoritative, separate *sales delivered* from *cash collected* (as the field scorecard does) and source both from reconciled figures rather than app-entered purchase amounts.
-- **Collection reconciliation.** Replace the app-recorded collection figure with the SQL Account authoritative value, keeping the app number as a cross-check and surfacing variance as a data-health signal — never overwriting the accounting authority.
-- **Period outlook.** Add quarterly / half-year outlook (Q3, Q4, H2, full year) to the coverage view once delivery and payment-term timing is available from SQL Account, so coverage can be phased rather than a single annual figure.
-- **Balance / partial-payment tracking.** Reflect partial payments and outstanding balances per document once SQL Account exposes document-level payment state.
-
-Until then the card states the caveat inline and reads target vs unweighted open pipeline plus app-recorded collection.
-
 ### 11.4 Google Drive/source files
 
 - MVP may use manual upload/export from authorized shared folders.
@@ -983,6 +1017,15 @@ Until then the card states the caveat inline and reads target vs unweighted open
 - Calendar credentials/scopes are server-side and least privilege. Personal calendars are not ingested wholesale merely to detect availability.
 - Store provider event/calendar IDs, sync direction, checkpoint, last success, and conflict state. Provider deletion or edits must not silently erase the app's booking history.
 - Customer contact details, permission evidence, and private project notes are excluded from external event descriptions unless a separate policy explicitly permits them.
+
+### 11.7 WhatsApp and Google review handoff
+
+- V1 uses a user-initiated WhatsApp deep link containing an approved neutral message and the Tile Concept customer-handoff URL. The salesperson verifies the normalized phone and presses send in WhatsApp; the application does not claim delivery or silently send.
+- A later approved WhatsApp Business provider may send and reconcile delivery only after template approval, customer-contact basis, opt-out behavior, credential ownership, retention, retry, and failure handling are accepted.
+- `review_destinations` stores the owner-verified Google Business Profile review URL per Tile Concept business location, verification date, verifier, active state, and optional Place ID. Staff cannot paste an arbitrary per-request redirect.
+- The system follows the configured Google URL as an external handoff. It does not scrape Google, embed the review form, inject review text, transfer media, choose a rating, submit, or use a customer's Google identity.
+- Link-domain allowlisting, HTTPS, redirect validation, and periodic destination checks prevent an administrator error from turning a trusted customer link into an open redirect.
+- Any future Google Business Profile API use is a separate connector with official scopes, least privilege, terms review, location mapping, retention, and reconciliation. It must not be used to pressure, reward, or deterministically match a reviewer to a private customer without an accepted lawful basis and policy.
 
 ## 12. Technical architecture
 
@@ -1035,16 +1078,7 @@ The UI target remains the EFFEN-style internal command centre already defined in
 
 ### 12.3 Application repository shape
 
-*Resolved 2026-08-20.* Application code lives in the dedicated repository
-`nadeemramli/tile-concept`, deployed on Vercel against the hosted Supabase project
-`ewyiiematuuojlhpioqh`. This document is a dated snapshot inside it under `docs/prd/`;
-the canonical copy remains in the Obsidian Build Vault, which is still where product
-decisions are made. The separation was kept for the reasons originally given: it avoids
-exposing vault content, simplifies Vercel root selection, and gives the application an
-independent issue, access, release, and retention boundary.
-
-The layout below was followed, with one deviation: `tests/fixtures/` does not exist -
-fixtures live in `supabase/seed.sql` and `supabase/seeds/`.
+The PRD directory is inside the broader `nadeemramli/build-blog` knowledge-vault repository and deliberately contains no application scaffold. The dedicated implementation repository was identified on 2026-09-01 as [nadeemramli/tile-concept](https://github.com/nadeemramli/tile-concept), with local checkout `/home/nadeemramli/workspace/github.com/nadeemramli/tile-concept`. This separation reduces accidental exposure of vault content and gives the client application an independent access, release, and retention boundary.
 
 Recommended initial repository layout:
 
@@ -1187,14 +1221,7 @@ flowchart TB
 - `Shadow`: reads real authorized sources and compares/reviews; no external writes.
 - `Live`: approved workflows create operational records and any external write is separately gated.
 
-*Updated 2026-08-21.* The build is deployed and the hosted database holds real supplier
-source material, so this is no longer a design-only authorization. External **writes**
-remain ungranted: nothing in the system writes to Google Drive, a supplier site, or SQL
-Account. The corpus migration is a one-way read from Drive into Supabase, and the Drive
-originals were never modified.
-
-Note that importing supplier data is not the same as publishing it. Every commercial
-candidate from the corpus is `pending_review`; see §7.12.
+The current PRD authorizes only design and a future Demo/Shadow build. Live external writes require a new decision.
 
 ## 13. Security, privacy, and governance
 
@@ -1206,6 +1233,7 @@ candidate from the corpus is `pending_review`; see §7.12.
 - Private file buckets with signed, short-lived access.
 - Secrets in a secret manager; rotate and revoke on staff/provider changes.
 - Audit login, sensitive reveal, export, identity merge/unmerge, price publish, stock correction, amount/payment correction, integration change, and permission change.
+- Audit feedback-request creation, question/policy/prompt activation, staff answer edits, token issue/revoke, photo permission/upload/delete, model generation, customer confirmation, benefit event, WhatsApp opening, and Google handoff opening. Do not log raw tokens or full review drafts in generic logs.
 - Logs contain identifiers/reason codes, not full customer messages, credentials, or documents.
 - Backups, restore test, incident runbook, and breach-assessment workflow.
 - Vendor/subprocessor, hosting-region, cross-border transfer, DPO/registration, retention, privacy notice, and data-subject processes receive qualified Malaysian legal/privacy review.
@@ -1219,6 +1247,7 @@ candidate from the corpus is `pending_review`; see §7.12.
 - Audit and access logs.
 - Deleted/merged identity history.
 - Backups and extraction artifacts.
+- Raw feedback answers, customer-edited drafts, generated drafts/model metadata, access-token records, optional photos, handoff events, and benefit references.
 
 The app should encode accepted policies, not invent them.
 
@@ -1243,6 +1272,8 @@ The app should encode accepted policies, not invent them.
 | Scale | Initial schema/indexes support at least hundreds of thousands of activities/intake records without redesign; validate actual volume before load testing |
 | Accessibility | Keyboard-operable core workflows, visible focus, semantic labels, non-color state cues, reduced motion, WCAG 2.2 AA aspiration |
 | Browser | Current managed Chrome/Edge desktop; responsive mobile browser for quick capture |
+| Customer handoff | Current mobile Chrome/Safari and WhatsApp in-app browsers; no employee session required; page is no-store, token-scoped, rate-limited, and usable without the LLM |
+| External review | Correct configured Google profile opens from the customer page; no supported requirement assumes prefilled text, automatic photo transfer, rating selection, or submission |
 | Resilience | Idempotent webhooks/imports, bounded retries, dead-letter/review queue, checkpointed backfills |
 | Backup | Proposed RPO 24 hours and RTO 8 hours until the business accepts stronger requirements; restore test before launch |
 | Audit | Material business and security actions queryable by actor/object/time/reason |
@@ -1259,6 +1290,7 @@ Key product events:
 - `content_opportunity_nominated`, `media_permission_changed`, `shoot_hold_created`, `shoot_booking_confirmed`, `shoot_booking_rescheduled`, `shoot_completed`, `shoot_output_linked`.
 - `visit_recorded`, `quote_version_issued`, `opportunity_won`, `opportunity_lost`.
 - `purchase_recorded`, `repeat_purchase_detected`.
+- `feedback_request_created`, `feedback_answers_saved`, `feedback_handoff_prepared`, `feedback_whatsapp_opened`, `feedback_customer_link_opened`, `feedback_confirmed`, `feedback_declined`, `feedback_benefit_recorded`, `review_handoff_opened`.
 - `source_asset_uploaded`, `ingestion_completed`, `review_item_corrected`, `record_published`.
 - `price_published`, `price_conflict_detected`, `price_expired`.
 - `sql_sync_completed`, `sql_reconciliation_failed`, `supplier_snapshot_published`, `stock_became_stale`.
@@ -1266,6 +1298,7 @@ Key product events:
 Event envelope includes event/version IDs, occurred and recorded times, workspace/object/actor, correlation/causation, source integration, idempotency key, and minimum necessary payload classification.
 
 Do not use customer PII in analytics event properties unless strictly required and reviewed.
+Do not emit raw token, answer text, draft text, photo URL, phone, or inferred sentiment. `review_handoff_opened` is not `review_posted`.
 
 ## 16. Delivery plan
 
@@ -1275,6 +1308,7 @@ Deliverables:
 
 - Stakeholder/role map and one observed sales walkthrough.
 - One observed customer-project nomination and shoot-scheduling walkthrough, including who may hold/confirm dates and how customer permission is evidenced.
+- One observed post-purchase feedback walkthrough, including the unchanged walk-in save, neutral question capture, customer confirmation, benefit separation, WhatsApp handoff, and Google boundary.
 - Current stage, quote, purchase, payment, and customer-type definitions.
 - Representative sanitized samples: walk-in workbook, one file per product category, price list, catalog PDF/image, supplier stock update, SQL Account endpoint/Postman collection.
 - SQL quotation/stock behavior test and source-of-truth decision.
@@ -1297,6 +1331,20 @@ Build:
 - Audit, saved views, data health, synthetic demo fixtures.
 
 Exit gate: selected staff run live work in Shadow/controlled Live app flow without double-entering new walk-ins into Excel for the agreed pilot scope.
+
+### Phase 1B - Additive customer feedback pilot
+
+Build behind an independently controlled feature flag:
+
+- `Request feedback` action after a successful purchase/visit and in the existing customer timeline; no walk-in-form regression.
+- Versioned five-question program, verbatim staff capture, optional separately consented photo, and customer-facing notice.
+- Bounded LLM draft with deterministic no-AI fallback, provenance, minimum-data payload, and customer edit/confirmation.
+- Opaque expiring customer link, token-scoped mobile page, private media access, expiry/revocation, and safe recovery.
+- One-click user-initiated WhatsApp handoff with neutral message and location-correct Google review destination.
+- Private-feedback benefit reference that is structurally independent from Google invitation events.
+- Funnel/coverage events, audit, RLS/API/storage tests, and no `review posted` inference.
+
+Exit gate: a pilot salesperson completes the existing walk-in/purchase path unchanged, starts an optional request, and a synthetic customer confirms private feedback and opens the correct Google profile. A negative-answer test receives the identical optional review action and any approved private-feedback benefit remains earned when Google is declined.
 
 ### Phase 2 - Marketing opportunities and shoot scheduling
 
@@ -1375,6 +1423,22 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 - Existing-customer purchase updates repeat state without overwriting earlier history.
 - Amount and payment corrections are permissioned and audited.
 
+### Customer feedback and Google review handoff
+
+- With the feedback flag off, the walk-in UI, validations, required fields, save behavior, and success path are unchanged.
+- With the flag on, `Request feedback` is optional and unavailable until the contact is resolved and an eligible visit or purchase is accepted.
+- Starting feedback links to the existing contact, visit/purchase, salesperson, and location; it creates no duplicate customer, lead, project, or purchase.
+- The approved question-set version is preserved, skipped questions are explicit, and staff edits retain actor/time history.
+- Positive, mixed, and critical answer fixtures receive the same Google invitation path; no satisfaction/rating filter or staff override can selectively gate it.
+- Any approved private-feedback benefit can be granted when private feedback is confirmed and remains unchanged when the customer chooses `Not now`, never opens Google, or later changes/removes a review.
+- The LLM output contains no claim absent from the structured answers/accepted product labels, retains criticism, and falls back to raw answers or a deterministic template on failure.
+- The customer can edit or reject the draft, confirm private feedback, and continue without leaving a Google review.
+- The customer link exposes only one request, expires and revokes correctly, is rate-limited/no-store, leaks no raw token or unrelated PII, and fails closed for invalid tokens.
+- Feedback photos remain private, require separate permission, and are not automatically transferred to Google. Any customer download uses short-lived access.
+- WhatsApp opens only after staff review of recipient/message. The app distinguishes prepared/opened from delivered/read and records no autonomous send in v1.
+- The configured location's owner-verified Google review URL opens; text, photo, rating, and submission are not automated.
+- Analytics record minimum event IDs and timestamps without phone, raw answers, draft, token, photo URL, or inferred sentiment. A Google handoff click is never labeled a posted review.
+
 ### Marketing opportunities and shoot calendar
 
 - Sales can nominate an existing customer/project without creating duplicate customer, project, or opportunity records.
@@ -1437,7 +1501,7 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 - Pilot one location/team and one representative salesperson group.
 - Run the app as the only new-entry path for the agreed pilot while the old workbook is read-only or reconciliation-only.
 - Daily exception review during pilot: duplicates, missing fields, response tasks, amount mismatches, and adoption gaps.
-- Train by workflow: new inquiry, existing customer, walk-in purchase, opportunity update, content-opportunity nomination and shoot confirmation, product/price search, supplier stock update.
+- Train by workflow: new inquiry, existing customer, walk-in purchase, optional post-purchase feedback/review handoff, opportunity update, content-opportunity nomination and shoot confirmation, product/price search, supplier stock update.
 - Assign module owners and data stewards, not just an IT owner.
 - Exit pilot only when staff can recover from errors and managers trust the reconciliation evidence.
 
@@ -1454,6 +1518,11 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 | Brittle or unauthorized website scraping | Breakage, contractual/platform risk | Allowlist, owner approval, terms/robots review, snapshot/change detection, prefer files/API |
 | Staff keep parallel Excel ledger | Split truth and poor adoption | Pilot cutover owner, read-only archive, import/reconciliation, workflow-based training |
 | Broad customer-data access/export | Privacy and reputation risk | RLS/scopes, masking, approval, audit, retention, incident process |
+| Discount or other benefit is tied to a Google review | Google policy breach, review removal/profile restriction, and reputation harm | Benefit applies only to private feedback for every eligible customer; review is optional; schema, UI, tests, and staff script enforce separation |
+| Positive-only or staff-pressured solicitation | Rating manipulation and damaged trust | Same neutral invitation for all eligible customers, no sentiment gate/quota, complete-later WhatsApp handoff, manager coverage audit |
+| AI draft invents or sanitizes the experience | Misrepresentation and inauthentic public content | Minimum structured inputs, preserve criticism, no image inference, customer edit/confirmation, provenance, deterministic fallback, no auto-post |
+| Customer handoff token or photo leaks | Customer privacy breach | Hashed expiring/revocable tokens, narrow server endpoint, no-store/rate limit, private bucket, scoped short-lived access, log redaction |
+| Google handoff is mistaken for review completion | Misleading reporting and customer pressure | Separate click event, no `review_posted` status without a separately approved official reconciliation source |
 | Customer project is filmed or used beyond permission | Legal, relationship, and reputation harm | Separate media-permission record, scoped uses/restrictions, evidence, pre-shoot check, asset review, revocation workflow |
 | Crew or customer time is double-booked | Missed shoot and damaged trust | Tentative versus confirmed states, conflict/travel-buffer validation, confirmation ownership, reschedule audit and notifications |
 | Product/UOM schema too generic | Incorrect comparison and pricing | Common typed fields plus category attribute rules and versioned conversions |
@@ -1463,13 +1532,16 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 
 ## 20. Decision and discovery gates
 
-### Accepted decisions as of 2026-08-20
+### Accepted decisions as of 2026-09-01
 
 - The accepted business/product name is **Tile Concept**.
 - The platform set is **GitHub + Vercel + Supabase**.
 - The UI direction is the EFFEN-derived internal command centre described in section 9 and the implementation contract in section 12.2.
 - Marketing opportunity nomination and shoot scheduling belong in the product and remain linked to the customer/project record.
-- Production customer, supplier, price, stock, and credential data do not belong in Git or this knowledge vault.
+- The existing one-by-one walk-in phone lookup, identity review, and manual entry UI is retained. Customer feedback is a separate optional post-purchase action.
+- Production customer and credential data do not belong in Git or this knowledge vault. During the accepted discovery phase, current supplier/catalog/price/certificate data may be ingested into the local Git-ignored Obsidian discovery corpus to learn the overall shape. After schema freeze and migration, Supabase and the application become the operational authority and Obsidian is no longer a live merchandise database.
+
+External launch constraint: Google permits businesses to share a review link, including through WhatsApp, but prohibits incentives in exchange for reviews, selective positive-review solicitation, on-premises pressure, and requests for specific review content. The requested public-review discount and automatic prefilled/submitted Google review are therefore not implementable requirements. This PRD substitutes a separately earned private-feedback benefit plus a voluntary customer-controlled Google handoff.
 
 ### Must answer before Phase 1 build
 
@@ -1483,7 +1555,7 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 8. Who may merge identities, publish prices, correct amounts, and export customer data?
 9. Does the user have permission to re-use EFFEN design-system source code, or only visual inspiration/patterns?
 10. Where may production data be hosted, and what privacy/retention policies are accepted?
-11. What is the dedicated Tile Concept application repository URL/path, and who owns its GitHub organization, branch protection, and administrator access?
+11. **Repository resolved 2026-09-01:** [nadeemramli/tile-concept](https://github.com/nadeemramli/tile-concept), local checkout `/home/nadeemramli/workspace/github.com/nadeemramli/tile-concept`. GitHub organization ownership, branch protection, and administrator access remain an operational governance check.
 12. Which Vercel team/project and Supabase organization/projects are authoritative for Preview, Staging, and Production, and which approved regions/plans will they use?
 
 ### Must answer before SQL integration
@@ -1523,6 +1595,18 @@ No AI closer, automated discounting, or autonomous customer messaging is implied
 5. Whether conversion outcomes may be posted back to advertising platforms and on what lawful/policy basis.
 6. n8n owner, Hetzner backup/monitoring, credential rotation, and which approved WhatsApp Business provider/account/group may receive lead alerts.
 
+### Must answer before customer feedback and review handoff goes live
+
+1. Which visits/purchases are eligible, when the request may be made, and whether every eligible customer must receive the same invitation automatically or through a monitored staff action.
+2. Final neutral five-question set, supported languages, version owner, and the exact staff script that makes private feedback and public review optionality clear.
+3. Whether a private-feedback benefit will exist; if yes, its written eligibility, amount/type, accounting authority, expiry, customer terms, and proof that it remains independent from Google behavior.
+4. Verified Google Business Profile review URL and profile owner for each Tile Concept business location; test result on supported mobile devices.
+5. Customer notice/consent basis for staff-entered answers and WhatsApp contact; separate photo capture/storage/download permission; retention, deletion, and data-subject process.
+6. Approved WhatsApp account/provider, sending behavior, template, opt-out handling, and what event is authoritative for delivery if provider sending is added.
+7. LLM provider/model, processing region/subprocessor approval, prompt owner, budget/rate limit, languages, retention/training setting, and deterministic fallback.
+8. Customer-token lifetime, resend/revoke rules, support recovery, rate limits, and which internal roles may view raw answers, drafts, media, benefit events, and audit.
+9. Whether the business wants only aggregate Google-handoff metrics or will separately authorize an official Business Profile review-management connector. No deterministic reviewer-to-customer matching is assumed.
+
 ## 21. Definition of Ready
 
 An epic is ready only when:
@@ -1545,6 +1629,7 @@ A release is done only when:
 - No real PII, credentials, or supplier-confidential data exist in repository fixtures/logs.
 - Monitoring, ownership, alerts, backup, restore, retry, and incident procedures are exercised.
 - Users complete the critical workflows without assistance in a pilot.
+- Feedback-pilot tests prove neutral eligibility, benefit/review independence, customer control, correct Google destination, no walk-in regression, no auto-post, and no false `review posted` reporting.
 - Documentation names current authorities, schemas, connectors, metrics, and known limitations.
 - The old live-entry path is retired or explicitly retained for a documented reason.
 
@@ -1563,3 +1648,22 @@ Build this thin but complete path before broad dashboards or automation:
 9. Audit, saved views, Excel import preview, and command-centre exceptions.
 
 This slice directly replaces the highest-friction current workflow, validates the canonical model, and creates the foundation required by platform connectors, OCR, pricing, and stock—without making those later dependencies prerequisites for learning.
+
+### Implemented additive slice - Customer feedback and review handoff
+
+After the accepted walk-in/purchase save works, add this bounded path without changing it:
+
+1. Feature-flagged `Request feedback` action on the purchase success state and customer/purchase timeline.
+2. Resolved-contact and eligible-purchase precondition.
+3. Versioned neutral five-question capture with explicit skips and verbatim source answers.
+4. Optional photo with separate permission and private storage.
+5. Low-cost LLM draft constrained to the customer's words, plus deterministic no-AI fallback.
+6. Expiring, revocable customer link for edit/confirmation.
+7. Independently recorded private-feedback benefit, disabled until policy approval.
+8. One-click staff-reviewed WhatsApp handoff.
+9. Separate customer-controlled `Copy my draft`, `Save my photo`, and `Open Google` actions.
+10. Coverage/funnel audit, negative-feedback parity test, security tests, and no posted-review inference.
+
+This is the closest technically supported and Google-policy-compliant version of the requested experience. The customer still performs the final copy/edit, photo selection, rating, and submission in Google.
+
+Implementation status on 2026-09-01: complete in the local application checkout and not deployed. The implementation adds the `feedback` private schema, RLS and security-definer RPCs, a private `feedback-media` bucket, staff capture/tracking screens, expiring hashed-token customer pages, an AI Gateway integration with deterministic fallback, WhatsApp handoff, and Google click-only redirection. Verification passed 67 unit tests, 87 pgTAP database tests, TypeScript, production build, new-schema lint, and a real-browser staff-to-customer confirmation journey. Hosted rollout still requires the launch decisions in section 20, `TC_GOOGLE_REVIEW_URL`, optional approved AI Gateway credentials/model, migration review/application, and Vercel deployment approval.

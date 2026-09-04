@@ -235,7 +235,7 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
         title={purchase ? <span className="flex items-center gap-2"><span className="font-mono">{purchase.external_ref ?? "Purchase"}</span><StatusPill map={PURCHASE_STATUS} value={purchase.status} size="md" />{purchase.is_repeat && <TonePill tone="ai" label="Repeat" size="md" />}</span> : ""}
         description={purchase ? `${formatDateTime(purchase.purchased_at)} · ${formatMoney(purchase.amount, purchase.currency)}` : undefined}
         width="md"
-        actions={purchase && can("purchase.correct") && purchase.status !== "voided" ? <Button size="sm" variant="outline" className="h-7" onClick={() => setCorrecting(true)}>Correct amount</Button> : undefined}
+        actions={purchase && purchase.status !== "voided" ? <div className="flex gap-2">{can("sales.write") && purchase.contact_id ? <Button asChild size="sm" className="h-7"><Link href={`/sales/feedback/new?purchase=${purchase.id}`}>Request feedback</Link></Button> : null}{can("purchase.correct") ? <Button size="sm" variant="outline" className="h-7" onClick={() => setCorrecting(true)}>Correct amount</Button> : null}</div> : undefined}
       >
         {purchase && (
           <>

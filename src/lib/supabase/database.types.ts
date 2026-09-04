@@ -2963,6 +2963,86 @@ export type Database = {
           },
         ]
       }
+      feedback_requests: {
+        Row: {
+          benefit_reference: string | null
+          benefit_status: string | null
+          contact_id: string | null
+          created_at: string | null
+          customer_confirmed_at: string | null
+          customer_name: string | null
+          google_handoff_opened_at: string | null
+          has_photo: boolean | null
+          id: string | null
+          location_id: string | null
+          location_name: string | null
+          photo_permission: boolean | null
+          purchase_amount: number | null
+          purchase_currency: string | null
+          purchase_id: string | null
+          purchase_ref: string | null
+          purchased_at: string | null
+          question_set_version: string | null
+          salesperson_id: string | null
+          salesperson_name: string | null
+          status: string | null
+          updated_at: string | null
+          visit_id: string | null
+          whatsapp_consent: boolean | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: true
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "requests_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_mappings: {
         Row: {
           connection_id: string | null
@@ -9827,6 +9907,15 @@ export type Database = {
         Args: { p_lead_id: string; p_owner_id: string; p_reason?: string }
         Returns: undefined
       }
+      attach_feedback_media: {
+        Args: {
+          p_mime_type: string
+          p_object_path: string
+          p_request_id: string
+          p_size_bytes: number
+        }
+        Returns: string
+      }
       change_opportunity_stage: {
         Args: {
           p_next_action?: string
@@ -9839,6 +9928,10 @@ export type Database = {
         Returns: undefined
       }
       command_centre_summary: { Args: never; Returns: Json }
+      confirm_feedback_by_token: {
+        Args: { p_customer_text: string; p_token_hash: string }
+        Returns: boolean
+      }
       convert_lead: {
         Args: {
           p_account_id?: string
@@ -9865,6 +9958,25 @@ export type Database = {
         }
         Returns: string
       }
+      create_feedback_request: {
+        Args: {
+          p_answers: Json
+          p_benefit_reference?: string
+          p_benefit_status?: string
+          p_expires_at: string
+          p_generated_text: string
+          p_generation_mode: string
+          p_input_hash: string
+          p_model_id: string
+          p_photo_permission?: boolean
+          p_prompt_version: string
+          p_purchase_id: string
+          p_review_url?: string
+          p_token_hash: string
+          p_whatsapp_consent?: boolean
+        }
+        Returns: Json
+      }
       create_ingestion_job: {
         Args: {
           p_job_type: string
@@ -9888,6 +10000,25 @@ export type Database = {
           opportunity_id: string
           purchase_id: string
           subject: string
+          visit_id: string
+        }[]
+      }
+      feedback_purchase_context: {
+        Args: { p_purchase_id: string }
+        Returns: {
+          amount: number
+          contact_id: string
+          currency: string
+          customer_name: string
+          existing_request_id: string
+          location_id: string
+          location_name: string
+          phone: string
+          purchase_id: string
+          purchase_ref: string
+          purchased_at: string
+          salesperson_id: string
+          salesperson_name: string
           visit_id: string
         }[]
       }
@@ -9939,6 +10070,30 @@ export type Database = {
         Returns: undefined
       }
       flag_stale_suppliers: { Args: never; Returns: number }
+      get_feedback_by_token: {
+        Args: { p_token_hash: string }
+        Returns: {
+          answers: Json
+          benefit_status: string
+          customer_name: string
+          draft_text: string
+          expires_at: string
+          has_photo: boolean
+          location_name: string
+          purchased_at: string
+          request_id: string
+          review_url: string
+          status: string
+        }[]
+      }
+      get_feedback_media_by_token: {
+        Args: { p_token_hash: string }
+        Returns: {
+          bucket_id: string
+          mime_type: string
+          object_path: string
+        }[]
+      }
       global_search: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -9949,6 +10104,14 @@ export type Database = {
           subtitle: string
           title: string
         }[]
+      }
+      log_feedback_customer_event: {
+        Args: { p_event_type: string; p_token_hash: string }
+        Returns: boolean
+      }
+      log_feedback_staff_event: {
+        Args: { p_event_type: string; p_request_id: string }
+        Returns: undefined
       }
       log_lead_response: {
         Args: {
