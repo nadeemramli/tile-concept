@@ -2,7 +2,7 @@
 -- Runs against a freshly seeded local database (`supabase test db`).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(15);
 
 -- helper to act as a demo user
 create or replace function pg_temp.act_as(uid text) returns void language sql as $$
@@ -20,10 +20,20 @@ reset role;
 -- mode made it count rows the manager cannot see, and should not see.
 create temp table t_counts as
   select (select count(*) from sales.opportunities
-          where workspace_id = '11111111-1111-1111-1111-111111111111') as opps;
+          where workspace_id = '11111111-1111-1111-1111-111111111111') as opps,
+         (select count(*) from sales.leads
+          where workspace_id = '11111111-1111-1111-1111-111111111111') as leads;
 grant select on t_counts to authenticated;
 set local role authenticated;
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
+select ok((select core.has_permission('sales.leads.read_all')), 'sales rep has shared Enquiry Box permission');
+select is((select count(*) from api.leads), (select leads from t_counts), 'sales rep sees every lead in their workspace');
+select is_empty(
+  $$update api.leads set notes = notes
+    where owner_id = 'aaaaaaaa-0000-0000-0000-000000000002'
+    returning id$$,
+  'shared lead visibility does not let a sales rep edit another owner''s lead'
+);
 select ok((select count(*) from api.opportunities) < (select opps from t_counts), 'sales rep is owner-scoped on opportunities');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000002');
 select is((select count(*) from api.opportunities), (select opps from t_counts), 'sales manager (sales.read_all) sees all opportunities');
