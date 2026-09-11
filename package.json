@@ -18,7 +18,9 @@
     "db:types:linked": "supabase gen types typescript --linked --schema api > src/lib/supabase/database.types.ts",
     "corpus:plan": "tsx scripts/corpus/run.mts --plan",
     "corpus:local": "tsx scripts/corpus/run.mts --local",
-    "corpus:linked": "tsx scripts/corpus/run.mts --linked"
+    "corpus:linked": "tsx scripts/corpus/run.mts --linked",
+    "import:tiktok": "tsx scripts/import/tiktok-leads.mts",
+    "import:tracker": "tsx scripts/import/daily-tracker.mts"
   },
   "dependencies": {
     "@fullcalendar/core": "^7.0.2",
