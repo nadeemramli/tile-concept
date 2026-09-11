@@ -21,10 +21,9 @@ interface Props {
   suppliers: { id: string; name: string }[];
   brands: { id: string; name: string }[];
   supplierNames: string[];
-  canWrite: boolean;
 }
 
-export function LibraryClient({ rows, detail, suppliers, brands, supplierNames, canWrite }: Props) {
+export function LibraryClient({ rows, detail, suppliers, brands, supplierNames }: Props) {
   const router = useRouter();
   const [kind, setKind] = useQueryState("kind", parseAsString.withDefault(""));
   const [supplier, setSupplier] = useQueryState("supplier", parseAsString.withDefault(""));
@@ -36,22 +35,34 @@ export function LibraryClient({ rows, detail, suppliers, brands, supplierNames, 
   const columns = useMemo<ColumnDef<SourceAssetRow, unknown>[]>(
     () => [
       { accessorKey: "name", header: "Document", cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
-      { accessorKey: "kind", header: "Kind", cell: ({ row }) => <StatusPill map={ASSET_KIND} value={row.original.kind} /> },
+      { accessorKey: "kind", header: "Kind", meta: { hint: "What kind of file it is decides how it is read: text is extracted from PDFs and spreadsheets; images go through OCR and carry confidence scores." }, cell: ({ row }) => <StatusPill map={ASSET_KIND} value={row.original.kind} /> },
       { accessorKey: "supplier_name", header: "Supplier", cell: ({ row }) => row.original.supplier_name ?? "—" },
       { accessorKey: "brand_name", header: "Brand", cell: ({ row }) => row.original.brand_name ?? "—" },
-      { accessorKey: "version_no", header: "Version", cell: ({ row }) => <MonoCell value={row.original.version_no ? `v${row.original.version_no}` : "—"} /> },
+      {
+        accessorKey: "version_no",
+        header: "Version",
+        meta: { hint: "Counts up when a changed file is uploaded under the same name. Identical content is ignored, so a re-upload never creates a version." },
+        cell: ({ row }) => <MonoCell value={row.original.version_no ? `v${row.original.version_no}` : "—"} />,
+      },
       { accessorKey: "size_bytes", header: "Size", cell: ({ row }) => <span className="tnum">{formatBytes(row.original.size_bytes)}</span> },
       { accessorKey: "page_count", header: "Pages", cell: ({ row }) => <span className="tnum">{row.original.page_count ?? "—"}</span> },
-      { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={ASSET_STATUS} value={row.original.status} /> },
+      { accessorKey: "status", header: "Status", meta: { hint: "Where the document is in parsing. Hover a pill for what to do." }, cell: ({ row }) => <StatusPill map={ASSET_STATUS} value={row.original.status} /> },
       {
         accessorKey: "pending_reviews",
         header: "To review",
-        cell: ({ row }) => (row.original.pending_reviews > 0 ? <TonePill tone="warning" label={String(row.original.pending_reviews)} /> : <span className="text-muted-foreground">—</span>),
+        meta: { hint: "Rows parsed from this document that are still waiting in Imports & OCR Review. Nothing reaches the catalog until they are approved." },
+        cell: ({ row }) =>
+          row.original.pending_reviews > 0 ? (
+            <TonePill tone="warning" label={String(row.original.pending_reviews)} hint="Parsed rows waiting for a reviewer. Open the document to jump to them." />
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
       },
       { accessorKey: "received_at", header: "Received", cell: ({ row }) => <span title={formatDateTime(row.original.received_at)}>{row.original.received_at ? formatRelative(row.original.received_at) : "—"}</span> },
       {
         accessorKey: "last_processed_at",
         header: "Last parsed",
+        meta: { hint: "When the parser last read this document. Never means it is still awaiting its first parse." },
         cell: ({ row }) => <span title={formatDateTime(row.original.last_processed_at)}>{row.original.last_processed_at ? formatRelative(row.original.last_processed_at) : "never"}</span>,
       },
       { accessorKey: "uploaded_by_name", header: "Uploaded by", cell: ({ row }) => row.original.uploaded_by_name ?? "—" },
@@ -106,7 +117,6 @@ export function LibraryClient({ rows, detail, suppliers, brands, supplierNames, 
 
       <AssetDrawer
         detail={detail}
-        canWrite={canWrite}
         onClose={() => {
           setAsset(null);
           router.refresh();

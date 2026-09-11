@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DataTable } from "@/components/patterns/data-table";
 import { MetricCard } from "@/components/patterns/metric-card";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint, Gated, Hint } from "@/components/patterns/explain";
 import { LEAD_STATUS, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -38,6 +39,32 @@ const VIEW_MAP: Record<string, LeadView> = {
   Disqualified: "disqualified",
   All: "all",
 };
+
+/** What each saved view selects. Keyed by the view id so renamed saved views keep their meaning. */
+const VIEW_HINTS: Record<LeadView, string> = {
+  new: "Leads that arrived and have not been responded to. The first-response clock is running.",
+  unassigned: "Active leads with no salesperson yet. Nobody is on the clock for them.",
+  mine: "Leads where you are the owner.",
+  "no-response": "New leads with no logged call, message or email.",
+  "follow-up": "The 4-hour first-response target has passed with no response logged. Message these first.",
+  "follow-ups-due": "Leads with a follow-up reminder due today or overdue.",
+  duplicates: "Leads marked duplicate or linked to another lead. Decide which record to keep.",
+  qualified: "A real need with budget and timing. Ready to convert into a project and opportunity.",
+  disqualified: "Closed with a reason. Kept for the audit trail.",
+  all: "Every lead within your scope, whatever its status.",
+  aging: "Still New or Contact attempted more than 2 days after arriving.",
+};
+
+const COLUMN_HINTS = {
+  received: "When the inquiry arrived from the connector or was typed in.",
+  source: "Where it came from. The line under the pill is the form or campaign name when the connector sent one.",
+  contact: "Phone and email are masked in lists. Revealing them needs the contact.reveal permission and is audited.",
+  owner: "The salesperson responsible. Unassigned means nobody is on the clock for this lead.",
+  sla: "Time to the first real contact. The target is 4 hours from arrival. Due shows the deadline; no SLA means no deadline was set; a dash means the lead is closed.",
+  next_follow_up: "The next reminder set from the lead. Red means it is overdue.",
+  attempts: "Calls, messages and emails logged for this lead, whether or not the customer was reached.",
+  products: "Product categories the customer asked about.",
+} as const;
 
 interface Props {
   view: LeadView;
@@ -80,17 +107,18 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
     const base = savedViews.length
       ? savedViews.map((v) => ({ key: VIEW_MAP[v.name] ?? "all", label: v.name }))
       : Object.entries(VIEW_MAP).map(([label, key]) => ({ key, label }));
-    const list = base.map((t) => ({ ...t, count: countFor[t.key] }));
-    if (view === "aging" && !list.some((t) => t.key === "aging")) list.push({ key: "aging", label: "Aging", count: counts.aging });
+    const list = base.map((t) => ({ ...t, count: countFor[t.key], hint: VIEW_HINTS[t.key] }));
+    if (view === "aging" && !list.some((t) => t.key === "aging")) list.push({ key: "aging", label: "Aging", count: counts.aging, hint: VIEW_HINTS.aging });
     return list;
   }, [savedViews, counts, view]);
 
   const columns = useMemo<ColumnDef<LeadRow, unknown>[]>(
     () => [
-      { accessorKey: "created_at", header: "Received", cell: ({ row }) => <span className="tnum text-muted-foreground">{formatRelative(row.original.created_at)}</span> },
+      { accessorKey: "created_at", header: "Received", meta: { hint: COLUMN_HINTS.received }, cell: ({ row }) => <span className="tnum text-muted-foreground">{formatRelative(row.original.created_at)}</span> },
       {
         accessorKey: "source_channel",
         header: "Source",
+        meta: { hint: COLUMN_HINTS.source },
         cell: ({ row }) => (
           <div>
             <StatusPill map={SOURCE_CHANNEL} value={row.original.source_channel} />
@@ -112,6 +140,7 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
       {
         id: "contact",
         header: "Phone / email",
+        meta: { hint: COLUMN_HINTS.contact },
         accessorFn: (r) => `${r.raw_phone_normalized ?? ""} ${r.raw_email ?? ""}`,
         cell: ({ row }) => (
           <div className="font-mono text-[12px] tnum">
@@ -121,23 +150,31 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
         ),
       },
       { accessorKey: "interest", header: "Interest", cell: ({ row }) => <span className="block max-w-64 truncate" title={row.original.interest ?? ""}>{row.original.interest ?? "—"}</span> },
-      { accessorKey: "owner_name", header: "Owner", cell: ({ row }) => row.original.owner_name ?? <TonePill tone="warning" label="Unassigned" /> },
+      { accessorKey: "owner_name", header: "Owner", meta: { hint: COLUMN_HINTS.owner }, cell: ({ row }) => row.original.owner_name ?? <TonePill tone="warning" label="Unassigned" hint="No salesperson owns this lead yet, so nobody is on the clock. A sales manager assigns it, or a rep picks it up." /> },
       { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={LEAD_STATUS} value={row.original.status} /> },
       {
         id: "sla",
         header: "First response",
+        meta: { hint: COLUMN_HINTS.sla },
         accessorFn: (r) => r.first_response_at ?? r.first_response_due_at ?? "",
         cell: ({ row }) => {
           const l = row.original;
           if (l.first_response_at) return <span className="tnum text-success">responded {formatRelative(l.first_response_at)}</span>;
           if (["disqualified", "converted", "duplicate"].includes(l.status)) return <span className="text-muted-foreground">—</span>;
           const over = isOverdue(l.first_response_due_at);
-          return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")}>{l.first_response_due_at ? `due ${formatRelative(l.first_response_due_at)}` : "no SLA"}</span>;
+          if (!l.first_response_due_at)
+            return (
+              <Hint content="No first-response deadline was set for this lead, usually because it was captured manually. Respond as if the 4-hour target applied." focusable>
+                <span className="tnum text-muted-foreground">no SLA</span>
+              </Hint>
+            );
+          return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")}>{`due ${formatRelative(l.first_response_due_at)}`}</span>;
         },
       },
       {
         id: "next_follow_up",
         header: "Next follow-up",
+        meta: { hint: COLUMN_HINTS.next_follow_up },
         accessorFn: (r) => r.next_follow_up_at ?? "",
         cell: ({ row }) => {
           const at = row.original.next_follow_up_at;
@@ -146,8 +183,8 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
           return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")}>due {formatRelative(at)}</span>;
         },
       },
-      { accessorKey: "contact_attempts", header: "Attempts", cell: ({ row }) => <span className="tnum">{row.original.contact_attempts}</span> },
-      { accessorKey: "product_interest", header: "Products", cell: ({ row }) => <span className="text-muted-foreground">{row.original.product_interest.map(titleCase).join(", ") || "—"}</span> },
+      { accessorKey: "contact_attempts", header: "Attempts", meta: { hint: COLUMN_HINTS.attempts }, cell: ({ row }) => <span className="tnum">{row.original.contact_attempts}</span> },
+      { accessorKey: "product_interest", header: "Products", meta: { hint: COLUMN_HINTS.products }, cell: ({ row }) => <span className="text-muted-foreground">{row.original.product_interest.map(titleCase).join(", ") || "—"}</span> },
       {
         id: "whatsapp",
         header: "",
@@ -193,11 +230,11 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
         active={view}
         basePath="/sales/inbox"
         extra={
-          can("sales.write") ? (
+          <Gated permission="sales.write">
             <Button size="sm" className="h-7" onClick={() => setNewParam("1")}>
               <Plus className="size-3.5" aria-hidden /> New inquiry
             </Button>
-          ) : null
+          </Gated>
         }
       />
 
@@ -263,23 +300,25 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
             <SelectContent>{members.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.full_name}</SelectItem>)}</SelectContent>
           </Select>
           <DialogFooter>
-            <Button
-              disabled={!bulkOwner || pending}
-              onClick={() =>
-                start(async () => {
-                  const r = await bulkAssignLeadsAction({ lead_ids: (bulkRows ?? []).map((x) => x.id), owner_id: bulkOwner });
-                  if (!r.ok) {
-                  toast.error(r.error);
-                  return;
+            <DisabledHint reason={bulkOwner ? null : "Choose the salesperson to assign these leads to first."}>
+              <Button
+                disabled={!bulkOwner || pending}
+                onClick={() =>
+                  start(async () => {
+                    const r = await bulkAssignLeadsAction({ lead_ids: (bulkRows ?? []).map((x) => x.id), owner_id: bulkOwner });
+                    if (!r.ok) {
+                      toast.error(r.error);
+                      return;
+                    }
+                    toast.success(r.message);
+                    setBulkRows(null);
+                    router.refresh();
+                  })
                 }
-                  toast.success(r.message);
-                  setBulkRows(null);
-                  router.refresh();
-                })
-              }
-            >
-              {pending ? "Assigning…" : "Confirm"}
-            </Button>
+              >
+                {pending ? "Assigning…" : "Confirm"}
+              </Button>
+            </DisabledHint>
           </DialogFooter>
         </DialogContent>
       </Dialog>

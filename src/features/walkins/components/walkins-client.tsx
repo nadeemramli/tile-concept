@@ -17,11 +17,36 @@ import { MetricCard } from "@/components/patterns/metric-card";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Gated, gateReason } from "@/components/patterns/explain";
 import { PURCHASE_STATUS, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatDateTime, formatMoney, formatRelative, titleCase } from "@/lib/format";
 import { useSession } from "@/components/shell/session-context";
 import { correctPurchaseAction } from "@/server/commands/walkins";
 import type { PurchaseRow, VisitRow } from "@/features/walkins/types";
+
+/** Column meanings follow the showroom Daily Tracker sheet the team already knows. */
+const HINTS = {
+  smp: "The staff member who served the visit (the sheet's SMP column).",
+  from: "Where the customer came from: their neighbourhood or town.",
+  status: "New means no earlier record of this customer; Existing means they were already in the app. Decided when the visit is recorded.",
+  type: "Homeowner, contractor, designer and so on. Set on the customer and confirmed at the visit.",
+  orc: "The official receipt number of the collection recorded at this visit. Blank when nothing was paid.",
+  collection: "Money taken at this visit, recorded as a linked purchase. Not reconciled with SQL Account.",
+  sq: "The quotation number handed to the customer at this visit.",
+  quotation: "The quoted amount in MYR. A quotation is not a sale; the purchase column is.",
+  heard: "The channel the customer named when asked how they heard of the showroom.",
+  purpose: "What the customer came to do: browse, collect, purchase, and so on.",
+  opportunity: "The pipeline opportunity this visit was linked to, if any.",
+  postingDate: "When the purchase was posted, not when it was entered into the app.",
+  documentNo: "The receipt or invoice number from the counter (the ORC).",
+  extRef: "A bank or e-wallet reference from the payment, when one was captured.",
+  repeat: "Repeat means this customer already had an accepted purchase in the app. Derived from app data only.",
+  source: "Whether the purchase came from a walk-in, an import or elsewhere.",
+  newPill: "No earlier record of this customer existed when the visit was recorded.",
+  existingPill: "The customer was already in the app before this visit.",
+  repeatPill: "This customer already had an accepted purchase recorded in the app.",
+  firstPill: "The first purchase recorded for this customer in the app. Earlier purchases in SQL Account are not counted.",
+} as const;
 
 interface Props {
   tab: "visits" | "purchases";
@@ -32,7 +57,7 @@ interface Props {
 
 export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
   const router = useRouter();
-  const { can } = useSession();
+  const { can, session } = useSession();
   const [, setTab] = useQueryState("tab", { shallow: false });
   const [visitId, setVisitId] = useQueryState("visit");
   const [purchaseId, setPurchaseId] = useQueryState("purchase");
@@ -56,7 +81,7 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
   const visitColumns = useMemo<ColumnDef<VisitRow, unknown>[]>(
     () => [
       { accessorKey: "occurred_at", header: "Date", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.occurred_at)}>{formatRelative(row.original.occurred_at)}</span> },
-      { accessorKey: "staff_name", header: "SMP", cell: ({ row }) => row.original.staff_name ?? "—" },
+      { accessorKey: "staff_name", header: "SMP", meta: { hint: HINTS.smp }, cell: ({ row }) => row.original.staff_name ?? "—" },
       {
         accessorKey: "contact_name",
         header: "Customer",
@@ -69,30 +94,33 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
             "—"
           ),
       },
-      { accessorKey: "origin_area", header: "From", cell: ({ row }) => row.original.origin_area ?? "—" },
-      { accessorKey: "is_new_customer", header: "Status", cell: ({ row }) => (row.original.is_new_customer === null ? "—" : row.original.is_new_customer ? <TonePill tone="info" label="New" /> : <TonePill tone="ai" label="Existing" />) },
-      { accessorKey: "customer_type", header: "Type", cell: ({ row }) => (row.original.customer_type ? titleCase(row.original.customer_type) : "—") },
-      { accessorKey: "renovation_area", header: "Area / renovation", cell: ({ row }) => row.original.renovation_area ?? "—" },
+      { accessorKey: "origin_area", header: "From", meta: { hint: HINTS.from }, cell: ({ row }) => row.original.origin_area ?? "—" },
+      { accessorKey: "is_new_customer", header: "Status", meta: { hint: HINTS.status }, cell: ({ row }) => (row.original.is_new_customer === null ? "—" : row.original.is_new_customer ? <TonePill tone="info" label="New" hint={HINTS.newPill} /> : <TonePill tone="ai" label="Existing" hint={HINTS.existingPill} />) },
+      { accessorKey: "customer_type", header: "Type", meta: { hint: HINTS.type }, cell: ({ row }) => (row.original.customer_type ? titleCase(row.original.customer_type) : "—") },
+      { accessorKey: "renovation_area", header: "Area / renovation", meta: { hint: "Which part of the property is being renovated: wet kitchen, master bath, and so on." }, cell: ({ row }) => row.original.renovation_area ?? "—" },
       {
         id: "orc_number",
         header: "ORC",
+        meta: { hint: HINTS.orc },
         cell: ({ row }) => <MonoCell value={purchaseByVisit.get(row.original.id)?.external_ref ?? null} />,
       },
       {
         id: "collection",
         header: "Collection",
+        meta: { hint: HINTS.collection },
         cell: ({ row }) => {
           const p = purchaseByVisit.get(row.original.id);
           return p ? <MoneyCell value={p.amount} currency={p.currency} className="font-medium" /> : <span className="text-muted-foreground">—</span>;
         },
       },
-      { accessorKey: "quotation_ref", header: "SQ", cell: ({ row }) => <MonoCell value={row.original.quotation_ref} /> },
-      { accessorKey: "quotation_amount", header: "Quotation", cell: ({ row }) => (row.original.quotation_amount !== null ? <MoneyCell value={row.original.quotation_amount} currency="MYR" /> : <span className="text-muted-foreground">—</span>) },
-      { accessorKey: "inquiry_source", header: "How they heard", cell: ({ row }) => (row.original.inquiry_source ? <StatusPill map={SOURCE_CHANNEL} value={row.original.inquiry_source} /> : "—") },
-      { accessorKey: "purpose", header: "Purpose", cell: ({ row }) => titleCase(row.original.purpose) || "—" },
+      { accessorKey: "quotation_ref", header: "SQ", meta: { hint: HINTS.sq }, cell: ({ row }) => <MonoCell value={row.original.quotation_ref} /> },
+      { accessorKey: "quotation_amount", header: "Quotation", meta: { hint: HINTS.quotation }, cell: ({ row }) => (row.original.quotation_amount !== null ? <MoneyCell value={row.original.quotation_amount} currency="MYR" /> : <span className="text-muted-foreground">—</span>) },
+      { accessorKey: "inquiry_source", header: "How they heard", meta: { hint: HINTS.heard }, cell: ({ row }) => (row.original.inquiry_source ? <StatusPill map={SOURCE_CHANNEL} value={row.original.inquiry_source} /> : "—") },
+      { accessorKey: "purpose", header: "Purpose", meta: { hint: HINTS.purpose }, cell: ({ row }) => titleCase(row.original.purpose) || "—" },
       {
         accessorKey: "opportunity_id",
         header: "Opportunity",
+        meta: { hint: HINTS.opportunity },
         cell: ({ row }) =>
           row.original.opportunity_id ? (
             <Link href={`/sales/pipeline?opportunity=${row.original.opportunity_id}`} className="text-info hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -108,8 +136,8 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
 
   const purchaseColumns = useMemo<ColumnDef<PurchaseRow, unknown>[]>(
     () => [
-      { accessorKey: "purchased_at", header: "Posting date", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.purchased_at)}>{formatRelative(row.original.purchased_at)}</span> },
-      { accessorKey: "external_ref", header: "Document no.", cell: ({ row }) => <MonoCell value={row.original.external_ref} /> },
+      { accessorKey: "purchased_at", header: "Posting date", meta: { hint: HINTS.postingDate }, cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.purchased_at)}>{formatRelative(row.original.purchased_at)}</span> },
+      { accessorKey: "external_ref", header: "Document no.", meta: { hint: HINTS.documentNo }, cell: ({ row }) => <MonoCell value={row.original.external_ref} /> },
       {
         id: "customer",
         header: "Customer",
@@ -132,11 +160,11 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
       },
       { accessorKey: "amount", header: "Amount", cell: ({ row }) => <MoneyCell value={row.original.amount} currency={row.original.currency} className="font-medium" /> },
       { accessorKey: "payment_methods", header: "Payment method", cell: ({ row }) => (row.original.payment_methods.length ? row.original.payment_methods.map(titleCase).join(", ") : <span className="text-muted-foreground">—</span>) },
-      { id: "ext_ref", header: "Bank / ext. ref", cell: ({ row }) => <MonoCell value={row.original.payments.find((p) => p.reference)?.reference ?? null} /> },
-      { accessorKey: "purchase_source", header: "Source", cell: ({ row }) => (row.original.purchase_source ? titleCase(row.original.purchase_source) : "—") },
+      { id: "ext_ref", header: "Bank / ext. ref", meta: { hint: HINTS.extRef }, cell: ({ row }) => <MonoCell value={row.original.payments.find((p) => p.reference)?.reference ?? null} /> },
+      { accessorKey: "purchase_source", header: "Source", meta: { hint: HINTS.source }, cell: ({ row }) => (row.original.purchase_source ? titleCase(row.original.purchase_source) : "—") },
       { accessorKey: "location_name", header: "Location", cell: ({ row }) => row.original.location_name ?? "—" },
       { accessorKey: "salesperson_name", header: "Salesperson", cell: ({ row }) => row.original.salesperson_name ?? "—" },
-      { accessorKey: "is_repeat", header: "Repeat", cell: ({ row }) => (row.original.is_repeat ? <TonePill tone="ai" label="Repeat" /> : <TonePill tone="neutral" label="First" />) },
+      { accessorKey: "is_repeat", header: "Repeat", meta: { hint: HINTS.repeat }, cell: ({ row }) => (row.original.is_repeat ? <TonePill tone="ai" label="Repeat" hint={HINTS.repeatPill} /> : <TonePill tone="neutral" label="First" hint={HINTS.firstPill} />) },
       { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={PURCHASE_STATUS} value={row.original.status} /> },
     ],
     [],
@@ -158,7 +186,7 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
             <TabsTrigger value="purchases">Purchases</TabsTrigger>
           </TabsList>
         </Tabs>
-        {can("sales.write") && (
+        {can("sales.write") ? (
           <div className="flex gap-2">
             <Button asChild size="sm" variant="outline" className="h-8">
               <Link href="/sales/walk-ins/import">
@@ -171,6 +199,17 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
               </Link>
             </Button>
           </div>
+        ) : (
+          <DisabledHint reason={{ title: "Needs a different role", body: gateReason("sales.write", session.roleLabel) }}>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="h-8" disabled>
+                <FileSpreadsheet className="size-3.5" aria-hidden /> Import spreadsheet
+              </Button>
+              <Button size="sm" className="h-8" disabled>
+                <Plus className="size-3.5" aria-hidden /> New walk-in
+              </Button>
+            </div>
+          </DisabledHint>
         )}
       </div>
 
@@ -232,10 +271,37 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
       <RecordDrawer
         open={!!purchase}
         onOpenChange={(o) => !o && setPurchaseId(null)}
-        title={purchase ? <span className="flex items-center gap-2"><span className="font-mono">{purchase.external_ref ?? "Purchase"}</span><StatusPill map={PURCHASE_STATUS} value={purchase.status} size="md" />{purchase.is_repeat && <TonePill tone="ai" label="Repeat" size="md" />}</span> : ""}
+        title={purchase ? <span className="flex items-center gap-2"><span className="font-mono">{purchase.external_ref ?? "Purchase"}</span><StatusPill map={PURCHASE_STATUS} value={purchase.status} size="md" />{purchase.is_repeat && <TonePill tone="ai" label="Repeat" size="md" hint={HINTS.repeatPill} />}</span> : ""}
         description={purchase ? `${formatDateTime(purchase.purchased_at)} · ${formatMoney(purchase.amount, purchase.currency)}` : undefined}
         width="md"
-        actions={purchase && purchase.status !== "voided" ? <div className="flex gap-2">{can("sales.write") && purchase.contact_id ? <Button asChild size="sm" className="h-7"><Link href={`/sales/feedback/new?purchase=${purchase.id}`}>Request feedback</Link></Button> : null}{can("purchase.correct") ? <Button size="sm" variant="outline" className="h-7" onClick={() => setCorrecting(true)}>Correct amount</Button> : null}</div> : undefined}
+        actions={
+          purchase && purchase.status !== "voided" ? (
+            <div className="flex gap-2">
+              {can("sales.write") && purchase.contact_id ? (
+                <Button asChild size="sm" className="h-7">
+                  <Link href={`/sales/feedback/new?purchase=${purchase.id}`}>Request feedback</Link>
+                </Button>
+              ) : (
+                <DisabledHint
+                  reason={
+                    !can("sales.write")
+                      ? { title: "Needs a different role", body: gateReason("sales.write", session.roleLabel) }
+                      : "Resolve the customer first. Feedback can only be requested for a purchase linked to a contact, because the private link goes to that person by WhatsApp."
+                  }
+                >
+                  <Button size="sm" className="h-7" disabled>
+                    Request feedback
+                  </Button>
+                </DisabledHint>
+              )}
+              <Gated permission="purchase.correct">
+                <Button size="sm" variant="outline" className="h-7" onClick={() => setCorrecting(true)}>
+                  Correct amount
+                </Button>
+              </Gated>
+            </div>
+          ) : undefined
+        }
       >
         {purchase && (
           <>
@@ -270,7 +336,7 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
             </DrawerSection>
             <DrawerSection title={`Items (${purchase.items.length})`}>
               {purchase.items.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No line items — document and total only (allowed by PRD §7.4).</p>
+                <p className="text-sm text-muted-foreground">No line items. Only the document number and total were recorded, which is enough for a purchase; item detail stays in SQL Account.</p>
               ) : (
                 <ul className="divide-y rounded-md border text-sm">
                   {purchase.items.map((it) => (
@@ -333,9 +399,11 @@ function CorrectForm({ purchase, pending, onSubmit }: { purchase: PurchaseRow; p
         <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
       </Field>
       <DialogFooter>
-        <Button disabled={pending || Number.isNaN(n) || n < 0 || reason.trim().length < 5} onClick={() => onSubmit(n, reason.trim())}>
-          {pending ? "Saving…" : "Apply correction"}
-        </Button>
+        <DisabledHint reason={!pending && (Number.isNaN(n) || n < 0) ? "Enter a corrected amount of zero or more." : !pending && reason.trim().length < 5 ? "The reason needs at least 5 characters. It is kept in the audit trail." : undefined}>
+          <Button disabled={pending || Number.isNaN(n) || n < 0 || reason.trim().length < 5} onClick={() => onSubmit(n, reason.trim())}>
+            {pending ? "Saving…" : "Apply correction"}
+          </Button>
+        </DisabledHint>
       </DialogFooter>
     </div>
   );

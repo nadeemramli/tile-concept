@@ -14,9 +14,11 @@ import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
 import { EmptyState } from "@/components/patterns/states";
+import { Gated, Hint } from "@/components/patterns/explain";
 import { CANDIDATE_CONFIDENCE, CANDIDATE_STATUS, LIFECYCLE_STATE, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatDate, formatDateTime, formatRelative, maskValue, titleCase } from "@/lib/format";
-import { useSession } from "@/components/shell/session-context";
+import { REASON_HINT, SCORE_HINT } from "@/features/inbox/components/candidate-list";
+import { PROVISIONAL_HINT } from "@/features/crm/components/contacts-table";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
 import type { MemberOption } from "@/features/crm/components/selects";
 import type { CandidatePair, CandidateSide, MergeEventRow } from "@/server/queries/identity";
@@ -25,40 +27,53 @@ import { cn } from "@/lib/utils";
 
 const REASON_LABEL: Record<string, string> = { exact_phone: "Same phone", exact_email: "Same email", similar_name: "Similar name", exact_registration: "Same registration no.", similar_company: "Similar company", alias_company: "Alias match" };
 
+const TAB_HINTS: Record<string, string> = {
+  suggested: "Pairs the system thinks may be the same person, waiting for a decision. Nothing is merged automatically.",
+  confirmed: "Pairs a sales manager merged. Each can be reversed from the merge history below.",
+  rejected: "Pairs marked as not the same person. Kept as negative evidence so they are not suggested again.",
+};
+
+const SIDE_HINTS = {
+  subject: "The newer or incoming record: the one just created from an inquiry, walk-in or import.",
+  candidate: "The record that already existed and looks like the same person or company.",
+} as const;
+
 export function IdentityReview({ pairs, events, members, status }: { pairs: CandidatePair[]; events: MergeEventRow[]; members: MemberOption[]; status: string }) {
-  const { can } = useSession();
   const [, setStatus] = useQueryState("status", parseAsString.withDefault("suggested").withOptions({ shallow: false }));
   const [merging, setMerging] = useState<CandidatePair | null>(null);
   const [rejecting, setRejecting] = useState<CandidatePair | null>(null);
   const [unmerging, setUnmerging] = useState<MergeEventRow | null>(null);
   const [pending, start] = useTransition();
   const names = new Map(members.map((m) => [m.user_id, m.full_name]));
-  const canMerge = can("identity.merge");
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Tabs value={status} onValueChange={(v) => setStatus(v)}>
           <TabsList>
-            <TabsTrigger value="suggested">Suggested</TabsTrigger>
-            <TabsTrigger value="confirmed">Merged</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected</TabsTrigger>
+            {(["suggested", "confirmed", "rejected"] as const).map((k) => (
+              <Hint key={k} content={TAB_HINTS[k]}>
+                <TabsTrigger value={k}>{k === "confirmed" ? "Merged" : titleCase(k)}</TabsTrigger>
+              </Hint>
+            ))}
           </TabsList>
         </Tabs>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const res = await scanDuplicatesAction(200);
-              if (res.ok) toast.success(res.message ?? "Scan complete");
-              else toast.error(res.error);
-            })
-          }
-        >
-          <ScanSearch className="size-3.5" aria-hidden /> {pending ? "Scanning…" : "Scan for duplicates"}
-        </Button>
+        <Hint content="Re-checks the 200 most recently created contacts and accounts for matches by phone, email, registration number, name and alias. New records and imports are checked automatically anyway.">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const res = await scanDuplicatesAction(200);
+                if (res.ok) toast.success(res.message ?? "Scan complete");
+                else toast.error(res.error);
+              })
+            }
+          >
+            <ScanSearch className="size-3.5" aria-hidden /> {pending ? "Scanning…" : "Scan for duplicates"}
+          </Button>
+        </Hint>
       </div>
 
       {pairs.length === 0 ? (
@@ -70,21 +85,23 @@ export function IdentityReview({ pairs, events, members, status }: { pairs: Cand
               <Card className="gap-3 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusPill map={CANDIDATE_CONFIDENCE} value={p.confidence} size="md" />
-                  <span className="tnum text-xs text-muted-foreground">score {p.score}</span>
+                  <Hint content={SCORE_HINT} focusable>
+                    <span className="tnum text-xs text-muted-foreground">score {p.score}</span>
+                  </Hint>
                   {p.reasons.map((r, i) => (
-                    <span key={i} className="rounded-full border px-2 py-0.5 text-[11px]">
-                      {REASON_LABEL[r.code] ?? r.code}
-                    </span>
+                    <Hint key={i} content={REASON_HINT[r.code]} focusable>
+                      <span className="rounded-full border px-2 py-0.5 text-[11px]">{REASON_LABEL[r.code] ?? r.code}</span>
+                    </Hint>
                   ))}
                   <StatusPill map={CANDIDATE_STATUS} value={p.status} className="ml-auto" />
                   <span className="tnum text-[11px] text-muted-foreground">suggested {formatRelative(p.created_at)}</span>
                 </div>
                 <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-                  <SideCard side={p.subject} label="New / subject" />
+                  <SideCard side={p.subject} label="New / subject" hint={SIDE_HINTS.subject} />
                   <div className="hidden items-center md:flex">
                     <ArrowLeftRight className="size-4 text-muted-foreground" aria-hidden />
                   </div>
-                  <SideCard side={p.candidate} label="Existing / candidate" />
+                  <SideCard side={p.candidate} label="Existing / candidate" hint={SIDE_HINTS.candidate} />
                 </div>
                 {p.status !== "suggested" && (
                   <p className="text-xs text-muted-foreground">
@@ -105,12 +122,16 @@ export function IdentityReview({ pairs, events, members, status }: { pairs: Cand
                   </Button>
                   {p.status === "suggested" && (
                     <>
-                      <Button variant="outline" size="sm" onClick={() => setRejecting(p)}>
-                        <X className="size-3.5" aria-hidden /> Not a duplicate
-                      </Button>
-                      <Button size="sm" className="ml-auto" disabled={!canMerge} title={canMerge ? undefined : "Only sales managers / admins can confirm a merge"} onClick={() => setMerging(p)}>
-                        <GitMerge className="size-3.5" aria-hidden /> Merge…
-                      </Button>
+                      <Gated permission="sales.write">
+                        <Button variant="outline" size="sm" onClick={() => setRejecting(p)}>
+                          <X className="size-3.5" aria-hidden /> Not a duplicate
+                        </Button>
+                      </Gated>
+                      <Gated permission="identity.merge" className="ml-auto">
+                        <Button size="sm" className="ml-auto" onClick={() => setMerging(p)}>
+                          <GitMerge className="size-3.5" aria-hidden /> Merge…
+                        </Button>
+                      </Gated>
                     </>
                   )}
                 </div>
@@ -138,21 +159,23 @@ export function IdentityReview({ pairs, events, members, status }: { pairs: Cand
                 </Link>
                 <span className="text-xs text-muted-foreground">by {names.get(e.actor_id ?? "") ?? "—"}</span>
                 <span className="text-xs italic text-muted-foreground">“{e.reason}”</span>
-                <span className="tnum text-[11px] text-muted-foreground">
-                  moved:{" "}
-                  {Object.entries(e.relinked)
-                    .filter(([, n]) => n > 0)
-                    .map(([k, n]) => `${k} ${n}`)
-                    .join(", ") || "nothing"}
-                </span>
+                <Hint content="How many linked records (contact points, account links, opportunities, purchases, tasks) were re-pointed from the merged contact to the survivor. Nothing counts as the merged record had no links of its own." focusable>
+                  <span className="tnum text-[11px] text-muted-foreground">
+                    moved:{" "}
+                    {Object.entries(e.relinked)
+                      .filter(([, n]) => n > 0)
+                      .map(([k, n]) => `${k} ${n}`)
+                      .join(", ") || "nothing"}
+                  </span>
+                </Hint>
                 {e.reversed_at ? (
-                  <TonePill tone="warning" label={`reversed ${formatDate(e.reversed_at)}`} />
+                  <TonePill tone="warning" label={`reversed ${formatDate(e.reversed_at)}`} hint="This merge was undone on the date shown. The merged contact is a separate record again; business records created after the merge stayed with the survivor." />
                 ) : (
-                  canMerge && (
+                  <Gated permission="identity.merge" className="ml-auto">
                     <Button variant="ghost" size="sm" className="ml-auto h-7" onClick={() => setUnmerging(e)}>
                       <Undo2 className="size-3.5" aria-hidden /> Unmerge
                     </Button>
-                  )
+                  </Gated>
                 )}
               </li>
             ))}
@@ -179,12 +202,14 @@ export function IdentityReview({ pairs, events, members, status }: { pairs: Cand
   );
 }
 
-function SideCard({ side, label }: { side: CandidateSide; label: string }) {
+function SideCard({ side, label, hint }: { side: CandidateSide; label: string; hint: string }) {
   return (
     <div className="rounded-md border bg-background p-3 text-sm">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
-        {side.is_provisional && <TonePill tone="warning" label="provisional" />}
+        <Hint content={hint} focusable>
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
+        </Hint>
+        {side.is_provisional && <TonePill tone="warning" label="provisional" hint={PROVISIONAL_HINT} />}
       </div>
       <div className="font-medium">{side.display_name}</div>
       <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
@@ -204,7 +229,11 @@ function SideCard({ side, label }: { side: CandidateSide; label: string }) {
         <dd className="tnum">{side.created_at ? formatDate(side.created_at) : "—"}</dd>
         <dt className="text-muted-foreground">Records</dt>
         <dd className="tnum">
-          {side.opportunities} opp · {side.purchases} purchases
+          <Hint content="Opportunities and purchases attached to this record. On merge they all move to the survivor, whichever side you keep." focusable>
+            <span>
+              {side.opportunities} opp · {side.purchases} purchases
+            </span>
+          </Hint>
         </dd>
       </dl>
     </div>

@@ -8,6 +8,7 @@ import { getAccountDetail } from "@/server/queries/accounts";
 import { getMembers, getStages } from "@/server/queries/reference";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { Hint } from "@/components/patterns/explain";
 import { LIFECYCLE_STATE, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatDate, formatDateTime, maskValue, titleCase } from "@/lib/format";
 import { Timeline } from "@/components/patterns/timeline";
@@ -17,6 +18,14 @@ import { AuditList, OpportunitiesList, PurchasesList, QuotesList, SectionCard } 
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = { title: "Account" };
+
+const PROJECT_STATUS_HINT: Record<string, string> = {
+  planning: "Not started on site. Content shoots and readiness do not apply yet.",
+  active: "Work is in progress.",
+  completed: "Finished and handed over. Candidates for a content shoot are nominated from here.",
+  on_hold: "Paused by the customer or the site.",
+  cancelled: "Will not go ahead.",
+};
 
 export default async function AccountPage({ params }: PageProps<"/sales/accounts/[id]">) {
   const session = await requireSession();
@@ -77,8 +86,14 @@ export default async function AccountPage({ params }: PageProps<"/sales/accounts
                       {c.display_name}
                     </Link>
                     {c.role && <span className="text-xs text-muted-foreground">{c.role}</span>}
-                    {c.is_primary && <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">primary</Badge>}
-                    <span className="ml-auto font-mono text-[12px] tnum text-muted-foreground">{maskValue(c.primary_phone, "phone")}</span>
+                    {c.is_primary && (
+                      <Hint content="The main person to speak to at this account." focusable>
+                        <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">primary</Badge>
+                      </Hint>
+                    )}
+                    <Hint content="Masked here. Open the contact and use Reveal details to see the full number; every reveal is audited." focusable>
+                      <span className="ml-auto font-mono text-[12px] tnum text-muted-foreground">{maskValue(c.primary_phone, "phone")}</span>
+                    </Hint>
                   </li>
                 ))}
               </ul>
@@ -101,7 +116,7 @@ export default async function AccountPage({ params }: PageProps<"/sales/accounts
                     </Link>
                     <span className="text-xs text-muted-foreground">{titleCase(p.project_type ?? "")}</span>
                     <span className="text-xs text-muted-foreground">{p.area ?? ""}</span>
-                    <TonePill tone={p.status === "completed" ? "success" : p.status === "active" ? "info" : "neutral"} label={titleCase(p.status)} />
+                    <TonePill tone={p.status === "completed" ? "success" : p.status === "active" ? "info" : "neutral"} label={titleCase(p.status)} hint={PROJECT_STATUS_HINT[p.status]} />
                   </li>
                 ))}
               </ul>

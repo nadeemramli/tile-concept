@@ -46,12 +46,12 @@ export async function findCandidatesAction(input: { phone?: string; email?: stri
     if (error) return fail(error);
     return ok(
       (data ?? []).map((c) => ({
-        entity_type: c.entity_type as "contact" | "account",
+        entity_type: c.entity_type as IdentityCandidate["entity_type"],
         entity_id: String(c.entity_id),
         display_name: String(c.display_name ?? ""),
         confidence: (c.confidence as IdentityCandidate["confidence"]) ?? "low",
         score: Number(c.score ?? 0),
-        reasons: (c.reasons as IdentityCandidate["reasons"]) ?? [],
+        reasons: (c.reasons as unknown as IdentityCandidate["reasons"]) ?? [],
         masked_phone: c.masked_phone,
         masked_email: c.masked_email,
         lifecycle_state: c.lifecycle_state,

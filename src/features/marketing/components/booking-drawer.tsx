@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
+import { Gated, Hint, InfoTip } from "@/components/patterns/explain";
 import { useSession } from "@/components/shell/session-context";
 import { MarketingPill, Chips } from "@/features/marketing/components/pills";
 import { BookingDialog } from "@/features/marketing/components/booking-dialog";
 import { OutcomeDialog } from "@/features/marketing/components/outcome-dialog";
 import { OutputDialog } from "@/features/marketing/components/output-dialog";
 import { OutputsList } from "@/features/marketing/components/outputs-list";
-import { BOOKING_STATUS, CLOSED_STATUSES, CONTENT_TYPES, PERMISSION_STATUS, READINESS_STATE, meta, permissionBlocks } from "@/features/marketing/lib/status";
+import { PermissionExpiry } from "@/features/marketing/components/permission-summary";
+import { BOOKING_STATUS, CLOSED_STATUSES, CONTENT_TYPES, CUSTOMER_MEDIA_PERMISSION_HINT, PARTICIPANT_ROLE_HINTS, PERMISSION_STATUS, READINESS_STATE, meta, permissionBlocks, permissionHint, permissionSentence } from "@/features/marketing/lib/status";
 import { addChecklistItemAction, toggleChecklistAction } from "@/server/commands/marketing";
 import { useAction } from "@/features/catalog/use-action";
 import type { BookingDetail, SchedulableOpportunity } from "@/server/queries/marketing";
@@ -23,6 +25,7 @@ import { APP_TZ_LABEL, timeRangeLabel } from "@/features/marketing/lib/time";
 import { cn } from "@/lib/utils";
 
 const CONTENT_TYPE_LABELS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.label]));
+const CONTENT_TYPE_HINTS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.hint]));
 
 type Which = "edit" | "confirm" | "outcome" | "output" | null;
 
@@ -45,7 +48,6 @@ export function BookingDrawer({
   const addItem = useAction(addChecklistItemAction, { onSuccess: () => setNewItem("") });
 
   const canWrite = can("marketing.write");
-  const canConfirm = can("marketing.confirm");
   const closed = CLOSED_STATUSES.has(booking.status);
   const blocked = permissionBlocks(booking.permission_status, booking.permission_expires_at);
   const notReady = booking.readiness_state !== "ready" && booking.readiness_state !== "completed";
@@ -85,10 +87,12 @@ export function BookingDrawer({
         </span>
       }
       actions={
-        canWrite && !closed ? (
-          <Button size="sm" onClick={() => setOpen("edit")}>
-            <Pencil className="size-3.5" aria-hidden /> Reschedule
-          </Button>
+        !closed ? (
+          <Gated permission="marketing.write">
+            <Button size="sm" onClick={() => setOpen("edit")}>
+              <Pencil className="size-3.5" aria-hidden /> Reschedule
+            </Button>
+          </Gated>
         ) : null
       }
     >
@@ -97,13 +101,26 @@ export function BookingDrawer({
           {blocked && (
             <p className="flex items-start gap-2">
               <ShieldAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              Customer media permission is {meta(PERMISSION_STATUS, booking.permission_status ?? "not_requested").label.toLowerCase()} — assets from this shoot cannot be marked usable yet.
+              <span>
+                {permissionSentence(booking.permission_status, booking.permission_expires_at)} This is the customer&apos;s consent, not your access: the date can be held, but assets from this shoot cannot be marked usable until it is approved.
+                {booking.content_opportunity_id && (
+                  <>
+                    {" "}
+                    <Link href={`/marketing/content-opportunities?opportunity=${booking.content_opportunity_id}&view=all`} className="font-medium underline underline-offset-2">
+                      Record it on the nomination
+                    </Link>
+                    .
+                  </>
+                )}
+              </span>
             </p>
           )}
           {notReady && (
             <p className="flex items-start gap-2">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              Project readiness is {meta(READINESS_STATE, booking.readiness_state).label.toLowerCase()}. Confirm with the site before travelling.
+              <span>
+                Project readiness is {meta(READINESS_STATE, booking.readiness_state).label.toLowerCase()}: {meta(READINESS_STATE, booking.readiness_state).hint} Confirm with the site before travelling.
+              </span>
             </p>
           )}
         </div>
@@ -116,39 +133,51 @@ export function BookingDrawer({
         </div>
       )}
 
-      {canWrite && (
-        <div className="flex flex-wrap gap-2">
-          {!closed && canConfirm && booking.status !== "confirmed" && (
+      <div className="flex flex-wrap gap-2">
+        {!closed && booking.status !== "confirmed" && (
+          <Gated permission="marketing.confirm">
             <Button variant="outline" size="sm" onClick={() => setOpen("confirm")}>
               <CalendarCheck className="size-3.5" aria-hidden /> Confirm
             </Button>
-          )}
-          {!closed && (
+          </Gated>
+        )}
+        {!closed && (
+          <Gated permission="marketing.write">
             <Button variant="outline" size="sm" onClick={() => setOpen("outcome")}>
               <ClipboardCheck className="size-3.5" aria-hidden /> Record outcome
             </Button>
-          )}
+          </Gated>
+        )}
+        <Gated permission="marketing.write">
           <Button variant="outline" size="sm" onClick={() => setOpen("output")}>
             <Upload className="size-3.5" aria-hidden /> Add output
           </Button>
-        </div>
-      )}
+        </Gated>
+      </div>
 
-      <DrawerSection title="Facts">
+      <DrawerSection title="Facts" action={<InfoTip label="Facts" content="Coordinator, readiness and content types come from the nomination in Content Opportunities. Customer media permission is the customer's consent to be filmed and featured, recorded there too." />}>
         <FactList
           items={[
             { label: "Coordinator", value: names.get(booking.coordinator_id ?? "") ?? "—" },
-            { label: "Permission", value: <MarketingPill map={PERMISSION_STATUS} value={booking.permission_status ?? "not_requested"} /> },
+            {
+              label: "Customer media permission",
+              value: (
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  <MarketingPill map={PERMISSION_STATUS} value={booking.permission_status ?? "not_requested"} hint={permissionHint(booking.permission_status, booking.permission_expires_at)} />
+                  <PermissionExpiry expiresAt={booking.permission_expires_at} className="text-[11px]" />
+                </span>
+              ),
+            },
             { label: "Readiness", value: <MarketingPill map={READINESS_STATE} value={booking.readiness_state} /> },
             { label: "Story angle", value: booking.story_angle ?? "—" },
-            { label: "Content types", value: <Chips values={booking.content_types} labels={CONTENT_TYPE_LABELS} /> },
+            { label: "Content types", value: <Chips values={booking.content_types} labels={CONTENT_TYPE_LABELS} hints={CONTENT_TYPE_HINTS} /> },
             { label: "Timezone", value: `${booking.timezone} (${APP_TZ_LABEL})` },
           ]}
         />
         {booking.notes && <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-sm">{booking.notes}</p>}
       </DrawerSection>
 
-      <DrawerSection title={`Participants (${booking.participants.length})`}>
+      <DrawerSection title={`Participants (${booking.participants.length})`} action={<InfoTip label="Participants" content="Everyone attached to the shoot and their role. Crew and standby are checked for clashes with other bookings; the status shows whether they accepted." />}>
         {booking.participants.length === 0 ? (
           <p className="text-sm text-muted-foreground">No crew assigned.</p>
         ) : (
@@ -156,7 +185,9 @@ export function BookingDrawer({
             {booking.participants.map((p, i) => (
               <li key={`${p.user_id ?? p.name}-${i}`} className="flex items-center gap-2 px-3 py-1.5">
                 <span className="min-w-0 flex-1 truncate">{p.name ?? names.get(p.user_id ?? "") ?? "External"}</span>
-                <span className="text-xs text-muted-foreground">{titleCase(p.role)}</span>
+                <Hint content={PARTICIPANT_ROLE_HINTS[p.role as keyof typeof PARTICIPANT_ROLE_HINTS]} focusable>
+                  <span className="text-xs text-muted-foreground">{titleCase(p.role)}</span>
+                </Hint>
                 <span className={cn("text-[11px]", p.status === "declined" ? "text-destructive" : p.status === "accepted" ? "text-success" : "text-muted-foreground")}>{titleCase(p.status)}</span>
               </li>
             ))}
@@ -164,7 +195,7 @@ export function BookingDrawer({
         )}
       </DrawerSection>
 
-      <DrawerSection title={`Sites (${booking.sites.length})`}>
+      <DrawerSection title={`Sites (${booking.sites.length})`} action={<InfoTip label="Sites" content="The production-day order. The buffer is travel time reserved between this site and the next; it counts in the clash check." />}>
         {booking.sites.length === 0 ? (
           <p className="text-sm text-muted-foreground">No site attached.</p>
         ) : (
@@ -184,11 +215,13 @@ export function BookingDrawer({
         )}
       </DrawerSection>
 
-      <DrawerSection title={`Checklist (${doneCount}/${booking.checklists.length})`}>
+      <DrawerSection title={`Checklist (${doneCount}/${booking.checklists.length})`} action={<InfoTip label="Checklist" content="Pre-shoot checks for this booking: readiness, customer contact, equipment, interview questions, logistics. Ticking one records who and when." />}>
         <ul className="space-y-1">
           {booking.checklists.map((c) => (
             <li key={c.id} className="flex items-center gap-2 text-sm">
-              <Checkbox checked={c.is_done} disabled={!canWrite || toggle.pending} onCheckedChange={(v) => toggle.run({ id: c.id, is_done: !!v })} id={`c-${c.id}`} />
+              <Gated permission="marketing.write">
+                <Checkbox checked={c.is_done} disabled={toggle.pending} onCheckedChange={(v) => toggle.run({ id: c.id, is_done: !!v })} id={`c-${c.id}`} />
+              </Gated>
               <label htmlFor={`c-${c.id}`} className={cn("flex-1", c.is_done && "text-muted-foreground line-through")}>
                 {c.item}
               </label>
@@ -212,11 +245,11 @@ export function BookingDrawer({
         )}
       </DrawerSection>
 
-      <DrawerSection title={`Outputs (${booking.outputs.length})`}>
+      <DrawerSection title={`Outputs (${booking.outputs.length})`} action={<InfoTip label="Outputs" content={{ body: "Photos, video and notes from the shoot. Marking one usable is checked against the customer media permission by the database, so it cannot be done while that is unapproved or expired.", action: CUSTOMER_MEDIA_PERMISSION_HINT.action }} />}>
         <OutputsList outputs={booking.outputs} permissionStatus={booking.permission_status} permissionExpiresAt={booking.permission_expires_at} />
       </DrawerSection>
 
-      <DrawerSection title={`Booking history (${booking.status_events.length})`}>
+      <DrawerSection title={`Booking history (${booking.status_events.length})`} action={<InfoTip label="Booking history" content="Every status change with who made it and why. A reschedule keeps the previous slot here." />}>
         <ul className="space-y-1 text-sm">
           {booking.status_events.map((e) => (
             <li key={e.id} className="flex flex-wrap items-baseline gap-x-2">

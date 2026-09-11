@@ -8,7 +8,9 @@ import { SalesScorecard } from "@/features/command-centre/components/sales-score
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill } from "@/components/patterns/status-pill";
+import { Hint, InfoTip } from "@/components/patterns/explain";
 import { TASK_PRIORITY } from "@/lib/domain/status-maps";
+import { PERMISSION_EXPLAINERS } from "@/lib/rbac/matrix";
 import { formatDateTime, formatMoney, formatRelative, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/patterns/states";
@@ -25,16 +27,33 @@ export default async function CommandCentrePage() {
   const canManage = session.permissions.includes("settings.manage");
 
   const freshness = summary ? `Computed ${formatRelative(summary.generated_at)} from live tables` : "—";
-  const scope = session.permissions.includes("sales.read_all") ? "All sales records" : "Your records";
+  const readAll = session.permissions.includes("sales.read_all");
+  const scope = readAll ? "All sales records" : "Your records";
 
   return (
     <PageBody>
-      <PageHeader title="Command Centre" description={`Morning brief for ${session.fullName.split(" ")[0]} · ${scope} · ${session.workspaceName}`} />
+      <PageHeader
+        title="Command Centre"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-1">
+            Morning brief for {session.fullName.split(" ")[0]} · {scope}
+            <InfoTip
+              label="Scope"
+              content={
+                readAll
+                  ? "Your role can see every salesperson's records, so these numbers cover the whole workspace."
+                  : "Your role sees its own records, so these numbers cover leads, opportunities and purchases assigned to you. Sales managers and management see everyone's."
+              }
+            />
+            · {session.workspaceName}
+          </span>
+        }
+      />
 
       {!canSales && (
         <EmptyState
-          title="No sales scope on this role"
-          description="Your role does not include sales visibility. Use the navigation for the modules available to you."
+          title={`Not available to ${session.roleLabel}`}
+          description={`${PERMISSION_EXPLAINERS["sales.read"]} Use the navigation for the modules available to you, or ask an administrator if you need sales visibility.`}
         />
       )}
 
@@ -99,7 +118,9 @@ export default async function CommandCentrePage() {
                         <Link href={`/sales/tasks?task=${t.id}`} className="min-w-0 flex-1 truncate hover:underline">
                           {t.title}
                         </Link>
-                        <span className={cn("tnum shrink-0 text-[11px]", isOverdue(t.due_at) ? "text-destructive" : "text-muted-foreground")}>{t.due_at ? formatRelative(t.due_at) : "no due"}</span>
+                        <Hint content={!t.due_at ? "No due date set, so this task never shows as overdue. Open it to add one." : isOverdue(t.due_at) ? "Past its due date." : "When it is due."} focusable>
+                          <span className={cn("tnum shrink-0 text-[11px]", isOverdue(t.due_at) ? "text-destructive" : "text-muted-foreground")}>{t.due_at ? formatRelative(t.due_at) : "no due"}</span>
+                        </Hint>
                         <StatusPill map={TASK_PRIORITY} value={t.priority} />
                       </li>
                     ))}
@@ -107,7 +128,10 @@ export default async function CommandCentrePage() {
                 )}
                 {work.opportunities.length > 0 && (
                   <div>
-                    <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Next actions</div>
+                    <div className="mb-1 inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Next actions
+                      <InfoTip label="Next actions" content="The next step recorded on each open opportunity you own, with its due date. Red means the date has passed." />
+                    </div>
                     <ul className="space-y-1.5">
                       {work.opportunities.slice(0, 5).map((o) => (
                         <li key={o.id} className="text-sm">

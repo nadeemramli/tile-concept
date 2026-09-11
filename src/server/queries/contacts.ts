@@ -110,6 +110,8 @@ export interface ContactDetail {
   opportunities: OpportunitySummary[];
   purchases: PurchaseSummary[];
   visits: { id: string; occurred_at: string; purpose: string | null; location_name: string | null; is_new_customer: boolean | null; notes: string | null }[];
+  /** Enquiries linked to this contact, newest first. Subject to the inbox visibility rules. */
+  enquiries: { id: string; status: string; source_channel: string; source_detail: string | null; interest: string | null; owner_id: string | null; created_at: string; first_response_at: string | null; converted_opportunity_id: string | null }[];
   quotes: QuoteSummary[];
   consents: { id: string; channel: string; purpose: string; status: string; recorded_at: string; evidence: string | null }[];
   external_identities: { id: string; provider: string; external_id: string; first_seen_at: string }[];
@@ -251,7 +253,7 @@ export async function getContactDetail(id: string): Promise<ContactDetail | null
   const { data: c } = await supabase.from("contacts").select("*").eq("id", id).maybeSingle();
   if (!c) return null;
 
-  const [{ data: points }, { data: rels }, { data: projects }, opportunities, purchases, { data: visits }, { data: consents }, { data: ext }, timeline, audit, merged] = await Promise.all([
+  const [{ data: points }, { data: rels }, { data: projects }, opportunities, purchases, { data: visits }, { data: consents }, { data: ext }, timeline, audit, merged, { data: enquiries }] = await Promise.all([
     supabase.from("contact_points").select("id, kind, normalized_value, is_primary, label, source").eq("contact_id", id).order("is_primary", { ascending: false }),
     supabase.from("account_contact_relationships").select("id, account_id, role, is_primary, accounts(name)").eq("contact_id", id),
     supabase.from("projects").select("id, name, status, project_type, area, expected_completion").eq("primary_contact_id", id).order("created_at", { ascending: false }),
@@ -263,6 +265,7 @@ export async function getContactDetail(id: string): Promise<ContactDetail | null
     getTimeline("contact", id),
     getAuditFor([id]),
     c.merged_into_contact_id ? supabase.from("contacts").select("display_name").eq("id", c.merged_into_contact_id).maybeSingle() : Promise.resolve({ data: null }),
+    supabase.from("leads").select("id, status, source_channel, source_detail, interest, owner_id, created_at, first_response_at, converted_opportunity_id").eq("contact_id", id).neq("status", "duplicate").order("created_at", { ascending: false }).limit(50),
   ]);
   const quotes = await getQuotesForOpportunities(opportunities.map((o) => o.id), new Map(opportunities.map((o) => [o.id, o.name])));
 
@@ -290,6 +293,17 @@ export async function getContactDetail(id: string): Promise<ContactDetail | null
     opportunities,
     purchases,
     visits: (visits ?? []).map((v) => ({ id: v.id!, occurred_at: v.occurred_at!, purpose: v.purpose, location_name: (v.business_locations as unknown as { name: string } | null)?.name ?? null, is_new_customer: v.is_new_customer, notes: v.notes })),
+    enquiries: (enquiries ?? []).map((l) => ({
+      id: l.id!,
+      status: l.status ?? "new",
+      source_channel: l.source_channel ?? "other",
+      source_detail: l.source_detail,
+      interest: l.interest,
+      owner_id: l.owner_id,
+      created_at: l.created_at!,
+      first_response_at: l.first_response_at,
+      converted_opportunity_id: l.converted_opportunity_id,
+    })),
     quotes,
     consents: (consents ?? []).map((x) => ({ id: x.id!, channel: x.channel!, purpose: x.purpose!, status: x.status!, recorded_at: x.recorded_at!, evidence: x.evidence })),
     external_identities: (ext ?? []).map((e) => ({ id: e.id!, provider: e.provider!, external_id: e.external_id!, first_seen_at: e.first_seen_at! })),

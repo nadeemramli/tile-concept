@@ -8,7 +8,9 @@ import { getContactDetail } from "@/server/queries/contacts";
 import { getMembers, getStages } from "@/server/queries/reference";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
-import { LIFECYCLE_STATE, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
+import { Hint } from "@/components/patterns/explain";
+import { LEAD_STATUS, LIFECYCLE_STATE, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
+import { PROVISIONAL_HINT } from "@/features/crm/components/contacts-table";
 import { formatDate, formatDateTime, maskValue, titleCase } from "@/lib/format";
 import { Timeline } from "@/components/patterns/timeline";
 import { FactList } from "@/components/patterns/record-drawer";
@@ -17,6 +19,20 @@ import { AuditList, OpportunitiesList, PurchasesList, QuotesList, SectionCard } 
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = { title: "Contact" };
+
+const PRIMARY_HINT = "The default used when the app needs one: the number to message, or the account this person represents.";
+const PROJECT_STATUS_HINT: Record<string, string> = {
+  planning: "Not started on site. Content shoots and readiness do not apply yet.",
+  active: "Work is in progress.",
+  completed: "Finished and handed over. Candidates for a content shoot are nominated from here.",
+  on_hold: "Paused by the customer or the site.",
+  cancelled: "Will not go ahead.",
+};
+const CONSENT_HINT: Record<string, string> = {
+  granted: "The customer agreed to be contacted on this channel for this purpose.",
+  declined: "The customer said no. Do not use this channel for this purpose.",
+  withdrawn: "The customer took back an earlier agreement. Treat as declined.",
+};
 
 export default async function ContactPage({ params }: PageProps<"/sales/contacts/[id]">) {
   const session = await requireSession();
@@ -45,7 +61,7 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
                 · acquired via <StatusPill map={SOURCE_CHANNEL} value={contact.original_acquisition_source} /> {contact.original_acquisition_at ? formatDate(contact.original_acquisition_at) : ""}
               </span>
             )}
-            {contact.is_provisional && <TonePill tone="warning" label="Provisional — identity review pending" />}
+            {contact.is_provisional && <TonePill tone="warning" label="Provisional — identity review pending" hint={PROVISIONAL_HINT} />}
           </span>
         }
       >
@@ -74,8 +90,14 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
                   {contact.points.map((p) => (
                     <li key={p.id} className="flex items-center gap-2">
                       <span className="w-16 text-xs text-muted-foreground">{titleCase(p.kind)}</span>
-                      <span className="font-mono text-[12px] tnum">{maskValue(p.normalized_value, p.kind)}</span>
-                      {p.is_primary && <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">primary</Badge>}
+                      <Hint content="Masked here. Use Reveal details to see the full value; every reveal is audited." focusable>
+                        <span className="font-mono text-[12px] tnum">{maskValue(p.normalized_value, p.kind)}</span>
+                      </Hint>
+                      {p.is_primary && (
+                        <Hint content={PRIMARY_HINT} focusable>
+                          <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">primary</Badge>
+                        </Hint>
+                      )}
                       {p.label && <span className="text-xs text-muted-foreground">{p.label}</span>}
                       {p.source && <span className="text-[11px] text-muted-foreground">· {p.source}</span>}
                     </li>
@@ -92,7 +114,11 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
                         {r.account_name}
                       </Link>
                       {r.role && <span className="text-xs text-muted-foreground">{r.role}</span>}
-                      {r.is_primary && <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">primary</Badge>}
+                      {r.is_primary && (
+                        <Hint content={PRIMARY_HINT} focusable>
+                          <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">primary</Badge>
+                        </Hint>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -116,7 +142,7 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
                     </Link>
                     <span className="text-xs text-muted-foreground">{titleCase(p.project_type ?? "")}</span>
                     <span className="text-xs text-muted-foreground">{p.area ?? ""}</span>
-                    <TonePill tone={p.status === "completed" ? "success" : p.status === "active" ? "info" : "neutral"} label={titleCase(p.status)} />
+                    <TonePill tone={p.status === "completed" ? "success" : p.status === "active" ? "info" : "neutral"} label={titleCase(p.status)} hint={PROJECT_STATUS_HINT[p.status]} />
                   </li>
                 ))}
               </ul>
@@ -131,6 +157,29 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
             <QuotesList items={contact.quotes} />
           </SectionCard>
 
+          <SectionCard title="Enquiries" count={contact.enquiries.length}>
+            {contact.enquiries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No enquiries linked to this customer. An enquiry links when its phone or email matches, or when someone links it from the Inquiry Inbox.</p>
+            ) : (
+              <ul className="divide-y text-sm">
+                {contact.enquiries.map((l) => (
+                  <li key={l.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5">
+                    <span className="tnum text-xs text-muted-foreground">{formatDateTime(l.created_at)}</span>
+                    <StatusPill map={SOURCE_CHANNEL} value={l.source_channel} />
+                    <StatusPill map={LEAD_STATUS} value={l.status} />
+                    {l.interest && <span className="truncate text-xs text-muted-foreground">{l.interest}</span>}
+                    <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                      {l.owner_id ? memberNames.get(l.owner_id) ?? "—" : "Unassigned"}
+                      <Link href={`/sales/inbox?lead=${l.id}`} className="text-info hover:underline">
+                        Open
+                      </Link>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+
           <SectionCard title="Visits" count={contact.visits.length}>
             {contact.visits.length === 0 ? (
               <p className="text-sm text-muted-foreground">No showroom visits.</p>
@@ -141,7 +190,7 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
                     <span className="tnum text-xs text-muted-foreground">{formatDateTime(v.occurred_at)}</span>
                     <span>{titleCase(v.purpose ?? "visit")}</span>
                     <span className="text-xs text-muted-foreground">{v.location_name ?? ""}</span>
-                    {v.is_new_customer && <TonePill tone="info" label="first visit" />}
+                    {v.is_new_customer && <TonePill tone="info" label="first visit" hint="The first showroom visit recorded for this customer in the app." />}
                     {v.notes && <span className="truncate text-xs text-muted-foreground">{v.notes}</span>}
                   </li>
                 ))}
@@ -184,14 +233,14 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
 
           <SectionCard title="Consent" count={contact.consents.length}>
             {contact.consents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No consent records. Media permission for marketing is tracked separately (Phase 2).</p>
+              <p className="text-sm text-muted-foreground">No consent records. Consent here covers being contacted. The customer&apos;s media permission for marketing shoots is recorded separately on the project nomination in Content Opportunities.</p>
             ) : (
               <ul className="space-y-1 text-sm">
                 {contact.consents.map((c) => (
                   <li key={c.id} className="flex flex-wrap items-center gap-2">
                     <span>{titleCase(c.channel)}</span>
                     <span className="text-xs text-muted-foreground">{c.purpose}</span>
-                    <TonePill tone={c.status === "granted" ? "success" : c.status === "declined" || c.status === "withdrawn" ? "destructive" : "neutral"} label={titleCase(c.status)} />
+                    <TonePill tone={c.status === "granted" ? "success" : c.status === "declined" || c.status === "withdrawn" ? "destructive" : "neutral"} label={titleCase(c.status)} hint={CONSENT_HINT[c.status]} />
                     <span className="tnum text-[11px] text-muted-foreground">{formatDate(c.recorded_at)}</span>
                   </li>
                 ))}

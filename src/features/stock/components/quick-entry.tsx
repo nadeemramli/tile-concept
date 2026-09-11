@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Hint } from "@/components/patterns/explain";
 import { TonePill } from "@/components/patterns/status-pill";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { fieldError, useAction } from "@/features/catalog/use-action";
-import { AVAILABILITY_STATUS, CHANNEL_LABEL } from "@/features/stock/status";
+import { AVAILABILITY_STATUS, CHANNEL_HINT, CHANNEL_LABEL } from "@/features/stock/status";
 import { AVAILABILITY_STATES, NUMERIC_STATES, SOURCE_CHANNELS, type AvailabilityStateInput } from "@/features/stock/schema";
 import { recordSupplierAvailabilityAction } from "@/server/commands/stock";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -124,15 +125,16 @@ export function QuickEntry({ suppliers, variants, units, defaultSupplierId }: Pr
         <Field label="Availability" required>
           <div className="flex flex-wrap gap-1">
             {AVAILABILITY_STATES.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setF({ ...f, availability: s, quantity: NUMERIC_STATES.includes(s) ? f.quantity : "" })}
-                aria-pressed={f.availability === s}
-                className={`rounded-md border px-2 py-1 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${f.availability === s ? "border-primary bg-accent font-medium" : "border-border text-muted-foreground hover:bg-accent/50"}`}
-              >
-                {AVAILABILITY_STATUS[s]?.label ?? s}
-              </button>
+              <Hint key={s} content={AVAILABILITY_STATUS[s]?.hint}>
+                <button
+                  type="button"
+                  onClick={() => setF({ ...f, availability: s, quantity: NUMERIC_STATES.includes(s) ? f.quantity : "" })}
+                  aria-pressed={f.availability === s}
+                  className={`rounded-md border px-2 py-1 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${f.availability === s ? "border-primary bg-accent font-medium" : "border-border text-muted-foreground hover:bg-accent/50"}`}
+                >
+                  {AVAILABILITY_STATUS[s]?.label ?? s}
+                </button>
+              </Hint>
             ))}
           </div>
         </Field>
@@ -145,11 +147,11 @@ export function QuickEntry({ suppliers, variants, units, defaultSupplierId }: Pr
           <SimpleSelect value={f.unit_id} onChange={(v) => setF({ ...f, unit_id: v })} options={units.map((u) => ({ value: u.id, label: `${u.code} · ${u.label}` }))} disabled={!numeric} />
         </Field>
 
-        <Field label="Expected replenishment">
+        <Field label="Expected replenishment" tip="The date the supplier said stock would arrive. Recorded as given, not calculated.">
           <Input type="date" value={f.expected_replenishment} onChange={(e) => setF({ ...f, expected_replenishment: e.target.value })} />
         </Field>
 
-        <Field label="How did you hear this?" required>
+        <Field label="How did you hear this?" required hint={CHANNEL_HINT[f.source_channel]} tip="The channel is kept with the figure so the next person knows how much to trust it and where to look for the evidence.">
           <SimpleSelect value={f.source_channel} onChange={(v) => setF({ ...f, source_channel: v as (typeof SOURCE_CHANNELS)[number] })} options={SOURCE_CHANNELS.map((c) => ({ value: c, label: CHANNEL_LABEL[c] ?? c }))} allowNone={false} />
         </Field>
 
@@ -189,9 +191,15 @@ export function QuickEntry({ suppliers, variants, units, defaultSupplierId }: Pr
       {record.error && <p className="text-sm text-destructive">{record.error}</p>}
 
       <div className="flex items-center justify-between gap-2">
-        <Button size="sm" onClick={submit} disabled={record.pending || !f.supplier_id || !f.variant_id}>
-          {record.pending ? "Saving…" : "Record update"}
-        </Button>
+        {(() => {
+          const blocker = !f.supplier_id ? "Choose a supplier first." : !f.variant_id ? "Choose the product this figure is about." : null;
+          const button = (
+            <Button size="sm" onClick={submit} disabled={record.pending || blocker !== null}>
+              {record.pending ? "Saving…" : "Record update"}
+            </Button>
+          );
+          return blocker ? <DisabledHint reason={blocker}>{button}</DisabledHint> : button;
+        })()}
         {recorded.length > 0 && <span className="text-xs text-muted-foreground">{recorded.length} recorded this session</span>}
       </div>
 

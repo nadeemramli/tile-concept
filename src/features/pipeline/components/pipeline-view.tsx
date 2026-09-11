@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { DataTable, MoneyCell } from "@/components/patterns/data-table";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { Hint, InfoTip } from "@/components/patterns/explain";
 import { OPPORTUNITY_STATUS, SOURCE_CHANNEL, STAGE_GROUP_TONE } from "@/lib/domain/status-maps";
 import { formatDate, formatMoney, formatRelative, initials, isOverdue, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -22,15 +23,31 @@ import type { MemberOption } from "@/features/crm/components/selects";
 import { StageChangeDialog } from "@/features/pipeline/components/stage-dialog";
 import { OpportunityDrawer } from "@/features/pipeline/components/opportunity-drawer";
 
-const VIEWS: { key: View; label: string }[] = [
-  { key: "open", label: "Open" },
-  { key: "overdue", label: "Overdue next action" },
-  { key: "missing-next-action", label: "Missing next action" },
-  { key: "quotes", label: "Quote stages" },
-  { key: "won", label: "Won (30d)" },
-  { key: "lost", label: "Lost (30d)" },
-  { key: "all", label: "All" },
+const VIEWS: { key: View; label: string; hint: string }[] = [
+  { key: "open", label: "Open", hint: "Every opportunity still being worked, in any open stage." },
+  { key: "overdue", label: "Overdue next action", hint: "Open opportunities whose next action due date has passed." },
+  { key: "missing-next-action", label: "Missing next action", hint: "Open opportunities with no next action or no due date. Every active opportunity needs both." },
+  { key: "quotes", label: "Quote stages", hint: "Open opportunities sitting in a quotation stage: quote in preparation, sent, or under negotiation." },
+  { key: "won", label: "Won (30d)", hint: "Closed as won in the last 30 days." },
+  { key: "lost", label: "Lost (30d)", hint: "Closed as lost in the last 30 days, each with a recorded reason." },
+  { key: "all", label: "All", hint: "Everything within your scope, open and closed." },
 ];
+
+const COLUMN_HINTS = {
+  stage: "Where the opportunity is in the sales process. Stages are configured in Settings; the colour shows the reporting group (open, won, lost, deferred).",
+  value: "The estimated deal value entered by the owner. An estimate, not a quote or an order.",
+  prob: "Probability band set by the owner. The business has not yet agreed the bands, so treat it as the owner's gut feel, not a forecast weight.",
+  close: "When the owner expects the deal to close.",
+  next: "What happens next on this deal. Every active opportunity needs one; missing means it must be set.",
+  due: "When the next action is due. Red means it is overdue on an open opportunity.",
+  owner: "The salesperson responsible. Only the owner, a sales manager or an administrator can move it.",
+  source: "Where the customer originally came from, carried over from the lead.",
+  updated: "The last time anything on this opportunity changed.",
+} as const;
+
+const TOTAL_HINT = "Count of opportunities in this view and the plain sum of their estimated values. Unweighted, so not a forecast.";
+const NO_NEXT_ACTION_HINT = "Every open opportunity needs a next action and a due date. Set one from the drawer or when moving stage.";
+const STAGE_PILL_HINT = "Stage in the pipeline. Colour is the reporting group: open, won, lost or deferred. Hover the status pill for what the group means.";
 
 export function PipelineView({ rows, stages, members, view, detail, suggestedQuoteNumber }: { rows: OpportunityRow[]; stages: StageRef[]; members: MemberOption[]; view: View; detail: OpportunityDetail | null; suggestedQuoteNumber: string }) {
   const { can, session } = useSession();
@@ -45,17 +62,30 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
   const cols = useMemo<ColumnDef<OpportunityRow, unknown>[]>(
     () => [
       { accessorKey: "name", header: "Opportunity", cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span> },
-      { accessorKey: "stage_key", header: "Stage", cell: ({ getValue }) => { const s = stageByKey.get(getValue<string>()); return <TonePill tone={STAGE_GROUP_TONE[s?.reporting_group ?? "open"] ?? "info"} label={s?.label ?? getValue<string>()} />; } },
+      { accessorKey: "stage_key", header: "Stage", meta: { hint: COLUMN_HINTS.stage }, cell: ({ getValue }) => { const s = stageByKey.get(getValue<string>()); return <TonePill tone={STAGE_GROUP_TONE[s?.reporting_group ?? "open"] ?? "info"} label={s?.label ?? getValue<string>()} hint={STAGE_PILL_HINT} />; } },
       { accessorKey: "status", header: "Status", cell: ({ getValue }) => <StatusPill map={OPPORTUNITY_STATUS} value={getValue<string>()} /> },
       { id: "who", header: "Account / contact", accessorFn: (r) => `${r.account_name ?? ""} ${r.contact_name ?? ""}`, cell: ({ row }) => <span className="text-xs">{[row.original.account_name, row.original.contact_name].filter(Boolean).join(" · ") || "—"}</span> },
-      { accessorKey: "estimated_value", header: "Value", cell: ({ row }) => <MoneyCell value={row.original.estimated_value} currency={row.original.currency} /> },
-      { accessorKey: "probability_band", header: "Prob.", cell: ({ getValue }) => titleCase(getValue<string | null>() ?? "") || "—" },
-      { accessorKey: "expected_close_date", header: "Exp. close", cell: ({ getValue }) => <span className="tnum text-xs">{formatDate(getValue<string | null>())}</span> },
-      { accessorKey: "next_action", header: "Next action", cell: ({ getValue }) => <span className="text-xs">{getValue<string | null>() ?? <span className="text-warning">missing</span>}</span> },
-      { accessorKey: "next_action_due_at", header: "Due", cell: ({ row }) => <span className={cn("tnum text-xs", isOverdue(row.original.next_action_due_at) && row.original.status === "open" ? "text-destructive" : "text-muted-foreground")}>{row.original.next_action_due_at ? formatRelative(row.original.next_action_due_at) : "—"}</span> },
-      { accessorKey: "owner_id", header: "Owner", cell: ({ getValue }) => names.get(getValue<string | null>() ?? "") ?? "—" },
-      { accessorKey: "source_channel", header: "Source", cell: ({ getValue }) => (getValue<string | null>() ? <StatusPill map={SOURCE_CHANNEL} value={getValue<string>()} /> : "—") },
-      { accessorKey: "updated_at", header: "Updated", cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{formatRelative(getValue<string>())}</span> },
+      { accessorKey: "estimated_value", header: "Value", meta: { hint: COLUMN_HINTS.value }, cell: ({ row }) => <MoneyCell value={row.original.estimated_value} currency={row.original.currency} /> },
+      { accessorKey: "probability_band", header: "Prob.", meta: { hint: COLUMN_HINTS.prob }, cell: ({ getValue }) => titleCase(getValue<string | null>() ?? "") || "—" },
+      { accessorKey: "expected_close_date", header: "Exp. close", meta: { hint: COLUMN_HINTS.close }, cell: ({ getValue }) => <span className="tnum text-xs">{formatDate(getValue<string | null>())}</span> },
+      {
+        accessorKey: "next_action",
+        header: "Next action",
+        meta: { hint: COLUMN_HINTS.next },
+        cell: ({ getValue }) => (
+          <span className="text-xs">
+            {getValue<string | null>() ?? (
+              <Hint content={NO_NEXT_ACTION_HINT} focusable>
+                <span className="text-warning">missing</span>
+              </Hint>
+            )}
+          </span>
+        ),
+      },
+      { accessorKey: "next_action_due_at", header: "Due", meta: { hint: COLUMN_HINTS.due }, cell: ({ row }) => <span className={cn("tnum text-xs", isOverdue(row.original.next_action_due_at) && row.original.status === "open" ? "text-destructive" : "text-muted-foreground")}>{row.original.next_action_due_at ? formatRelative(row.original.next_action_due_at) : "—"}</span> },
+      { accessorKey: "owner_id", header: "Owner", meta: { hint: COLUMN_HINTS.owner }, cell: ({ getValue }) => names.get(getValue<string | null>() ?? "") ?? "—" },
+      { accessorKey: "source_channel", header: "Source", meta: { hint: COLUMN_HINTS.source }, cell: ({ getValue }) => (getValue<string | null>() ? <StatusPill map={SOURCE_CHANNEL} value={getValue<string>()} /> : "—") },
+      { accessorKey: "updated_at", header: "Updated", meta: { hint: COLUMN_HINTS.updated }, cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{formatRelative(getValue<string>())}</span> },
     ],
     [names, stageByKey],
   );
@@ -72,15 +102,16 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
         <Tabs value={view} onValueChange={(v) => setView(v)}>
           <TabsList className="flex-wrap">
             {VIEWS.map((v) => (
-              <TabsTrigger key={v.key} value={v.key}>
-                {v.label}
-              </TabsTrigger>
+              <Hint key={v.key} content={v.hint}>
+                <TabsTrigger value={v.key}>{v.label}</TabsTrigger>
+              </Hint>
             ))}
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-2">
-          <span className="tnum text-xs text-muted-foreground">
+          <span className="tnum inline-flex items-center gap-1 text-xs text-muted-foreground">
             {rows.length} · {formatMoney(rows.reduce((a, r) => a + (r.estimated_value ?? 0), 0))}
+            <InfoTip label="Total" content={TOTAL_HINT} />
           </span>
           <ToggleGroup type="single" value={layout} onValueChange={(v) => v && setLayout(v)} variant="outline" size="sm">
             <ToggleGroupItem value="board" aria-label="Board">
@@ -111,7 +142,7 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
                         {items.length} · {formatMoney(sum)}
                       </div>
                     </div>
-                    <TonePill tone={STAGE_GROUP_TONE[s.reporting_group] ?? "info"} label={String(s.position)} dot={false} />
+                    <TonePill tone={STAGE_GROUP_TONE[s.reporting_group] ?? "info"} label={String(s.position)} dot={false} hint={`Stage ${s.position} in the pipeline order. The count and value below are for this stage only, unweighted.${s.requires_reason ? " Entering it needs a reason." : ""}${s.requires_next_action ? " Entering it needs a next action and due date." : ""}`} />
                   </header>
                   <ul className="flex-1 space-y-2 p-2">
                     {items.length === 0 && <li className="rounded-md border border-dashed px-2 py-4 text-center text-[11px] text-muted-foreground">Empty</li>}
@@ -156,12 +187,18 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
                           <div className="mt-1 truncate text-xs text-muted-foreground">{[o.account_name, o.contact_name].filter(Boolean).join(" · ") || "—"}</div>
                           <div className="mt-1.5 flex items-center justify-between gap-2">
                             <span className="tnum text-xs font-medium">{o.estimated_value !== null ? formatMoney(o.estimated_value, o.currency) : "—"}</span>
-                            <Avatar className="size-5" title={names.get(o.owner_id ?? "") ?? "Unassigned"}>
-                              <AvatarFallback className="text-[9px]">{initials(names.get(o.owner_id ?? "") ?? "?")}</AvatarFallback>
-                            </Avatar>
+                            <Hint content={`Owner: ${names.get(o.owner_id ?? "") ?? "Unassigned"}`} focusable>
+                              <Avatar className="size-5">
+                                <AvatarFallback className="text-[9px]">{initials(names.get(o.owner_id ?? "") ?? "?")}</AvatarFallback>
+                              </Avatar>
+                            </Hint>
                           </div>
                           <div className={cn("mt-1 truncate text-[11px]", isOverdue(o.next_action_due_at) && o.status === "open" ? "text-destructive" : "text-muted-foreground")}>
-                            {o.next_action ?? <span className="text-warning">No next action</span>}
+                            {o.next_action ?? (
+                              <Hint content={NO_NEXT_ACTION_HINT} focusable>
+                                <span className="text-warning">No next action</span>
+                              </Hint>
+                            )}
                             {o.next_action_due_at ? ` · ${formatRelative(o.next_action_due_at)}` : ""}
                           </div>
                           {o.product_interest.length > 0 && (

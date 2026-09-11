@@ -5,6 +5,13 @@ import { formatDateTime } from "@/lib/format";
 import type { MetricDefinition } from "@/server/queries/reports";
 import { PII_LABEL, QUALITY_TONE, type ReportDef } from "@/features/reports/registry";
 
+/** What a metric's quality word means, shown on the pill. */
+const QUALITY_HINT: Record<string, string> = {
+  trusted: "Definition agreed with the business and the source is complete. Safe to quote in a meeting.",
+  monitored: "Definition is stable but the source is still being watched for gaps, so check the caveats before relying on it.",
+  degraded: "A known gap in the source or the definition. Treat the number as indicative until the caveat is resolved.",
+};
+
 /**
  * Every governed report declares what its numbers mean before it shows any
  * (PRD §7.9): definition and formula, grain, filters in effect, source
@@ -32,7 +39,7 @@ export function GovernanceHeader({
         <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">How this report is defined</span>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {definitions.map((d) => (
-            <TonePill key={d.key} tone={QUALITY_TONE[d.quality] ?? "info"} label={`${d.name}: ${d.quality}`} />
+            <TonePill key={d.key} tone={QUALITY_TONE[d.quality] ?? "info"} label={`${d.name}: ${d.quality}`} hint={QUALITY_HINT[d.quality] ?? "Quality of this metric definition, as declared by its owner."} />
           ))}
         </div>
       </div>

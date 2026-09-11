@@ -5,8 +5,16 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/patterns/status-pill";
 import { FreshnessBadge } from "@/components/patterns/freshness-badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Hint } from "@/components/patterns/explain";
 import { formatDateTime } from "@/lib/format";
+
+const HINTS = {
+  checkpoint: "The last position read from the provider, so the next pull resumes where this one stopped and nothing is fetched twice.",
+  credentialSet: "Only the name of the secret-manager entry appears here. The secret itself is never stored in this app.",
+  credentialUnset: "No secret is configured. The connector cannot leave demo mode until one is set in the environment.",
+  runs: "Pulls or webhook deliveries in the last seven days, and how many of them failed.",
+  idempotency: "Sending the same submission twice has the same effect as sending it once. Each submission carries a key, so a retry never creates a second lead.",
+} as const;
 import { useAction } from "@/features/catalog/use-action";
 import { sendTestSubmissionAction } from "@/server/commands/connectors";
 import { cn } from "@/lib/utils";
@@ -58,11 +66,15 @@ export function ConnectorCards({ connectors, demoMode }: { connectors: Connector
                 <dd className="tnum">{c.last_attempt_at ? formatDateTime(c.last_attempt_at) : "Never"}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Checkpoint</dt>
+                <Hint content={HINTS.checkpoint} focusable>
+                  <dt className="text-muted-foreground">Checkpoint</dt>
+                </Hint>
                 <dd className="truncate font-mono text-[11px]">{c.checkpoint ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Runs (7d)</dt>
+                <Hint content={HINTS.runs} focusable>
+                  <dt className="text-muted-foreground">Runs (7d)</dt>
+                </Hint>
                 <dd className="tnum">
                   {c.runs_7d}
                   {c.failed_7d > 0 && <span className="text-destructive"> · {c.failed_7d} failed</span>}
@@ -70,7 +82,17 @@ export function ConnectorCards({ connectors, demoMode }: { connectors: Connector
               </div>
               <div className="min-w-0">
                 <dt className="text-muted-foreground">Credential</dt>
-                <dd className="truncate">{c.credential_ref ? <span className="font-mono text-[11px]">{c.credential_ref}</span> : <span className="text-warning">Not set</span>}</dd>
+                <dd className="truncate">
+                  {c.credential_ref ? (
+                    <Hint content={HINTS.credentialSet} focusable>
+                      <span className="font-mono text-[11px]">{c.credential_ref}</span>
+                    </Hint>
+                  ) : (
+                    <Hint content={HINTS.credentialUnset} focusable>
+                      <span className="text-warning">Not set</span>
+                    </Hint>
+                  )}
+                </dd>
               </div>
             </dl>
 
@@ -94,25 +116,16 @@ export function ConnectorCards({ connectors, demoMode }: { connectors: Connector
                   const Icon = ICON[state];
                   return (
                     <li key={item.key}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            className={cn(
-                              "inline-flex h-5 cursor-help items-center gap-1 rounded-full border px-2 text-[11px] font-medium",
-                              CONTRACT_CLASS[state],
-                            )}
-                          >
-                            <Icon className="size-3" aria-hidden /> {item.label}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-64">
-                          <span className="font-medium">
-                            {item.label} — {state}
-                          </span>
-                          <br />
-                          {item.detail}
-                        </TooltipContent>
-                      </Tooltip>
+                      <Hint content={{ title: `${item.label} — ${state}`, body: item.detail }} focusable>
+                        <span
+                          className={cn(
+                            "inline-flex h-5 cursor-help items-center gap-1 rounded-full border px-2 text-[11px] font-medium",
+                            CONTRACT_CLASS[state],
+                          )}
+                        >
+                          <Icon className="size-3" aria-hidden /> {item.label}
+                        </span>
+                      </Hint>
                     </li>
                   );
                 })}
@@ -127,7 +140,11 @@ export function ConnectorCards({ connectors, demoMode }: { connectors: Connector
                   <Send className="size-3.5" aria-hidden /> {test.pending ? "Sending…" : "Send a test submission"}
                 </Button>
                 <span className="text-[11px] text-muted-foreground">
-                  Signs a synthetic payload and posts it at this app&rsquo;s own endpoint — proves signature, freshness and idempotency without a provider.
+                  Signs a synthetic payload and posts it at this app&rsquo;s own endpoint — proves signature, freshness and{" "}
+                  <Hint content={HINTS.idempotency} focusable>
+                    <span className="underline decoration-dotted underline-offset-2">idempotency</span>
+                  </Hint>{" "}
+                  without a provider.
                 </span>
               </div>
             )}

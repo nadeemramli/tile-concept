@@ -10,19 +10,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Gated, Hint, InfoTip } from "@/components/patterns/explain";
 import { formatMoney } from "@/lib/format";
 import { setSalesTargetAction } from "@/server/commands/scorecard";
 import type { SalesScorecard as Scorecard } from "@/server/queries/command-centre";
 
-const SEGMENTS: Record<string, { label: string; color: string }> = {
-  institutional: { label: "Institutional / Gov", color: "#1E40AF" },
-  residential: { label: "Residential", color: "#2563EB" },
-  fnb: { label: "F&B / Retail", color: "#D97706" },
-  hospitality: { label: "Hospitality", color: "#16A34A" },
-  commercial: { label: "Commercial", color: "#7C3AED" },
-  other: { label: "Other", color: "#6B7280" },
+const SEGMENTS: Record<string, { label: string; color: string; hint: string }> = {
+  institutional: { label: "Institutional / Gov", color: "#1E40AF", hint: "Schools, hospitals, government and other public bodies." },
+  residential: { label: "Residential", color: "#2563EB", hint: "Homeowners, condos and landed houses." },
+  fnb: { label: "F&B / Retail", color: "#D97706", hint: "Restaurants, cafés and shops." },
+  hospitality: { label: "Hospitality", color: "#16A34A", hint: "Hotels, resorts and serviced apartments." },
+  commercial: { label: "Commercial", color: "#7C3AED", hint: "Offices, showrooms and other business premises." },
+  other: { label: "Other", color: "#6B7280", hint: "Opportunities with no segment recorded, or one outside the list." },
 };
 const seg = (k: string) => SEGMENTS[k] ?? SEGMENTS.other;
+
+const STAT_HINTS = {
+  target: "The annual sales target set by an administrator for this year.",
+  collected: "Purchases recorded in the app so far this year. Not reconciled with SQL Account.",
+  pipeline: "The estimated value of open opportunities in your scope, unweighted: no probability is applied.",
+  coverage: "Collected plus pipeline, as a share of the target. It shows how much of the year is already covered if every open opportunity closed; it is not a forecast.",
+  gap: "What is left of the target after collected and pipeline. Zero when coverage reaches 100%.",
+} as const;
 
 function pct(n: number) {
   return `${(n * 100).toFixed(1)}%`;
@@ -47,11 +56,11 @@ export function SalesScorecard({ data, canManage }: { data: Scorecard; canManage
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-sm">
           <span>Annual target coverage · {data.year}</span>
-          {canManage && (
-            <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs font-normal text-info hover:underline">
+          <Gated permission="settings.manage">
+            <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs font-normal text-info hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline">
               <Pencil className="size-3" aria-hidden /> {data.target === null ? "Set target" : "Edit target"}
             </button>
-          )}
+          </Gated>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -64,11 +73,11 @@ export function SalesScorecard({ data, canManage }: { data: Scorecard; canManage
             {/* Coverage */}
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-                <Stat label="Annual target" value={formatMoney(target, cur)} tone="text-warning" />
-                <Stat label="YTD collected" value={formatMoney(data.collected, cur)} tone="text-success" sub={target ? pct(data.collected / target) : undefined} />
-                <Stat label="Open pipeline" value={formatMoney(data.pipeline, cur)} tone="text-info" sub={target ? pct(data.pipeline / target) : undefined} />
-                <Stat label="Coverage" value={target ? pct(covered / target) : "—"} tone="text-ai" sub="collected + pipeline" />
-                <Stat label="Remaining gap" value={formatMoney(gap, cur)} tone="text-destructive" />
+                <Stat label="Annual target" value={formatMoney(target, cur)} tone="text-warning" hint={STAT_HINTS.target} />
+                <Stat label="YTD collected" value={formatMoney(data.collected, cur)} tone="text-success" sub={target ? pct(data.collected / target) : undefined} hint={STAT_HINTS.collected} />
+                <Stat label="Open pipeline" value={formatMoney(data.pipeline, cur)} tone="text-info" sub={target ? pct(data.pipeline / target) : undefined} hint={STAT_HINTS.pipeline} />
+                <Stat label="Coverage" value={target ? pct(covered / target) : "—"} tone="text-ai" sub="collected + pipeline" hint={STAT_HINTS.coverage} />
+                <Stat label="Remaining gap" value={formatMoney(gap, cur)} tone="text-destructive" hint={STAT_HINTS.gap} />
               </div>
 
               <div className="flex h-4 overflow-hidden rounded-md bg-muted" role="img" aria-label={`Coverage ${target ? pct(covered / target) : ""}`}>
@@ -109,7 +118,9 @@ export function SalesScorecard({ data, canManage }: { data: Scorecard; canManage
                     {data.segments.map((s) => (
                       <li key={s.segment} className="flex items-center gap-2 text-[11.5px]">
                         <span className="size-2 shrink-0 rounded-sm" style={{ background: seg(s.segment).color }} />
-                        <span className="flex-1 truncate text-muted-foreground">{seg(s.segment).label}</span>
+                        <Hint content={seg(s.segment).hint} focusable className="max-w-56">
+                          <span className="flex-1 truncate text-muted-foreground">{seg(s.segment).label}</span>
+                        </Hint>
                         <span className="tnum font-medium">{formatMoney(s.value, cur)}</span>
                         <span className="tnum w-11 text-right text-muted-foreground">{pct(s.value / segTotal)}</span>
                       </li>
@@ -127,10 +138,13 @@ export function SalesScorecard({ data, canManage }: { data: Scorecard; canManage
   );
 }
 
-function Stat({ label, value, tone, sub }: { label: string; value: string; tone: string; sub?: string }) {
+function Stat({ label, value, tone, sub, hint }: { label: string; value: string; tone: string; sub?: string; hint?: string }) {
   return (
     <div className="min-w-0">
-      <div className="truncate text-[11px] text-muted-foreground">{label}</div>
+      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+        <span className="truncate">{label}</span>
+        {hint && <InfoTip label={label} content={hint} className="size-3" />}
+      </div>
       <div className={`tnum text-base font-semibold ${tone}`}>{value}</div>
       {sub && <div className="text-[10px] text-muted-foreground">{sub}</div>}
     </div>
@@ -163,6 +177,7 @@ function TargetDialog({ open, onOpenChange, year, current }: { open: boolean; on
           <Input className="h-9 tnum" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1000000" autoFocus />
         </Field>
         <DialogFooter>
+          <DisabledHint reason={!pending && (amount === "" || Number.isNaN(n) || n < 0) ? "Enter a target amount of zero or more, digits only." : undefined}>
           <Button
             disabled={pending || Number.isNaN(n) || n < 0 || amount === ""}
             onClick={() =>
@@ -180,6 +195,7 @@ function TargetDialog({ open, onOpenChange, year, current }: { open: boolean; on
           >
             {pending ? "Saving…" : "Save target"}
           </Button>
+          </DisabledHint>
         </DialogFooter>
       </DialogContent>
     </Dialog>

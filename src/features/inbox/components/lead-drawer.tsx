@@ -8,6 +8,7 @@ import { ArrowRight, Check, ExternalLink, MessageCircle, MoreHorizontal, Search,
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint, Gated, Hint } from "@/components/patterns/explain";
 import { LEAD_STATUS } from "@/lib/domain/status-maps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,9 +54,11 @@ type Panel = null | "respond" | "disqualify" | "matches" | "convert" | "assign";
 
 const TIMELINE_PREVIEW = 5;
 
+const MASKED_HINT = "Shown masked because your role does not include contact.reveal. Revealing a phone number or email is audited with who, when and which record.";
+
 export function LeadDrawer({ lead, intake, timeline, contact, members, initialSuggestions, onClose }: Props) {
   const router = useRouter();
-  const { can } = useSession();
+  const { can, session } = useSession();
   const [pending, start] = useTransition();
   const [panel, setPanel] = useState<Panel>(null);
   const [candidates, setCandidates] = useState<IdentityCandidate[] | null>(initialSuggestions ?? null);
@@ -77,7 +80,11 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
       }
     });
 
-  const canWrite = can("sales.write");
+  // The inbox is shared for reading; acting on a lead stays with its owner, a
+  // sales manager or an administrator (the database enforces the same rule).
+  const isOwner = can("sales.read_all") || !lead.owner_id || lead.owner_id === session.userId;
+  const OWNER_ONLY = `Only ${lead.owner_name ?? "the assigned salesperson"}, a sales manager or an administrator can act on this lead. You can still read it and message the customer.`;
+  const canWrite = can("sales.write") && isOwner;
   const canReveal = can("contact.reveal");
   const terminal = ["converted", "disqualified", "duplicate"].includes(lead.status);
   const slaOverdue = !lead.first_response_at && isOverdue(lead.first_response_due_at);
@@ -131,33 +138,54 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         {/* Primary actions: what a rep does most, in the order they do it. */}
         <div className="flex flex-wrap items-center gap-2">
           {whatsappUrl && (
-            <Button asChild size="sm" className="h-8">
-              <a href={whatsappUrl} target="_blank" rel="noreferrer" title="Opens a pre-filled message; tap Done WhatsApp after sending">
-                <MessageCircle className="size-3.5" aria-hidden /> WhatsApp
-              </a>
-            </Button>
+            <Hint content="Opens WhatsApp with a pre-filled message. Sending it is not recorded here; tap Done WhatsApp afterwards.">
+              <Button asChild size="sm" className="h-8">
+                <a href={whatsappUrl} target="_blank" rel="noreferrer">
+                  <MessageCircle className="size-3.5" aria-hidden /> WhatsApp
+                </a>
+              </Button>
+            </Hint>
           )}
-          {whatsappUrl && !terminal && canWrite && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8"
-              disabled={pending}
-              title="One tap: records that you messaged this customer, under your name"
-              onClick={() =>
-                run(
-                  () => logLeadResponseAction({ lead_id: lead.id, kind: "message", channel: "whatsapp", reached: false, body: "WhatsApp message sent" }),
-                  () => setNudgeFollowUpFor(lead.id),
-                )
-              }
-            >
-              <Check className="size-3.5" aria-hidden /> Done WhatsApp
-            </Button>
+          {whatsappUrl && !terminal && !isOwner && (
+            <DisabledHint reason={OWNER_ONLY}>
+              <Button size="sm" variant="outline" className="h-8" disabled>
+                <Check className="size-3.5" aria-hidden /> Done WhatsApp
+              </Button>
+            </DisabledHint>
           )}
-          {!terminal && canWrite && (
-            <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-8" onClick={() => setPanel("respond")}>
-              Log a call or email
-            </Button>
+          {whatsappUrl && !terminal && isOwner && (
+            <Gated permission="sales.write">
+              <Hint content="One tap: records that you messaged this customer, under your name. Counts as an attempt, not a reply, so the status becomes Contact attempted.">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  disabled={pending}
+                  onClick={() =>
+                    run(
+                      () => logLeadResponseAction({ lead_id: lead.id, kind: "message", channel: "whatsapp", reached: false, body: "WhatsApp message sent" }),
+                      () => setNudgeFollowUpFor(lead.id),
+                    )
+                  }
+                >
+                  <Check className="size-3.5" aria-hidden /> Done WhatsApp
+                </Button>
+              </Hint>
+            </Gated>
+          )}
+          {!terminal && !isOwner && (
+            <DisabledHint reason={OWNER_ONLY}>
+              <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-8" disabled>
+                Log a call or email
+              </Button>
+            </DisabledHint>
+          )}
+          {!terminal && isOwner && (
+            <Gated permission="sales.write">
+              <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-8" onClick={() => setPanel("respond")}>
+                Log a call or email
+              </Button>
+            </Gated>
           )}
           {lead.converted_opportunity_id && (
             <Button asChild size="sm" variant="outline" className="h-8">
@@ -186,8 +214,9 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
                   </DropdownMenuItem>
                 )}
                 {canWrite && (
-                  <DropdownMenuItem disabled={!lead.contact_id} onSelect={() => setPanel("convert")} title={lead.contact_id ? undefined : "Link a customer record first"}>
+                  <DropdownMenuItem disabled={!lead.contact_id} onSelect={() => setPanel("convert")}>
                     <ArrowRight className="size-3.5" aria-hidden /> Convert to opportunity
+                    {!lead.contact_id && <span className="ml-1 text-[11px] text-muted-foreground">— link a customer record first</span>}
                   </DropdownMenuItem>
                 )}
                 {canWrite && (
@@ -218,23 +247,49 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
                 <FactList
                   className="sm:grid-cols-3"
                   items={[
-                    { label: "Phone", value: canReveal ? lead.raw_phone : maskValue(lead.raw_phone_normalized ?? lead.raw_phone, "phone"), mono: true },
-                    { label: "Email", value: canReveal ? lead.raw_email : maskValue(lead.raw_email, "email"), mono: true },
+                    {
+                      label: "Phone",
+                      value: canReveal ? (
+                        lead.raw_phone
+                      ) : (
+                        <Hint content={MASKED_HINT} focusable>
+                          <span>{maskValue(lead.raw_phone_normalized ?? lead.raw_phone, "phone")}</span>
+                        </Hint>
+                      ),
+                      mono: true,
+                    },
+                    {
+                      label: "Email",
+                      value: canReveal ? (
+                        lead.raw_email
+                      ) : (
+                        <Hint content={MASKED_HINT} focusable>
+                          <span>{maskValue(lead.raw_email, "email")}</span>
+                        </Hint>
+                      ),
+                      mono: true,
+                    },
                     { label: "Company", value: lead.raw_company },
                   ]}
                 />
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                   <span>
                     <span className="text-muted-foreground">Salesperson </span>
-                    {lead.owner_name ?? <span className="text-warning">Unassigned</span>}
+                    {lead.owner_name ?? (
+                      <Hint content="No salesperson owns this lead yet, so nobody is on the clock. A sales manager assigns it from More, or a rep picks it up." focusable>
+                        <span className="text-warning">Unassigned</span>
+                      </Hint>
+                    )}
                   </span>
                   <span className="min-w-0">
                     <span className="text-muted-foreground">Customer record </span>
                     {contact ? (
                       <>
-                        <Link href={`/sales/contacts/${contact.id}`} className="font-medium hover:underline" title="Open the customer 360">
-                          {contact.display_name}
-                        </Link>
+                        <Hint content="Open the customer 360: every inquiry, visit, purchase and consent for this person.">
+                          <Link href={`/sales/contacts/${contact.id}`} className="font-medium hover:underline">
+                            {contact.display_name}
+                          </Link>
+                        </Hint>
                         <span className="text-muted-foreground">
                           {" · "}
                           {titleCase(contact.lifecycle_state)}
@@ -451,7 +506,11 @@ function AssignForm({ members, current, pending, onAssign }: { members: ProfileR
         <Input className="h-8" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Workload, language, location…" />
       </Field>
       <DialogFooter>
-        <Button disabled={!owner || pending} onClick={() => onAssign(owner, reason || undefined)}>Assign</Button>
+        <DisabledHint reason={owner ? null : "Choose a salesperson first."}>
+          <Button disabled={!owner || pending} onClick={() => onAssign(owner, reason || undefined)}>
+            Assign
+          </Button>
+        </DisabledHint>
       </DialogFooter>
     </div>
   );
@@ -465,9 +524,11 @@ export function ReasonForm({ label, submitLabel, destructive, pending, onSubmit,
         <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
       </Field>
       <DialogFooter>
-        <Button variant={destructive ? "destructive" : "default"} disabled={reason.trim().length < min || pending} onClick={() => onSubmit(reason.trim())}>
-          {submitLabel}
-        </Button>
+        <DisabledHint reason={reason.trim().length < min ? `The reason needs at least ${min} characters. It is kept in the audit trail.` : null}>
+          <Button variant={destructive ? "destructive" : "default"} disabled={reason.trim().length < min || pending} onClick={() => onSubmit(reason.trim())}>
+            {submitLabel}
+          </Button>
+        </DisabledHint>
       </DialogFooter>
     </div>
   );
@@ -561,9 +622,11 @@ function CreateContactInline({ defaultName, pending, onCreate }: { defaultName: 
             {["homeowner", "contractor", "designer", "developer", "retailer", "architect", "other"].map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button size="sm" className="h-8" disabled={name.trim().length < 2 || pending} onClick={() => onCreate(name.trim(), type)}>
-          Create & link
-        </Button>
+        <DisabledHint reason={name.trim().length < 2 ? "Enter the customer's name (at least 2 characters) first." : null}>
+          <Button size="sm" className="h-8" disabled={name.trim().length < 2 || pending} onClick={() => onCreate(name.trim(), type)}>
+            Create & link
+          </Button>
+        </DisabledHint>
       </div>
       <p className="mt-1.5 text-[11px] text-muted-foreground">Phone/email from the inquiry become contact points; duplicate suggestions are generated for review.</p>
     </div>
@@ -577,6 +640,16 @@ function ConvertForm({ lead, pending, onSubmit }: { lead: LeadRow; pending: bool
   const [value, setValue] = useState("");
   const [nextAction, setNextAction] = useState("Schedule consultation");
   const [due, setDue] = useState(() => new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 16));
+  const blocker =
+    projectName.trim().length < 2
+      ? "Give the project a name (at least 2 characters)."
+      : oppName.trim().length < 2
+        ? "Give the opportunity a name (at least 2 characters)."
+        : nextAction.trim().length < 2
+          ? "Every active opportunity needs a next action. Say what happens next."
+          : !due
+            ? "Set when the next action is due."
+            : null;
   return (
     <div className="space-y-3">
       <Field label="Project / site name" required>
@@ -597,12 +670,14 @@ function ConvertForm({ lead, pending, onSubmit }: { lead: LeadRow; pending: bool
         <Input className="h-8" value={nextAction} onChange={(e) => setNextAction(e.target.value)} />
       </Field>
       <DialogFooter>
-        <Button
-          disabled={pending || projectName.trim().length < 2 || oppName.trim().length < 2 || nextAction.trim().length < 2 || !due}
-          onClick={() => onSubmit({ project_name: projectName.trim(), opportunity_name: oppName.trim(), estimated_value: value ? Number(value) : undefined, next_action: nextAction.trim(), next_action_due_at: due })}
-        >
-          {pending ? "Converting…" : "Create opportunity"}
-        </Button>
+        <DisabledHint reason={blocker}>
+          <Button
+            disabled={pending || !!blocker}
+            onClick={() => onSubmit({ project_name: projectName.trim(), opportunity_name: oppName.trim(), estimated_value: value ? Number(value) : undefined, next_action: nextAction.trim(), next_action_due_at: due })}
+          >
+            {pending ? "Converting…" : "Create opportunity"}
+          </Button>
+        </DisabledHint>
       </DialogFooter>
     </div>
   );

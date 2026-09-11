@@ -63,19 +63,90 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   guest: "Guest (demo)",
 };
 
-export const PERMISSION_EXPLAINERS: Partial<Record<PermissionKey, string>> = {
-  "sales.read": "Viewing leads, accounts, projects and opportunities needs a sales role.",
-  "sales.leads.read_all": "Sales representatives, managers and administrators share visibility of every Enquiry Box lead.",
+/** What each key lets a person do, in the words used on screen. */
+export const PERMISSION_LABELS: Record<PermissionKey, string> = {
+  "sales.read": "See leads, accounts, projects and opportunities",
+  "sales.read_all": "See every salesperson's records, not only your own",
+  "sales.leads.read_all": "See every Enquiry Box lead",
+  "sales.write": "Create and edit sales records, log activity, add tasks",
+  "sales.assign": "Assign leads to a salesperson",
+  "contact.reveal": "Reveal a masked phone number or email (audited)",
+  "identity.merge": "Confirm or reverse a duplicate merge",
+  "purchase.write": "Record walk-ins and purchases",
+  "purchase.correct": "Correct a recorded purchase amount (audited)",
+  "catalog.read": "See the product catalog",
+  "catalog.write": "Edit products and mark them reviewed",
+  "price.read": "See prices",
+  "price.publish": "Publish, override or reject prices",
+  "stock.read": "See stock",
+  "stock.write": "Enter supplier stock updates and flag stale suppliers",
+  "marketing.read": "See content opportunities and the shoot calendar",
+  "marketing.write": "Nominate projects, record customer media permission, hold shoot dates",
+  "marketing.confirm": "Confirm crew capacity and mark shoot assets usable",
+  "source.import": "Upload and parse source documents",
+  "review.approve": "Approve or reject parsed import items",
+  "report.read": "Open reports",
+  "audit.read": "See the audit trail within your scope",
+  "audit.read_all": "See the whole workspace's audit trail",
+  "settings.manage": "Manage users, roles, stages and integrations",
+  "export.customer": "Export customer data",
+};
+
+/**
+ * Role → permissions, mirrored from `core.role_permissions`
+ * (`supabase/migrations/20260820000001_foundation.sql`, the Enquiry Box
+ * migration and `20260823000001_guest_mode.sql`). Used only to explain gates
+ * and to render Help & glossary; the database decides.
+ */
+export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
+  admin: ["sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "settings.manage", "export.customer"],
+  management: ["sales.read", "sales.read_all", "sales.leads.read_all", "contact.reveal", "catalog.read", "price.read", "stock.read", "marketing.read", "report.read", "audit.read"],
+  sales_manager: ["sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "report.read", "audit.read", "export.customer"],
+  sales_rep: ["sales.read", "sales.leads.read_all", "sales.write", "contact.reveal", "purchase.write", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "audit.read"],
+  showroom: ["sales.read", "sales.write", "purchase.write", "catalog.read", "price.read", "stock.read", "audit.read"],
+  marketing_coordinator: ["sales.read", "marketing.read", "marketing.write", "marketing.confirm", "catalog.read", "audit.read"],
+  catalog_pricing: ["catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "source.import", "review.approve", "audit.read"],
+  stock_coordinator: ["catalog.read", "price.read", "stock.read", "stock.write", "audit.read"],
+  analyst: ["report.read", "catalog.read", "price.read"],
+  guest: ["sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "export.customer"],
+};
+
+/** Roles that hold a permission, excluding the demo guest. */
+export function rolesWith(permission: PermissionKey): RoleKey[] {
+  return ROLES.filter((r) => r !== "guest" && ROLE_PERMISSIONS[r].includes(permission));
+}
+
+/**
+ * One sentence per key naming who can. Shown by `PermissionDenied`, by
+ * `Gated` controls, and in refusal toasts, so a person always learns which
+ * role to ask for rather than "you do not have permission".
+ */
+export const PERMISSION_EXPLAINERS: Record<PermissionKey, string> = {
+  "sales.read": "Viewing leads, accounts, projects and opportunities needs a sales, showroom, marketing or management role.",
+  "sales.read_all": "Seeing every salesperson's records needs a sales manager, management or administrator role; representatives see their own.",
+  "sales.leads.read_all": "Sales representatives, sales managers, management and administrators share visibility of every Enquiry Box lead.",
+  "sales.write": "Creating or editing sales records needs a sales representative, sales manager or showroom role.",
   "sales.assign": "Only sales managers and administrators can assign leads.",
+  "contact.reveal": "Revealing a masked phone or email needs a sales or management role, and every reveal is audited.",
   "identity.merge": "Confirming an identity merge is restricted to sales managers and administrators.",
-  "price.publish": "Publishing prices is restricted to catalog/pricing operators.",
+  "purchase.write": "Recording walk-ins and purchases needs a sales representative, sales manager or showroom role.",
+  "purchase.correct": "Correcting a recorded purchase is restricted to sales managers and administrators, and is audited.",
   "catalog.read": "Catalog access needs a merchandise, sales, or management role.",
+  "catalog.write": "Editing products is restricted to catalog/pricing operators.",
+  "price.read": "Seeing prices needs a sales, merchandise, management or analyst role.",
+  "price.publish": "Publishing prices is restricted to catalog/pricing operators.",
   "stock.read": "Stock visibility needs a stock, sales, or management role.",
+  "stock.write": "Entering supplier stock updates is restricted to stock coordinators.",
   "marketing.read": "Marketing coordination needs a marketing, sales, or management role.",
+  "marketing.write": "Nominating projects, recording customer media permission and holding shoot dates needs a sales or marketing coordinator role.",
+  "marketing.confirm": "Confirming crew capacity and marking shoot assets usable is restricted to marketing coordinators.",
   "source.import": "Importing source documents is restricted to catalog/pricing operators.",
-  "audit.read": "Audit access is role-scoped.",
-  "settings.manage": "Settings and user management are restricted to administrators.",
+  "review.approve": "Approving parsed import items is restricted to catalog/pricing operators.",
   "report.read": "Reports need a management, analyst, or manager role.",
+  "audit.read": "The audit trail is visible to every operational role within its own scope.",
+  "audit.read_all": "Seeing the whole workspace's audit trail is restricted to administrators.",
+  "settings.manage": "Settings and user management are restricted to administrators.",
+  "export.customer": "Exporting customer data is restricted to sales managers and administrators.",
 };
 
 export function can(perms: ReadonlySet<string> | string[], permission: PermissionKey): boolean {

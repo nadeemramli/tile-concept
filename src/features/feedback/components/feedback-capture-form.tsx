@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint } from "@/components/patterns/explain";
 import { TonePill } from "@/components/patterns/status-pill";
 import { createFeedbackRequestAction, logFeedbackWhatsAppOpenedAction } from "@/server/commands/feedback";
 import { FEEDBACK_QUESTIONS } from "@/features/feedback/schema";
@@ -65,8 +66,17 @@ export function FeedbackCaptureForm({ purchase }: { purchase: FeedbackPurchaseCo
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <TonePill tone={result.generation_mode === "llm" ? "ai" : "neutral"} label={result.generation_mode === "llm" ? "LLM-assisted draft" : "Deterministic fallback"} size="md" />
-          <TonePill tone="success" label="Private link expires in 7 days" size="md" />
+          <TonePill
+            tone={result.generation_mode === "llm" ? "ai" : "neutral"}
+            label={result.generation_mode === "llm" ? "LLM-assisted draft" : "Deterministic fallback"}
+            size="md"
+            hint={
+              result.generation_mode === "llm"
+                ? "A language model turned the five answers into a review draft. The customer sees and can edit it before anything is posted."
+                : "The model was unavailable, so the draft was assembled from the answers by fixed rules. The customer can still edit it."
+            }
+          />
+          <TonePill tone="success" label="Private link expires in 7 days" size="md" hint="After 7 days the link stops working and the request shows as Expired. Prepare a new one if the customer still wants to respond." />
         </div>
         {result.photo_warning ? <Alert className="border-warning/40 bg-warning/5"><AlertTitle>Photo not attached</AlertTitle><AlertDescription>{result.photo_warning}</AlertDescription></Alert> : null}
         <div className="rounded-lg border bg-muted/25 p-3 font-mono text-xs break-all">{result.secure_link}</div>
@@ -100,7 +110,12 @@ export function FeedbackCaptureForm({ purchase }: { purchase: FeedbackPurchaseCo
             <p className="text-sm font-semibold">{purchase.customer_name}</p>
             <p className="mt-1 text-xs text-muted-foreground">{purchase.purchase_ref ?? "Purchase"} · {formatDateTime(purchase.purchased_at)} · {formatMoney(purchase.amount, purchase.currency)}</p>
           </div>
-          <TonePill tone={purchase.phone ? "success" : "destructive"} label={purchase.phone ? "WhatsApp ready" : "Phone unavailable"} size="md" />
+          <TonePill
+            tone={purchase.phone ? "success" : "destructive"}
+            label={purchase.phone ? "WhatsApp ready" : "Phone unavailable"}
+            size="md"
+            hint={purchase.phone ? "The customer record has a phone number, so the private link can be sent by WhatsApp." : "The customer record has no phone number, so the WhatsApp link cannot be prepared. Add a phone number on the contact first."}
+          />
         </div>
         <p className="text-xs text-muted-foreground">{purchase.location_name ?? "Location not recorded"} · {purchase.salesperson_name ?? "Salesperson not recorded"}</p>
       </Card>
@@ -129,10 +144,12 @@ export function FeedbackCaptureForm({ purchase }: { purchase: FeedbackPurchaseCo
           <span><span className="font-medium">Customer granted private photo storage and download permission</span><span className="mt-1 block text-xs text-muted-foreground">The app cannot attach the photo to Google; the customer may save and upload it themselves.</span></span>
         </label>
         <Field label="Optional photo" hint="JPEG, PNG, or WebP · up to 10 MB">
-          <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground hover:bg-muted/40">
-            <ImagePlus className="size-4" aria-hidden />
-            <Input name="photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={!photoPermission} className="h-auto border-0 p-0 file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs" />
-          </label>
+          <DisabledHint reason={!photoPermission ? "Tick the photo permission box above first. A photo is stored only with the customer's separate, explicit agreement." : undefined} className="flex w-full">
+            <label className="flex w-full cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-4 text-sm text-muted-foreground hover:bg-muted/40">
+              <ImagePlus className="size-4" aria-hidden />
+              <Input name="photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={!photoPermission} className="h-auto border-0 p-0 file:mr-3 file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs" />
+            </label>
+          </DisabledHint>
         </Field>
       </Card>
 
@@ -145,7 +162,9 @@ export function FeedbackCaptureForm({ purchase }: { purchase: FeedbackPurchaseCo
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit" size="lg" disabled={pending || !purchase.phone}>{pending ? "Preparing…" : "Prepare private WhatsApp link"}</Button>
+        <DisabledHint reason={!purchase.phone ? "WhatsApp needs a phone number on the customer record. Add one on the contact, then come back." : undefined}>
+          <Button type="submit" size="lg" disabled={pending || !purchase.phone}>{pending ? "Preparing…" : "Prepare private WhatsApp link"}</Button>
+        </DisabledHint>
       </div>
     </form>
   );

@@ -7,7 +7,15 @@ import { DataTable } from "@/components/patterns/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Gated } from "@/components/patterns/explain";
 import { SimpleSelect } from "@/features/catalog/components/selects";
+
+const HINTS = {
+  form: "Which of the provider's forms the mapping applies to. Any form means every form from that provider.",
+  question: "The field name exactly as the provider sends it in the payload.",
+  canonical: "The lead field it fills in this app. Ignore means the answer is deliberately dropped rather than kept as unmapped.",
+  version: "Raise it when a form changes. Old submissions keep the mapping they were processed with, so history is never rewritten.",
+} as const;
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAction } from "@/features/catalog/use-action";
 import { deleteFieldMappingAction, upsertFieldMappingAction } from "@/server/commands/connectors";
@@ -29,10 +37,10 @@ export function MappingsTab({ rows, canEdit }: { rows: FieldMappingRow[]; canEdi
   const columns = useMemo<ColumnDef<FieldMappingRow, unknown>[]>(
     () => [
       { accessorKey: "provider", header: "Provider" },
-      { accessorKey: "form_ref", header: "Form", cell: ({ row }) => row.original.form_ref ?? <span className="text-muted-foreground">Any form</span> },
-      { accessorKey: "source_field", header: "Provider question", cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.source_field}</span> },
-      { accessorKey: "target_field", header: "Canonical field", cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.target_field}</span> },
-      { accessorKey: "version", header: "Version", cell: ({ row }) => <span className="tnum">v{row.original.version}</span> },
+      { accessorKey: "form_ref", header: "Form", meta: { hint: HINTS.form }, cell: ({ row }) => row.original.form_ref ?? <span className="text-muted-foreground">Any form</span> },
+      { accessorKey: "source_field", header: "Provider question", meta: { hint: HINTS.question }, cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.source_field}</span> },
+      { accessorKey: "target_field", header: "Canonical field", meta: { hint: HINTS.canonical }, cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.target_field}</span> },
+      { accessorKey: "version", header: "Version", meta: { hint: HINTS.version }, cell: ({ row }) => <span className="tnum">v{row.original.version}</span> },
       ...(canEdit
         ? [
             {
@@ -79,7 +87,13 @@ export function MappingsTab({ rows, canEdit }: { rows: FieldMappingRow[]; canEdi
         searchPlaceholder="Filter mappings…"
         emptyTitle="No field mappings"
         emptyDescription="Without mappings the connectors fall back to name-matching heuristics."
-        toolbar={canEdit ? <Button size="sm" className="h-8 gap-1.5" onClick={() => setDraft(EMPTY)}><Plus className="size-3.5" aria-hidden /> Add mapping</Button> : undefined}
+        toolbar={
+          <Gated permission="settings.manage">
+            <Button size="sm" className="h-8 gap-1.5" onClick={() => setDraft(EMPTY)}>
+              <Plus className="size-3.5" aria-hidden /> Add mapping
+            </Button>
+          </Gated>
+        }
       />
 
       <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>
@@ -109,9 +123,15 @@ export function MappingsTab({ rows, canEdit }: { rows: FieldMappingRow[]; canEdi
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDraft(null)}>Cancel</Button>
-            <Button disabled={upsert.pending || !draft?.source_field.trim()} onClick={() => draft && upsert.run(draft)}>
-              {upsert.pending ? "Saving…" : "Save mapping"}
-            </Button>
+            {(() => {
+              const blocker = !draft?.source_field.trim() ? "Enter the provider question name first." : null;
+              const button = (
+                <Button disabled={upsert.pending || blocker !== null} onClick={() => draft && upsert.run(draft)}>
+                  {upsert.pending ? "Saving…" : "Save mapping"}
+                </Button>
+              );
+              return blocker ? <DisabledHint reason={blocker}>{button}</DisabledHint> : button;
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>

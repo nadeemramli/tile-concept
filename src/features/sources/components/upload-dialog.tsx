@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/patterns/field";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint } from "@/components/patterns/explain";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { useSession } from "@/components/shell/session-context";
 import { classifySource } from "@/lib/parsers";
@@ -199,9 +200,9 @@ export function UploadDialog({ open, onOpenChange, suppliers, brands }: { open: 
                 <CheckCircle2 className="size-4" aria-hidden /> Extracted {summary.records} row(s)
               </p>
               <div className="flex flex-wrap gap-1.5">
-                <TonePill tone="warning" label={`${summary.review_items} to review`} />
-                {summary.duplicates > 0 && <TonePill tone="info" label={`${summary.duplicates} existing code(s)`} />}
-                {summary.note && <TonePill tone="destructive" label={summary.note} />}
+                <TonePill tone="warning" label={`${summary.review_items} to review`} hint="Rows staged for a reviewer. None of them has reached the catalog or a price list." />
+                {summary.duplicates > 0 && <TonePill tone="info" label={`${summary.duplicates} existing code(s)`} hint="Rows whose product code already exists in the catalog. They are flagged as a duplicate conflict so the reviewer decides whether it is the same product." />}
+                {summary.note && <TonePill tone="destructive" label={summary.note} hint="A problem the parser reported for this document. Check the import job in the document drawer." />}
               </div>
               <p className="text-muted-foreground">Nothing has been published — every row waits in the review queue.</p>
               <Button asChild size="sm" onClick={() => onOpenChange(false)}>
@@ -222,12 +223,19 @@ export function UploadDialog({ open, onOpenChange, suppliers, brands }: { open: 
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             {phase === "done" || phase === "duplicate" ? "Close" : "Cancel"}
           </Button>
-          {phase !== "done" && phase !== "duplicate" && (
-            <Button onClick={submit} disabled={!file || busy}>
-              {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <FileUp className="size-4" aria-hidden />}
-              Upload and read
-            </Button>
-          )}
+          {phase !== "done" && phase !== "duplicate" &&
+            (file ? (
+              <Button onClick={submit} disabled={busy}>
+                {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <FileUp className="size-4" aria-hidden />}
+                Upload and read
+              </Button>
+            ) : (
+              <DisabledHint reason="Choose a file first.">
+                <Button disabled>
+                  <FileUp className="size-4" aria-hidden /> Upload and read
+                </Button>
+              </DisabledHint>
+            ))}
         </DialogFooter>
       </DialogContent>
     </Dialog>

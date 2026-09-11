@@ -14,9 +14,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field } from "@/components/patterns/field";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
 import { EmptyState } from "@/components/patterns/states";
+import { DisabledHint, Gated, Hint, InfoTip, gateReason } from "@/components/patterns/explain";
+import { useSession } from "@/components/shell/session-context";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { EvidenceViewer } from "@/features/sources/components/evidence-viewer";
-import { CONFLICT_LABEL, ITEM_TYPE, REVIEW_ITEM_STATUS, confidenceLabel, confidenceTone } from "@/features/sources/status-maps";
+import { CONFIDENCE_HINT, CONFLICT_LABEL, ITEM_TYPE, REVIEW_ITEM_STATUS, confidenceLabel, confidenceTone } from "@/features/sources/status-maps";
+
+const FILTER_HINT = "Status is where the row is in review. Source is the document it was read from. Type is what the row would become. Confidence bands group rows by how sure the parser was: 95%+ is normally right, 80–95% deserves a glance, below 80% must be checked against the source.";
+const CONFLICTS_HINT = "Only rows where the parser flagged a problem: a duplicate code, a value from a formula, a missing code or amount, or a row it could not read.";
+const EDITED_HINT = "You changed this from what the parser read. Approving keeps both the parsed value and your correction.";
 import {
   DIMENSION_UNIT_OPTIONS,
   DUPLICATE_RESOLUTION_OPTIONS,
@@ -62,6 +68,7 @@ function asText(v: unknown): string {
 
 export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Props) {
   const router = useRouter();
+  const { session } = useSession();
   const [status, setStatus] = useQueryState("status", parseAsString.withDefault("pending"));
   const [asset, setAsset] = useQueryState("asset", parseAsString.withDefault(""));
   const [itemType, setItemType] = useQueryState("type", parseAsString.withDefault(""));
@@ -257,9 +264,12 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
         noneLabel="Any confidence"
         className="h-8 w-40 text-sm"
       />
-      <Button size="sm" variant={conflicts === "1" ? "default" : "outline"} className="h-8" onClick={() => setConflicts(conflicts === "1" ? null : "1")}>
-        Conflicts only
-      </Button>
+      <Hint content={CONFLICTS_HINT}>
+        <Button size="sm" variant={conflicts === "1" ? "default" : "outline"} className="h-8" aria-pressed={conflicts === "1"} onClick={() => setConflicts(conflicts === "1" ? null : "1")}>
+          Conflicts only
+        </Button>
+      </Hint>
+      <InfoTip label="Filters" content={FILTER_HINT} />
     </div>
   );
 
@@ -343,10 +353,18 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
             <div className="flex flex-wrap items-center gap-1.5">
               <StatusPill map={ITEM_TYPE} value={item.item_type} />
               <StatusPill map={REVIEW_ITEM_STATUS} value={item.status} />
-              <TonePill tone={confidenceTone(item.confidence)} label={`Confidence ${confidenceLabel(item.confidence)}`} />
+              <TonePill tone={confidenceTone(item.confidence)} label={`Confidence ${confidenceLabel(item.confidence)}`} hint={CONFIDENCE_HINT} />
             </div>
-            <span className="text-[11px] text-muted-foreground">{item.parser_version ?? item.job_type ?? "parser"}</span>
+            <Hint content="Which parser produced this row, so a systematic misread can be traced to a version." focusable>
+              <span className="text-[11px] text-muted-foreground">{item.parser_version ?? item.job_type ?? "parser"}</span>
+            </Hint>
           </div>
+
+          {(!isPending || !canApprove) && (
+            <p className="text-[11px] text-muted-foreground">
+              {!isPending ? "This row has already been decided, so its fields are read-only." : gateReason("review.approve", session.roleLabel)}
+            </p>
+          )}
 
           {item.conflicts.length > 0 && (
             <ul className="space-y-1.5">
@@ -409,8 +427,8 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
                           className="h-8 text-sm"
                         />
                       )}
-                      {ext?.confidence != null && <TonePill tone={confidenceTone(ext.confidence)} label={confidenceLabel(ext.confidence)} />}
-                      {changed && <TonePill tone="ai" label="Edited" />}
+                      {ext?.confidence != null && <TonePill tone={confidenceTone(ext.confidence)} label={confidenceLabel(ext.confidence)} hint={CONFIDENCE_HINT} />}
+                      {changed && <TonePill tone="ai" label="Edited" hint={EDITED_HINT} />}
                     </div>
                   </Field>
                 </div>
@@ -451,14 +469,17 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
 
           {isPending && (
             <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-              <Button onClick={approve} disabled={!canApprove || pending !== null || blockers.length > 0}>
-                {pending === "approve" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
-                {dirtyKeys.length > 0 ? `Correct & approve (${dirtyKeys.length})` : "Approve"}
-              </Button>
-              <Button variant="outline" onClick={() => setRejecting(true)} disabled={!canApprove || pending !== null}>
-                <X className="size-4" aria-hidden /> Reject
-              </Button>
-              {!canApprove && <span className="text-[11px] text-muted-foreground">Approving needs the review permission.</span>}
+              <Gated permission="review.approve">
+                <Button onClick={approve} disabled={pending !== null || blockers.length > 0}>
+                  {pending === "approve" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
+                  {dirtyKeys.length > 0 ? `Correct & approve (${dirtyKeys.length})` : "Approve"}
+                </Button>
+              </Gated>
+              <Gated permission="review.approve">
+                <Button variant="outline" onClick={() => setRejecting(true)} disabled={pending !== null}>
+                  <X className="size-4" aria-hidden /> Reject
+                </Button>
+              </Gated>
             </div>
           )}
         </Card>
@@ -477,9 +498,15 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
             <Button variant="outline" onClick={() => setRejecting(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={reject} disabled={reason.trim().length < 3 || pending !== null}>
-              {pending === "reject" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null} Reject row
-            </Button>
+            {(() => {
+              const blocker = reason.trim().length < 3 ? "Give a reason of at least 3 characters. It is kept as parser feedback." : null;
+              const button = (
+                <Button variant="destructive" onClick={reject} disabled={blocker !== null || pending !== null}>
+                  {pending === "reject" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null} Reject row
+                </Button>
+              );
+              return blocker ? <DisabledHint reason={blocker}>{button}</DisabledHint> : button;
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>

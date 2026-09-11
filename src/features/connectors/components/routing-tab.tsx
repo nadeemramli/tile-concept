@@ -9,7 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field } from "@/components/patterns/field";
 import { TonePill } from "@/components/patterns/status-pill";
+import { Gated } from "@/components/patterns/explain";
 import { SimpleSelect } from "@/features/catalog/components/selects";
+
+const HINTS = {
+  order: "Rules run from the lowest number up, and the first rule that matches wins.",
+  matches: "The conditions a submission must meet. Everything means no conditions, so it catches whatever earlier rules missed.",
+  assigns: "The salesperson the matched lead goes to. Leaves unassigned puts it in the Unassigned view of the inbox, which is a queue, not a failure.",
+  active: "Off means the rule is kept but skipped.",
+} as const;
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAction } from "@/features/catalog/use-action";
 import { deleteRoutingRuleAction, upsertRoutingRuleAction } from "@/server/commands/connectors";
@@ -29,10 +37,11 @@ export function RoutingTab({ rows, members, canEdit }: { rows: RoutingRuleRow[];
 
   const columns = useMemo<ColumnDef<RoutingRuleRow, unknown>[]>(
     () => [
-      { accessorKey: "position", header: "Order", cell: ({ row }) => <span className="tnum">{row.original.position}</span> },
+      { accessorKey: "position", header: "Order", meta: { hint: HINTS.order }, cell: ({ row }) => <span className="tnum">{row.original.position}</span> },
       {
         id: "match",
         header: "Matches",
+        meta: { hint: HINTS.matches },
         accessorFn: (r) => `${r.match_source_channel ?? ""} ${r.match_product_interest ?? ""}`,
         cell: ({ row }) => {
           const r = row.original;
@@ -45,8 +54,8 @@ export function RoutingTab({ rows, members, canEdit }: { rows: RoutingRuleRow[];
           );
         },
       },
-      { accessorKey: "assign_to_name", header: "Assigns to", cell: ({ row }) => row.original.assign_to_name ?? <span className="text-muted-foreground">Leaves unassigned</span> },
-      { id: "active", header: "Active", accessorFn: (r) => r.is_active, cell: ({ row }) => <TonePill tone={row.original.is_active ? "success" : "neutral"} label={row.original.is_active ? "Active" : "Off"} /> },
+      { accessorKey: "assign_to_name", header: "Assigns to", meta: { hint: HINTS.assigns }, cell: ({ row }) => row.original.assign_to_name ?? <span className="text-muted-foreground">Leaves unassigned</span> },
+      { id: "active", header: "Active", meta: { hint: HINTS.active }, accessorFn: (r) => r.is_active, cell: ({ row }) => <TonePill tone={row.original.is_active ? "success" : "neutral"} label={row.original.is_active ? "Active" : "Off"} hint={row.original.is_active ? "Evaluated in order with the other active rules." : "Kept but skipped. Edit it to switch it back on."} /> },
       ...(canEdit
         ? [
             {
@@ -99,7 +108,13 @@ export function RoutingTab({ rows, members, canEdit }: { rows: RoutingRuleRow[];
         initialSorting={[{ id: "position", desc: false }]}
         emptyTitle="No routing rules"
         emptyDescription="Every inbound submission will arrive unassigned until a rule exists."
-        toolbar={canEdit ? <Button size="sm" className="h-8 gap-1.5" onClick={() => setDraft(EMPTY)}><Plus className="size-3.5" aria-hidden /> Add rule</Button> : undefined}
+        toolbar={
+          <Gated permission="sales.assign">
+            <Button size="sm" className="h-8 gap-1.5" onClick={() => setDraft(EMPTY)}>
+              <Plus className="size-3.5" aria-hidden /> Add rule
+            </Button>
+          </Gated>
+        }
       />
 
       <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>

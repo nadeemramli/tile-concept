@@ -6,8 +6,9 @@ import { PermissionDenied } from "@/components/patterns/states";
 import { getProjectDetail } from "@/server/queries/projects";
 import { getMembers, getStages } from "@/server/queries/reference";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
-import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { StatusPill } from "@/components/patterns/status-pill";
 import { TASK_STATUS } from "@/lib/domain/status-maps";
+import { PROJECT_STATUS } from "@/features/crm/project-status";
 import { formatDate, formatDateTime, formatRelative, isOverdue, titleCase } from "@/lib/format";
 import { Timeline } from "@/components/patterns/timeline";
 import { FactList } from "@/components/patterns/record-drawer";
@@ -25,7 +26,6 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
   if (!project) notFound();
   const memberNames = new Map(members.map((m) => [m.user_id, m.full_name]));
   const stageLabels = new Map(stages.map((s) => [s.key, s.label]));
-  const statusTone = project.status === "completed" ? "success" : project.status === "active" ? "info" : project.status === "on_hold" ? "warning" : project.status === "cancelled" ? "destructive" : "neutral";
 
   return (
     <PageBody>
@@ -38,7 +38,7 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
         title={project.name}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            <TonePill tone={statusTone} label={titleCase(project.status)} />
+            <StatusPill map={PROJECT_STATUS} value={project.status} />
             {project.project_type && <span>{titleCase(project.project_type)}</span>}
             {project.area && <span>· {project.area}</span>}
             {project.account_id && (

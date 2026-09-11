@@ -6,10 +6,10 @@ import { Download, FileVideo, Image as ImageIcon, NotepadText, Paperclip } from 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Gated } from "@/components/patterns/explain";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
-import { useSession } from "@/components/shell/session-context";
 import { MarketingPill } from "@/features/marketing/components/pills";
-import { OUTPUT_STATE, permissionBlocks } from "@/features/marketing/lib/status";
+import { OUTPUT_STATE, permissionBlocks, permissionHint } from "@/features/marketing/lib/status";
 import { createSignedUrlAction, reviewOutputAction } from "@/server/commands/marketing";
 import type { OutputRow } from "@/server/queries/marketing";
 import { formatDateTime } from "@/lib/format";
@@ -54,11 +54,10 @@ export function OutputsList({
   permissionStatus: string | null;
   permissionExpiresAt: string | null;
 }) {
-  const { can } = useSession();
   const [reviewing, setReviewing] = useState<{ output: OutputRow; decision: "usable" | "restricted" | "rejected" } | null>(null);
   const quickReview = useAction(reviewOutputAction);
-  const canReview = can("marketing.confirm");
   const blocked = permissionBlocks(permissionStatus, permissionExpiresAt);
+  const blockedReason = { ...permissionHint(permissionStatus, permissionExpiresAt), title: "Cannot be marked usable yet" };
 
   if (outputs.length === 0) return <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">No assets yet.</p>;
 
@@ -80,34 +79,43 @@ export function OutputsList({
               </span>
               <MarketingPill map={OUTPUT_STATE} value={o.state} />
               <DownloadButton path={o.storage_path} />
-              {canReview && o.state !== "usable" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  disabled={quickReview.pending}
-                  onClick={async () => {
-                    const res = await quickReview.run({ output_id: o.id, decision: "usable" });
-                    // The database gates "usable" on an approved, unexpired permission.
-                    if (!res.ok) setReviewing(null);
-                  }}
-                >
-                  Mark usable
-                </Button>
-              )}
-              {canReview && (
+              {o.state !== "usable" &&
+                (blocked ? (
+                  <DisabledHint reason={blockedReason}>
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-xs" disabled>
+                      Mark usable
+                    </Button>
+                  </DisabledHint>
+                ) : (
+                  <Gated permission="marketing.confirm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      disabled={quickReview.pending}
+                      onClick={async () => {
+                        const res = await quickReview.run({ output_id: o.id, decision: "usable" });
+                        // The database gates "usable" on an approved, unexpired permission.
+                        if (!res.ok) setReviewing(null);
+                      }}
+                    >
+                      Mark usable
+                    </Button>
+                  </Gated>
+                ))}
+              <Gated permission="marketing.confirm">
                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setReviewing({ output: o, decision: "restricted" })}>
                   Review…
                 </Button>
-              )}
+              </Gated>
             </li>
           );
         })}
       </ul>
 
-      {canReview && blocked && (
+      {blocked && (
         <p className="mt-2 text-[11px] text-warning">
-          Customer media permission is not approved (or has lapsed), so nothing here can be marked usable yet.
+          {blockedReason.body} Nothing here can be marked usable until the customer&apos;s media permission is approved on the nomination.
         </p>
       )}
 

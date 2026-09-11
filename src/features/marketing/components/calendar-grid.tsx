@@ -3,7 +3,8 @@
 import { Fragment, useMemo } from "react";
 import { ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CHIP_CLASSES, BOOKING_STATUS, meta, permissionBlocks } from "@/features/marketing/lib/status";
+import { Hint, type RichHint } from "@/components/patterns/explain";
+import { CHIP_CLASSES, BOOKING_STATUS, HELP, meta, permissionBlocks, permissionSentence } from "@/features/marketing/lib/status";
 import { addDays, dayKey, dayLabel, eachDay, minutesOfDay, timeLabel, timeRangeLabel, todayKey } from "@/features/marketing/lib/time";
 import type { CalendarBooking } from "@/server/queries/marketing";
 
@@ -32,26 +33,52 @@ function groupByDay(bookings: CalendarBooking[]): Map<string, CalendarBooking[]>
   return map;
 }
 
+/**
+ * What a chip says on hover and focus: the booking state in plain words, and
+ * when the shield shows, whose permission is missing and what that blocks.
+ * The word "permission" never appears on its own (PRD §7.11).
+ */
+function chipHint(booking: CalendarBooking): RichHint {
+  const m = meta(BOOKING_STATUS, booking.status);
+  const blocked = permissionBlocks(booking.permission_status, booking.permission_expires_at);
+  return {
+    title: `${m.label} · ${timeRangeLabel(booking.starts_at, booking.ends_at)}`,
+    body: (
+      <>
+        {m.hint && <span className="block">{m.hint}</span>}
+        {blocked && (
+          <span className="mt-1 flex items-start gap-1">
+            <ShieldAlert className="mt-0.5 size-3 shrink-0" aria-hidden />
+            <span>{permissionSentence(booking.permission_status, booking.permission_expires_at)}</span>
+          </span>
+        )}
+      </>
+    ),
+    action: blocked ? { label: "What is customer media permission?", href: HELP.customerMediaPermission } : undefined,
+  };
+}
+
 function Chip({ booking, onOpen, compact }: { booking: CalendarBooking; onOpen: (id: string) => void; compact?: boolean }) {
   const m = meta(BOOKING_STATUS, booking.status);
   const Icon = m.icon;
   const blocked = permissionBlocks(booking.permission_status, booking.permission_expires_at);
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(booking.id)}
-      title={`${m.label} · ${timeRangeLabel(booking.starts_at, booking.ends_at)}${blocked ? " · permission not approved" : ""}`}
-      className={cn(
-        "flex w-full items-center gap-1 overflow-hidden rounded border border-l-2 px-1.5 py-0.5 text-left text-[11px] outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring",
-        CHIP_CLASSES[m.tone],
-        booking.status === "cancelled" && "line-through opacity-70",
-      )}
-    >
-      <Icon className="size-2.5 shrink-0" aria-hidden />
-      {!compact && <span className="tnum shrink-0 opacity-80">{timeLabel(booking.starts_at)}</span>}
-      <span className="min-w-0 flex-1 truncate">{booking.title ?? booking.project_name ?? "Shoot"}</span>
-      {blocked && <ShieldAlert className="size-2.5 shrink-0" aria-hidden />}
-    </button>
+    <Hint content={chipHint(booking)} side="bottom" align="start">
+      <button
+        type="button"
+        onClick={() => onOpen(booking.id)}
+        className={cn(
+          "flex w-full items-center gap-1 overflow-hidden rounded border border-l-2 px-1.5 py-0.5 text-left text-[11px] outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring",
+          CHIP_CLASSES[m.tone],
+          booking.status === "cancelled" && "line-through opacity-70",
+        )}
+      >
+        <Icon className="size-2.5 shrink-0" aria-hidden />
+        {!compact && <span className="tnum shrink-0 opacity-80">{timeLabel(booking.starts_at)}</span>}
+        <span className="min-w-0 flex-1 truncate">{booking.title ?? booking.project_name ?? "Shoot"}</span>
+        {blocked && <ShieldAlert className="size-2.5 shrink-0" aria-label="Customer media permission not approved" />}
+      </button>
+    </Hint>
   );
 }
 
@@ -137,24 +164,25 @@ export function TimeGrid({ days, bookings, onOpen }: { days: string[]; bookings:
                   const Icon = m.icon;
                   const blocked = permissionBlocks(b.permission_status, b.permission_expires_at);
                   return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => onOpen(b.id)}
-                      className={cn(
-                        "absolute inset-x-1 overflow-hidden rounded border border-l-2 px-1.5 py-0.5 text-left text-[11px] outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring",
-                        CHIP_CLASSES[m.tone],
-                        b.status === "cancelled" && "line-through opacity-70",
-                      )}
-                      style={{ top, height: h }}
-                    >
-                      <span className="flex items-center gap-1">
-                        <Icon className="size-2.5 shrink-0" aria-hidden />
-                        <span className="tnum shrink-0 opacity-80">{timeLabel(b.starts_at)}</span>
-                        {blocked && <ShieldAlert className="size-2.5 shrink-0" aria-hidden />}
-                      </span>
-                      <span className="block truncate">{b.title ?? b.project_name ?? "Shoot"}</span>
-                    </button>
+                    <Hint key={b.id} content={chipHint(b)} side="right" align="start">
+                      <button
+                        type="button"
+                        onClick={() => onOpen(b.id)}
+                        className={cn(
+                          "absolute inset-x-1 overflow-hidden rounded border border-l-2 px-1.5 py-0.5 text-left text-[11px] outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring",
+                          CHIP_CLASSES[m.tone],
+                          b.status === "cancelled" && "line-through opacity-70",
+                        )}
+                        style={{ top, height: h }}
+                      >
+                        <span className="flex items-center gap-1">
+                          <Icon className="size-2.5 shrink-0" aria-hidden />
+                          <span className="tnum shrink-0 opacity-80">{timeLabel(b.starts_at)}</span>
+                          {blocked && <ShieldAlert className="size-2.5 shrink-0" aria-label="Customer media permission not approved" />}
+                        </span>
+                        <span className="block truncate">{b.title ?? b.project_name ?? "Shoot"}</span>
+                      </button>
+                    </Hint>
                   );
                 })}
               </div>
@@ -186,20 +214,22 @@ export function AgendaList({ days, bookings, onOpen, emptyText = "Nothing schedu
               const blocked = permissionBlocks(b.permission_status, b.permission_expires_at);
               return (
                 <li key={b.id}>
-                  <button type="button" onClick={() => onOpen(b.id)} className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-left text-sm outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring">
-                    <span className="tnum w-24 shrink-0 text-xs text-muted-foreground">{timeRangeLabel(b.starts_at, b.ends_at)}</span>
-                    <Icon className={cn("size-3.5 shrink-0", `text-${m.tone === "neutral" ? "muted-foreground" : m.tone}`)} aria-hidden />
-                    <span className="min-w-0 flex-1 truncate">
-                      {b.title ?? "Shoot"}
-                      <span className="ml-2 text-xs text-muted-foreground">{b.project_name ?? b.contact_name ?? ""}</span>
-                    </span>
-                    {blocked && (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-warning">
-                        <ShieldAlert className="size-3" aria-hidden /> permission
+                  <Hint content={chipHint(b)} side="bottom" align="start">
+                    <button type="button" onClick={() => onOpen(b.id)} className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-left text-sm outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring">
+                      <span className="tnum w-24 shrink-0 text-xs text-muted-foreground">{timeRangeLabel(b.starts_at, b.ends_at)}</span>
+                      <Icon className={cn("size-3.5 shrink-0", `text-${m.tone === "neutral" ? "muted-foreground" : m.tone}`)} aria-hidden />
+                      <span className="min-w-0 flex-1 truncate">
+                        {b.title ?? "Shoot"}
+                        <span className="ml-2 text-xs text-muted-foreground">{b.project_name ?? b.contact_name ?? ""}</span>
                       </span>
-                    )}
-                    <span className={cn("shrink-0 rounded-full border px-1.5 text-[11px]", CHIP_CLASSES[m.tone])}>{m.label}</span>
-                  </button>
+                      {blocked && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-warning">
+                          <ShieldAlert className="size-3" aria-hidden /> Customer permission
+                        </span>
+                      )}
+                      <span className={cn("shrink-0 rounded-full border px-1.5 text-[11px]", CHIP_CLASSES[m.tone])}>{m.label}</span>
+                    </button>
+                  </Hint>
                 </li>
               );
             })}

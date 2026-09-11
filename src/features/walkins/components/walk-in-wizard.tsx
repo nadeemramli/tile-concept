@@ -12,6 +12,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Hint } from "@/components/patterns/explain";
 import { CandidateList } from "@/features/inbox/components/candidate-list";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
 import { SOURCE_CHANNEL, LIFECYCLE_STATE, statusMeta } from "@/lib/domain/status-maps";
@@ -20,6 +21,7 @@ import { normalizePhone } from "@/lib/identity/normalize";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
 import { createWalkInContactAction, findCandidatesAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
+import { createContactForLeadAction } from "@/server/commands/leads";
 import { CUSTOMER_TYPES, PAYMENT_METHODS, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
 import type { IdentityCandidate } from "@/features/inbox/types";
 import type { OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
@@ -53,6 +55,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [contact, setContact] = useState<{ id: string; name: string; lifecycle?: string | null; isNew: boolean } | null>(null);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<string>("homeowner");
+  /** An unlinked enquiry the customer picked: the new contact is created from it and the enquiry linked. */
+  const [fromLead, setFromLead] = useState<IdentityCandidate | null>(null);
   const [accountId, setAccountId] = useState<string>("");
   const [openOpps, setOpenOpps] = useState<OpenOpportunityRef[]>([]);
 
@@ -110,6 +114,14 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       toast.info(`Account ${c.display_name} will be linked. Choose or create the person too.`);
       return;
     }
+    if (c.entity_type === "lead") {
+      // They enquired before but were never registered: register them now from
+      // the enquiry so its phone, email, history and salesperson stay attached.
+      setFromLead(c);
+      if (c.display_name && c.display_name !== "Enquiry") setNewName(c.display_name);
+      toast.info("Register the customer below. The enquiry will be linked to the new contact.");
+      return;
+    }
     setContact({ id: c.entity_id, name: c.display_name, lifecycle: c.lifecycle_state, isNew: false });
     start(async () => {
       const r = await getOpenOpportunitiesAction(c.entity_id);
@@ -120,7 +132,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
   function createContact(provisional: boolean) {
     start(async () => {
-      const r = await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, source, provisional });
+      const r = fromLead
+        ? await createContactForLeadAction({ lead_id: fromLead.entity_id, display_name: newName, customer_type: newType })
+        : await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, source, provisional });
       if (!r.ok) {
         toast.error(r.error);
         return;
@@ -189,6 +203,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
   const canNextVisit = !!purpose && (oppMode !== "link" || !!oppId) && (oppMode !== "create" || projectName.trim().length > 1);
   const canNextPurchase = !hasPurchase || (amountNum >= 0 && amount !== "" && (payments.every((p) => !p.amount) || Math.abs(remaining) < 0.005));
+  const nextVisitReason = !purpose ? "Choose a visit purpose first." : oppMode === "link" && !oppId ? "Choose which open opportunity to link, or switch to None." : oppMode === "create" && projectName.trim().length <= 1 ? "Give the new project a name (at least 2 characters)." : undefined;
+  const nextPurchaseReason = !hasPurchase ? undefined : amount === "" || Number.isNaN(amountNum) || amountNum < 0 ? "Enter the total amount (zero or more)." : !payments.every((p) => !p.amount) && Math.abs(remaining) >= 0.005 ? `The payments entered must add up to the total: ${remaining > 0 ? `${formatMoney(remaining)} short` : `${formatMoney(Math.abs(remaining))} over`}. Use Fill remaining or clear the split.` : undefined;
 
   if (result) {
     return (
@@ -198,9 +214,13 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           Walk-in recorded
         </div>
         <div className="flex flex-wrap gap-2">
-          {result.new_customer ? <TonePill tone="info" label="New customer" size="md" /> : <TonePill tone="ai" label="Existing customer · repeat signal kept" size="md" />}
-          {result.purchase_id && <TonePill tone="success" label="Purchase recorded" size="md" />}
-          {result.opportunity_id && <TonePill tone="info" label="Opportunity linked" size="md" />}
+          {result.new_customer ? (
+            <TonePill tone="info" label="New customer" size="md" hint="A new contact was created for this visit. Any duplicate suggestions go to Identity Review; nothing is merged automatically." />
+          ) : (
+            <TonePill tone="ai" label="Existing customer · repeat signal kept" size="md" hint="The visit was attached to a customer already in the app, so their history and repeat status carry on." />
+          )}
+          {result.purchase_id && <TonePill tone="success" label="Purchase recorded" size="md" hint="The purchase is linked to this visit and the customer. Corrections later need the purchase.correct permission and a reason." />}
+          {result.opportunity_id && <TonePill tone="info" label="Opportunity linked" size="md" hint="The visit was linked to a pipeline opportunity, so it shows on that opportunity's timeline." />}
         </div>
         <ul className="space-y-1 text-sm">
           <li><Link href={`/sales/contacts/${contact?.id}`} className="text-info hover:underline">Open {contact?.name}’s 360</Link></li>
@@ -220,20 +240,26 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   return (
     <div className="space-y-4">
       <ol className="flex flex-wrap items-center gap-1 text-xs" aria-label="Steps">
-        {STEPS.map((s, i) => (
-          <li key={s} className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={i > step || (i >= 2 && !contact)}
-              onClick={() => setStep(i)}
-              className={cn("inline-flex h-6 items-center gap-1.5 rounded-full border px-2 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60", i === step ? "border-primary bg-primary text-primary-foreground" : i < step ? "bg-accent" : "text-muted-foreground")}
-              aria-current={i === step ? "step" : undefined}
-            >
-              <span className="tnum">{i + 1}</span> {s}
-            </button>
-            {i < STEPS.length - 1 && <span className="text-muted-foreground/60">›</span>}
-          </li>
-        ))}
+        {STEPS.map((s, i) => {
+          const locked = i > step || (i >= 2 && !contact);
+          const reason = !locked ? undefined : i >= 2 && !contact ? "Find or register the customer first." : "Finish the current step to reach this one.";
+          return (
+            <li key={s} className="flex items-center gap-1">
+              <DisabledHint reason={reason}>
+                <button
+                  type="button"
+                  disabled={locked}
+                  onClick={() => setStep(i)}
+                  className={cn("inline-flex h-6 items-center gap-1.5 rounded-full border px-2 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60", i === step ? "border-primary bg-primary text-primary-foreground" : i < step ? "bg-accent" : "text-muted-foreground")}
+                  aria-current={i === step ? "step" : undefined}
+                >
+                  <span className="tnum">{i + 1}</span> {s}
+                </button>
+              </DisabledHint>
+              {i < STEPS.length - 1 && <span className="text-muted-foreground/60">›</span>}
+            </li>
+          );
+        })}
       </ol>
 
       {/* Step 1 */}
@@ -266,7 +292,17 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             {accountId && <p className="mt-1 text-[11px] text-muted-foreground">Account selected; now pick the person.</p>}
           </div>
           <div className="rounded-md border border-dashed p-3">
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium"><UserPlus className="size-3.5" aria-hidden /> Not listed? Register the customer</div>
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium"><UserPlus className="size-3.5" aria-hidden /> {fromLead ? "Register the customer from their enquiry" : "Not listed? Register the customer"}</div>
+            {fromLead && (
+              <p className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-ai/25 bg-ai/5 px-2 py-1.5 text-xs">
+                <span>
+                  Creates the contact with the phone and email from the enquiry, and links that enquiry, its history and its salesperson to the new record.
+                </span>
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setFromLead(null)}>
+                  Register without the enquiry
+                </Button>
+              </p>
+            )}
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <Input autoFocus={!(candidates && candidates.length)} className="h-9" placeholder="Full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
               <Select value={newType} onValueChange={setNewType}>
@@ -275,8 +311,21 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
               </Select>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button size="sm" disabled={newName.trim().length < 2 || pending} onClick={() => createContact(false)}>Create new contact</Button>
-              <Button size="sm" variant="outline" disabled={newName.trim().length < 2 || pending} onClick={() => createContact(true)} title="Create a provisional contact and queue possible duplicates for a manager">Send to review</Button>
+              <DisabledHint reason={newName.trim().length < 2 && !pending ? "Enter the customer's full name first (at least 2 characters)." : undefined}>
+                <Button size="sm" disabled={newName.trim().length < 2 || pending} onClick={() => createContact(false)}>Create new contact</Button>
+              </DisabledHint>
+              <Hint
+                content={
+                  fromLead
+                    ? "A contact created from an enquiry is a full record, not a provisional one: the enquiry already establishes who they are. Duplicates are still queued for review."
+                    : newName.trim().length < 2 && !pending
+                      ? "Enter the customer's full name first (at least 2 characters)."
+                      : "Creates a provisional contact and queues possible duplicates for a manager to decide in Identity Review."
+                }
+                focusable={newName.trim().length < 2 || !!fromLead}
+              >
+                <Button size="sm" variant="outline" disabled={newName.trim().length < 2 || pending || !!fromLead} onClick={() => createContact(true)}>Send to review</Button>
+              </Hint>
             </div>
             <p className="mt-1.5 text-[11px] text-muted-foreground">“Send to review” creates a provisional record and queues duplicate candidates — nothing is merged automatically.</p>
           </div>
@@ -292,7 +341,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
             <span className="font-medium">{contact.name}</span>
             {contact.lifecycle && <StatusPill map={LIFECYCLE_STATE} value={contact.lifecycle} />}
-            {contact.isNew && <TonePill tone="info" label="Just created" />}
+            {contact.isNew && <TonePill tone="info" label="Just created" hint="This contact was created a moment ago in this wizard. Use Change if you picked the wrong person." />}
             <Button variant="ghost" size="sm" className="ml-auto h-6 px-2 text-xs" onClick={() => setStep(1)}>Change</Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -349,7 +398,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <ToggleGroup type="single" value={oppMode} onValueChange={(v) => v && setOppMode(v as typeof oppMode)} variant="outline" size="sm" className="justify-start">
               <ToggleGroupItem value="none" className="h-7 px-2 text-xs">None</ToggleGroupItem>
               <ToggleGroupItem value="create" className="h-7 px-2 text-xs">Create new</ToggleGroupItem>
-              <ToggleGroupItem value="link" className="h-7 px-2 text-xs" disabled={openOpps.length === 0}>Link existing ({openOpps.length})</ToggleGroupItem>
+              <DisabledHint reason={openOpps.length === 0 ? "This customer has no open opportunity to link. Choose Create new to start one." : undefined}>
+                <ToggleGroupItem value="link" className="h-7 px-2 text-xs" disabled={openOpps.length === 0}>Link existing ({openOpps.length})</ToggleGroupItem>
+              </DisabledHint>
             </ToggleGroup>
             {oppMode === "create" && (
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -366,7 +417,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           </div>
           <div className="flex justify-between">
             <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="size-4" aria-hidden /> Back</Button>
-            <Button onClick={() => setStep(3)} disabled={!canNextVisit}>Next <ArrowRight className="size-4" aria-hidden /></Button>
+            <DisabledHint reason={nextVisitReason}>
+              <Button onClick={() => setStep(3)} disabled={!canNextVisit}>Next <ArrowRight className="size-4" aria-hidden /></Button>
+            </DisabledHint>
           </div>
         </Card>
       )}
@@ -429,7 +482,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           )}
           <div className="flex justify-between">
             <Button variant="ghost" onClick={() => setStep(2)}><ArrowLeft className="size-4" aria-hidden /> Back</Button>
-            <Button onClick={() => setStep(4)} disabled={!canNextPurchase}>Review <ArrowRight className="size-4" aria-hidden /></Button>
+            <DisabledHint reason={nextPurchaseReason}>
+              <Button onClick={() => setStep(4)} disabled={!canNextPurchase}>Review <ArrowRight className="size-4" aria-hidden /></Button>
+            </DisabledHint>
           </div>
         </Card>
       )}

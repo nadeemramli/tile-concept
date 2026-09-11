@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint, Gated, Hint, InfoTip } from "@/components/patterns/explain";
+import { CONFIDENCE_BANDS } from "@/features/catalog/components/catalog-table";
 import { FactList } from "@/components/patterns/record-drawer";
 import { Field } from "@/components/patterns/field";
 import { EmptyState } from "@/components/patterns/states";
@@ -90,20 +91,26 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
           </span>
         }
       >
-        {canWrite && product.review_state !== "reviewed" && (
-          <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => review.run(product.id)} disabled={review.pending}>
-            <Check className="size-3.5" aria-hidden /> Mark reviewed
-          </Button>
+        {product.review_state !== "reviewed" && (
+          <Gated permission="catalog.write">
+            <Hint content="Confirms that the attributes and their source have been checked by a person. Until then the product shows as Unreviewed and should not be quoted from.">
+              <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => review.run(product.id)} disabled={review.pending}>
+                <Check className="size-3.5" aria-hidden /> Mark reviewed
+              </Button>
+            </Hint>
+          </Gated>
         )}
-        {canWrite && (
+        <Gated permission="catalog.write">
           <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setEditOpen(true)}>
             <Pencil className="size-3.5" aria-hidden /> Edit
           </Button>
-        )}
-        {canWrite && product.status !== "archived" && (
-          <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground" onClick={() => setArchiveOpen(true)}>
-            <Archive className="size-3.5" aria-hidden /> Archive
-          </Button>
+        </Gated>
+        {product.status !== "archived" && (
+          <Gated permission="catalog.write">
+            <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground" onClick={() => setArchiveOpen(true)}>
+              <Archive className="size-3.5" aria-hidden /> Archive
+            </Button>
+          </Gated>
         )}
       </PageHeader>
 
@@ -112,7 +119,19 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
         <FactList
           items={[
             { label: "Source", value: product.source_ref ?? "Not recorded" },
-            { label: "Confidence", value: product.confidence != null ? `${Math.round(Number(product.confidence) * 100)}%` : "—" },
+            {
+              label: "Confidence",
+              value:
+                product.confidence != null ? (
+                  <Hint content={`Parser confidence: how sure the import was that it read this product correctly. ${CONFIDENCE_BANDS}`} focusable>
+                    <span>{Math.round(Number(product.confidence) * 100)}%</span>
+                  </Hint>
+                ) : (
+                  <Hint content="No parser score: the product was entered by hand or the source did not carry one." focusable>
+                    <span>—</span>
+                  </Hint>
+                ),
+            },
             { label: "Reviewed", value: product.reviewed_by_name ? `${product.reviewed_by_name} · ${formatDateTime(product.reviewed_at)}` : "Not yet reviewed" },
             { label: "Created", value: `${product.created_by_name ?? "—"} · ${formatDateTime(product.created_at)}` },
             { label: "Colour / finish / material", value: [product.color, product.finish, product.material].filter(Boolean).join(" · ") || "—" },
@@ -136,7 +155,7 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
                   </Link>
                   <span>{d.name}</span>
                   <span className="text-muted-foreground">{d.brand}</span>
-                  <TonePill tone="warning" label={d.reason} />
+                  <TonePill tone="warning" label={d.reason} hint="Why the two products look alike: a shared code, alias or name. A person decides; nothing is merged automatically." />
                 </li>
               ))}
             </ul>
@@ -309,8 +328,18 @@ function SpecsSection({ productId, specs, canWrite, categoryLabel }: { productId
               <TableHead className="h-9 text-xs">Attribute</TableHead>
               <TableHead className="h-9 text-xs">Value</TableHead>
               <TableHead className="h-9 text-xs">Type</TableHead>
-              <TableHead className="h-9 text-xs">Source</TableHead>
-              <TableHead className="h-9 text-xs">Required</TableHead>
+              <TableHead className="h-9 text-xs">
+                <span className="inline-flex items-center gap-1">
+                  Source
+                  <InfoTip label="Source" content="Where the value came from: a catalog page, a datasheet, a supplier email. Recorded so a reviewer can check it." />
+                </span>
+              </TableHead>
+              <TableHead className="h-9 text-xs">
+                <span className="inline-flex items-center gap-1">
+                  Required
+                  <InfoTip label="Required" content="Set by the category rule in Settings. A required attribute left blank keeps the product from being trusted for quoting." />
+                </span>
+              </TableHead>
               {canWrite && <TableHead className="h-9 w-20 text-xs" />}
             </TableRow>
           </TableHeader>
@@ -323,7 +352,17 @@ function SpecsSection({ productId, specs, canWrite, categoryLabel }: { productId
                     {s.label}
                     {s.unit && <span className="ml-1 text-muted-foreground">({s.unit})</span>}
                   </TableCell>
-                  <TableCell className="tnum py-1.5 text-[13px]">{missing ? <TonePill tone={s.is_required ? "warning" : "neutral"} label={s.is_required ? "Missing (required)" : "Not set"} /> : String(s.value)}</TableCell>
+                  <TableCell className="tnum py-1.5 text-[13px]">
+                    {missing ? (
+                      <TonePill
+                        tone={s.is_required ? "warning" : "neutral"}
+                        label={s.is_required ? "Missing (required)" : "Not set"}
+                        hint={s.is_required ? "The category rule requires this attribute and no source has supplied it. Fill it in with a source reference before the product is marked reviewed." : "Optional for this category and not stated by any source. Leave it blank rather than guess."}
+                      />
+                    ) : (
+                      String(s.value)
+                    )}
+                  </TableCell>
                   <TableCell className="py-1.5 text-[13px] text-muted-foreground">{s.data_type}</TableCell>
                   <TableCell className="py-1.5 text-[13px] text-muted-foreground">{s.source_ref ?? "—"}</TableCell>
                   <TableCell className="py-1.5 text-[13px]">{s.is_required ? "Yes" : "No"}</TableCell>
@@ -395,13 +434,13 @@ function VariantsSection({ detail, canWrite }: { detail: ProductDetail; canWrite
 
   return (
     <div className="space-y-3">
-      {canWrite && (
-        <div className="flex justify-end">
+      <div className="flex justify-end">
+        <Gated permission="catalog.write">
           <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setAddOpen(true)}>
             <Plus className="size-3.5" aria-hidden /> Add variant
           </Button>
-        </div>
-      )}
+        </Gated>
+      </div>
       <div className="grid gap-3 lg:grid-cols-2">
         {variants.map((v) => (
           <Card key={v.id} className="gap-2 px-4 py-3">
@@ -410,16 +449,13 @@ function VariantsSection({ detail, canWrite }: { detail: ProductDetail; canWrite
                 <span className="flex items-center gap-2">
                   <span className="font-mono text-[12px]">{v.sku ?? "—"}</span>
                   <span className="text-muted-foreground">{v.name}</span>
-                  {v.is_default && <TonePill tone="info" label="Default" dot={false} />}
+                  {v.is_default && <TonePill tone="info" label="Default" dot={false} hint="The variant used when a price or stock figure is attached to the product without naming a specific variant." />}
                 </span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => navigator.clipboard?.writeText(v.id)} aria-label="Copy variant id">
-                      <Copy className="size-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Copy variant id</TooltipContent>
-                </Tooltip>
+                <Hint content="Copy variant id">
+                  <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => navigator.clipboard?.writeText(v.id)} aria-label="Copy variant id">
+                    <Copy className="size-3.5" />
+                  </button>
+                </Hint>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 p-0">
@@ -570,9 +606,11 @@ function AliasesSection({ productId, aliases, canWrite }: { productId: string; a
           <Field label="Source">
             <Input value={source} onChange={(e) => setSource(e.target.value)} className="h-8 w-48" placeholder="supplier code, old catalog…" />
           </Field>
-          <Button type="submit" size="sm" className="h-8" disabled={add.pending || alias.trim().length < 2}>
-            Add alias
-          </Button>
+          <DisabledHint reason={!add.pending && alias.trim().length < 2 ? "Type the alias first (at least 2 characters)." : undefined}>
+            <Button type="submit" size="sm" className="h-8" disabled={add.pending || alias.trim().length < 2}>
+              Add alias
+            </Button>
+          </DisabledHint>
         </form>
       )}
     </div>

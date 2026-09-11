@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowRightLeft, FileText, ListTodo, MessageSquarePlus, Pencil, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint, Gated, Hint } from "@/components/patterns/explain";
 import { OPPORTUNITY_STATUS, SOURCE_CHANNEL, STAGE_GROUP_TONE, TASK_STATUS } from "@/lib/domain/status-maps";
 import { Timeline } from "@/components/patterns/timeline";
 import { formatDate, formatDateTime, formatMoney, formatRelative, isOverdue, titleCase } from "@/lib/format";
@@ -26,9 +27,19 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
   const [open, setOpen] = useState<Which>(null);
   const stage = stages.find((s) => s.key === opp.stage_key);
   const names = new Map(members.map((m) => [m.user_id, m.full_name]));
-  const canWrite = can("sales.write") && (can("sales.read_all") || !opp.owner_id || opp.owner_id === session.userId);
+  const isOwner = can("sales.read_all") || !opp.owner_id || opp.owner_id === session.userId;
+  const canWrite = can("sales.write") && isOwner;
   const closed = opp.status !== "open";
   const stageLabel = (k: string | null) => stages.find((s) => s.key === k)?.label ?? k ?? "—";
+  const ownerName = names.get(opp.owner_id ?? "") ?? "its owner";
+  const OWNER_ONLY = `Only ${ownerName}, a sales manager or an administrator can change this opportunity.`;
+
+  /** Role gate first (Gated), then the ownership rule the database also enforces. */
+  const write = (node: React.ReactElement<{ disabled?: boolean }>) => {
+    if (!can("sales.write")) return <Gated permission="sales.write">{node}</Gated>;
+    if (!isOwner) return <DisabledHint reason={OWNER_ONLY}>{React.cloneElement(node, { disabled: true })}</DisabledHint>;
+    return node;
+  };
 
   return (
     <RecordDrawer
@@ -38,7 +49,12 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
       title={
         <span className="flex flex-wrap items-center gap-2">
           {opp.name}
-          <TonePill tone={STAGE_GROUP_TONE[stage?.reporting_group ?? "open"] ?? "info"} label={stage?.label ?? opp.stage_key} size="md" />
+          <TonePill
+            tone={STAGE_GROUP_TONE[stage?.reporting_group ?? "open"] ?? "info"}
+            label={stage?.label ?? opp.stage_key}
+            size="md"
+            hint={`Current stage. ${stage?.requires_reason ? "Entering it needed a reason. " : ""}${stage?.requires_next_action ? "It requires a next action and due date. " : ""}Move it with the Stage button; backward moves and closing always need a reason.`}
+          />
           <StatusPill map={OPPORTUNITY_STATUS} value={opp.status} />
         </span>
       }
@@ -61,13 +77,11 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
           )}
         </span>
       }
-      actions={
-        canWrite ? (
-          <Button size="sm" onClick={() => setOpen("stage")}>
-            <ArrowRightLeft className="size-3.5" aria-hidden /> Stage
-          </Button>
-        ) : null
-      }
+      actions={write(
+        <Button size="sm" onClick={() => setOpen("stage")}>
+          <ArrowRightLeft className="size-3.5" aria-hidden /> Stage
+        </Button>,
+      )}
     >
       {closed && (
         <div className={cn("rounded-md border px-3 py-2 text-sm", opp.status === "won" ? "border-success/30 bg-success/10 text-success" : opp.status === "lost" ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-border bg-muted/50")}>
@@ -79,36 +93,65 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         </div>
       )}
 
-      {canWrite && (
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
+        {write(
           <Button variant="outline" size="sm" onClick={() => setOpen("edit")}>
             <Pencil className="size-3.5" aria-hidden /> Edit
-          </Button>
+          </Button>,
+        )}
+        {write(
           <Button variant="outline" size="sm" onClick={() => setOpen("quote")}>
             <FileText className="size-3.5" aria-hidden /> Quote version
-          </Button>
+          </Button>,
+        )}
+        {write(
           <Button variant="outline" size="sm" onClick={() => setOpen("activity")}>
             <MessageSquarePlus className="size-3.5" aria-hidden /> Activity
-          </Button>
+          </Button>,
+        )}
+        {write(
           <Button variant="outline" size="sm" onClick={() => setOpen("task")}>
             <ListTodo className="size-3.5" aria-hidden /> Task
+          </Button>,
+        )}
+        <Gated permission="sales.assign">
+          <Button variant="outline" size="sm" onClick={() => setOpen("reassign")}>
+            <UserCog className="size-3.5" aria-hidden /> Reassign
           </Button>
-          {can("sales.assign") && (
-            <Button variant="outline" size="sm" onClick={() => setOpen("reassign")}>
-              <UserCog className="size-3.5" aria-hidden /> Reassign
-            </Button>
-          )}
-        </div>
-      )}
+        </Gated>
+      </div>
 
       <DrawerSection title="Facts">
         <FactList
           items={[
             { label: "Estimated value", value: opp.estimated_value !== null ? formatMoney(opp.estimated_value, opp.currency) : "—", mono: true },
-            { label: "Probability", value: opp.probability_band ? titleCase(opp.probability_band) : "—" },
+            {
+              label: "Probability",
+              value: opp.probability_band ? (
+                <Hint content="A band set by the owner. The business has not yet agreed the bands, so it is the owner's gut feel, not a forecast weight." focusable>
+                  <span>{titleCase(opp.probability_band)}</span>
+                </Hint>
+              ) : (
+                "—"
+              ),
+            },
             { label: "Expected close", value: formatDate(opp.expected_close_date) },
             { label: "Owner", value: names.get(opp.owner_id ?? "") ?? "Unassigned" },
-            { label: "Next action", value: <span className={cn(isOverdue(opp.next_action_due_at) && !closed && "text-destructive")}>{opp.next_action ?? "—"}{opp.next_action_due_at ? ` · ${formatRelative(opp.next_action_due_at)}` : ""}</span> },
+            {
+              label: "Next action",
+              value: opp.next_action ? (
+                <span className={cn(isOverdue(opp.next_action_due_at) && !closed && "text-destructive")}>
+                  {opp.next_action}
+                  {opp.next_action_due_at ? ` · ${formatRelative(opp.next_action_due_at)}` : ""}
+                </span>
+              ) : closed ? (
+                "—"
+              ) : (
+                <Hint content="Every open opportunity needs a next action and a due date. Set one with Edit or when moving stage." focusable>
+                  <span className="text-warning">Missing</span>
+                </Hint>
+              ),
+            },
             { label: "Source", value: opp.source_channel ? <StatusPill map={SOURCE_CHANNEL} value={opp.source_channel} /> : "—" },
             { label: "Product interest", value: opp.product_interest.length ? opp.product_interest.map(titleCase).join(", ") : "—" },
             { label: "Competitor", value: opp.competitor ?? "—" },
@@ -131,7 +174,7 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
               <span>
                 {stageLabel(e.from_stage_key)} → <span className="font-medium">{stageLabel(e.to_stage_key)}</span>
               </span>
-              {e.is_backward && <TonePill tone="warning" label="backward" />}
+              {e.is_backward && <TonePill tone="warning" label="backward" hint="Moved to an earlier stage. A reason was required and is shown here; reports count it as regression, not progress." />}
               <span className="text-xs text-muted-foreground">{names.get(e.actor_id ?? "") ?? "system"}</span>
               {e.reason && <span className="text-xs italic text-muted-foreground">“{e.reason}”</span>}
             </li>

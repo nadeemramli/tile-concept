@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Contact, FolderKanban, KanbanSquare, Package, Receipt, Search } from "lucide-react";
+import { Building2, Contact, FolderKanban, Inbox, KanbanSquare, Package, Receipt, Search } from "lucide-react";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { globalSearchAction, type SearchHit } from "@/server/commands/search";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   contact: Contact,
+  lead: Inbox,
   account: Building2,
   project: FolderKanban,
   opportunity: KanbanSquare,
@@ -17,6 +18,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const LABELS: Record<string, string> = {
   contact: "Contacts",
+  lead: "Enquiries",
   account: "Accounts",
   project: "Projects",
   opportunity: "Opportunities",
@@ -65,8 +67,8 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
   }, {});
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} title="Global search" description="Search names, phones, emails, companies, projects, quote/order references and products" shouldFilter={false}>
-      <CommandInput placeholder="Name, phone, email, company, project, ORC/quote number, product code…" value={query} onValueChange={setQuery} />
+    <CommandDialog open={open} onOpenChange={onOpenChange} title="Global search" description="Search names, phones, emails, companies, enquiries, projects, quote/order references and products" shouldFilter={false}>
+      <CommandInput placeholder="Name, phone, email, company, enquiry, project, ORC/quote number, product code…" value={query} onValueChange={setQuery} />
       <CommandList>
         <CommandEmpty>
           {trimmed.length < 2 ? "Type at least 2 characters." : pending ? "Searching…" : "No results. Phone numbers match on 4+ digits; product codes and aliases are searched too."}

@@ -8,11 +8,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Columns2, ImageIcon, LayoutGrid, Rows3, Search, X } from "lucide-react";
 import { DataTable, MonoCell } from "@/components/patterns/data-table";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint, Hint, InfoTip } from "@/components/patterns/explain";
 import { PRODUCT_STATUS, REVIEW_STATE } from "@/lib/domain/status-maps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card } from "@/components/ui/card";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import type { CatalogFacets, CatalogRow, CatalogSearchResult } from "@/server/queries/catalog";
@@ -27,39 +27,44 @@ interface Props {
   views: { id: string; name: string; key: string }[];
 }
 
+/** What a parser confidence score means. Shown wherever a raw percentage appears. */
+export const CONFIDENCE_BANDS = "95% and above is normally right; 80–95% deserves a glance; below 80% must be checked against the source. A score never approves anything on its own.";
+
+const COLUMN_HINTS = {
+  look: "Colour, surface finish and material as recorded on the product. Blank parts were never stated by the source.",
+  size: "Nominal dimensions in millimetres, from the default variant.",
+  price: "The price in force today on the highest-priority list for this product. No approved price means nothing published covers it, so it cannot be quoted from the app.",
+  trust: "Whether a catalog operator has confirmed the attributes and their source. Hover the pill for the source, reviewer and parser confidence.",
+  status: "Draft, active, discontinued or archived. Only active products are sellable.",
+  views: "Saved views are named filters kept in Settings. Ready lists products that are active, reviewed and priced.",
+} as const;
+
 export function PriceCell({ price }: { price: CatalogRow["price"] }) {
-  if (!price) return <TonePill tone="warning" label="No approved price" />;
+  if (!price) return <TonePill tone="warning" label="No approved price" hint="No published price covers this product on any list. Publish one in Pricing before quoting; a draft does not count." />;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="tnum inline-flex items-baseline gap-1">
-          <span className="font-medium">{formatMoney(price.amount, price.currency)}</span>
-          {price.unit_code && <span className="text-[11px] text-muted-foreground">/ {price.unit_code}</span>}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>
-        {price.price_list_name} · {price.price_type} · valid from {price.valid_from}
-      </TooltipContent>
-    </Tooltip>
+    <Hint content={`${price.price_list_name} · ${price.price_type} · valid from ${price.valid_from}`} focusable>
+      <span className="tnum inline-flex items-baseline gap-1">
+        <span className="font-medium">{formatMoney(price.amount, price.currency)}</span>
+        {price.unit_code && <span className="text-[11px] text-muted-foreground">/ {price.unit_code}</span>}
+      </span>
+    </Hint>
   );
 }
 
 export function TrustCell({ row }: { row: CatalogRow }) {
+  const confidence = row.confidence != null ? Math.round(Number(row.confidence) * 100) : null;
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex items-center gap-1">
-          <StatusPill map={REVIEW_STATE} value={row.review_state} />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-72">
-        <div className="space-y-0.5 text-xs">
-          <div>Source: {row.source_ref ?? "not recorded"}</div>
-          <div>Reviewed: {row.reviewed_by_name ? `${row.reviewed_by_name} · ${formatDateTime(row.reviewed_at)}` : "not yet"}</div>
-          {row.confidence != null && <div>Confidence: {Math.round(Number(row.confidence) * 100)}%</div>}
-        </div>
-      </TooltipContent>
-    </Tooltip>
+    <StatusPill
+      map={REVIEW_STATE}
+      value={row.review_state}
+      hint={[
+        `Source: ${row.source_ref ?? "not recorded"}.`,
+        `Reviewed: ${row.reviewed_by_name ? `${row.reviewed_by_name} · ${formatDateTime(row.reviewed_at)}` : "not yet"}.`,
+        confidence !== null ? `Parser confidence ${confidence}%: ${CONFIDENCE_BANDS}` : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    />
   );
 }
 
@@ -113,11 +118,11 @@ export function CatalogTable({ result, categories, brands, facets, views }: Prop
           </div>
         ),
       },
-      { id: "look", header: "Colour / finish / material", cell: ({ row }) => [row.original.color, row.original.finish, row.original.material].filter(Boolean).join(" · ") || "—" },
-      { accessorKey: "dimensions_label", header: "Size", cell: ({ row }) => <span className="tnum">{row.original.dimensions_label}</span> },
-      { id: "price", header: "Current price", accessorFn: (row) => row.price?.amount ?? -1, cell: ({ row }) => <PriceCell price={row.original.price} /> },
-      { accessorKey: "review_state", header: "Trust", cell: ({ row }) => <TrustCell row={row.original} /> },
-      { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={PRODUCT_STATUS} value={row.original.status} /> },
+      { id: "look", header: "Colour / finish / material", meta: { hint: COLUMN_HINTS.look }, cell: ({ row }) => [row.original.color, row.original.finish, row.original.material].filter(Boolean).join(" · ") || "—" },
+      { accessorKey: "dimensions_label", header: "Size", meta: { hint: COLUMN_HINTS.size }, cell: ({ row }) => <span className="tnum">{row.original.dimensions_label}</span> },
+      { id: "price", header: "Current price", meta: { hint: COLUMN_HINTS.price }, accessorFn: (row) => row.price?.amount ?? -1, cell: ({ row }) => <PriceCell price={row.original.price} /> },
+      { accessorKey: "review_state", header: "Trust", meta: { hint: COLUMN_HINTS.trust }, cell: ({ row }) => <TrustCell row={row.original} /> },
+      { accessorKey: "status", header: "Status", meta: { hint: COLUMN_HINTS.status }, cell: ({ row }) => <StatusPill map={PRODUCT_STATUS} value={row.original.status} /> },
     ],
     [],
   );
@@ -189,6 +194,7 @@ export function CatalogTable({ result, categories, brands, facets, views }: Prop
   return (
     <div className={cn("space-y-3", pending && "opacity-70")} aria-busy={pending || undefined}>
       <div className="flex flex-wrap items-center gap-1 border-b">
+        <InfoTip label="Saved views" content={COLUMN_HINTS.views} className="mr-1" />
         {views.map((view) => (
           <button
             key={view.key}
@@ -231,9 +237,11 @@ export function CatalogTable({ result, categories, brands, facets, views }: Prop
           columnToggle
           selectable
           bulkActions={(selected) => (
-            <Button size="sm" variant="outline" className="h-6 gap-1 px-2 text-xs" disabled={selected.length < 2 || selected.length > 4} onClick={() => router.push(`/merchandise/catalog/compare?ids=${selected.map((row) => row.id).join(",")}`)}>
-              <Columns2 className="size-3" aria-hidden /> Compare {selected.length > 4 ? "(max 4)" : ""}
-            </Button>
+            <DisabledHint reason={selected.length < 2 ? "Select at least 2 products to compare (up to 4)." : selected.length > 4 ? "Compare takes at most 4 products. Untick some." : undefined}>
+              <Button size="sm" variant="outline" className="h-6 gap-1 px-2 text-xs" disabled={selected.length < 2 || selected.length > 4} onClick={() => router.push(`/merchandise/catalog/compare?ids=${selected.map((row) => row.id).join(",")}`)}>
+                <Columns2 className="size-3" aria-hidden /> Compare {selected.length > 4 ? "(max 4)" : selected.length < 2 ? "(2–4)" : ""}
+              </Button>
+            </DisabledHint>
           )}
           emptyTitle="No products"
           emptyDescription="No products match this search. Clear filters or switch to All active."
