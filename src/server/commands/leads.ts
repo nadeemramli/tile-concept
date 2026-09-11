@@ -7,6 +7,7 @@ import { requirePermission } from "@/server/session";
 import { fail, ok, type ActionResult } from "@/server/action-result";
 import { normalizePhone, normalizeEmail } from "@/lib/identity/normalize";
 import { convertLeadSchema, leadFollowUpSchema, logResponseSchema, newInquirySchema, type NewInquiryInput } from "@/features/inbox/schema";
+import { whereIsLead, whereSentence } from "@/features/inbox/lib/whereabouts";
 import type { IdentityCandidate } from "@/features/inbox/types";
 
 const INBOX = "/sales/inbox";
@@ -202,18 +203,48 @@ export async function bulkAssignLeadsAction(input: { lead_ids: string[]; owner_i
   }
 }
 
+/**
+ * Logs a call, message or email. The message that comes back says where the
+ * lead now sits in the inbox, because a response moves it out of "New" and
+ * an unowned lead becomes the responder's.
+ */
 export async function logLeadResponseAction(input: z.input<typeof logResponseSchema>): Promise<ActionResult> {
   const parsed = logResponseSchema.safeParse(input);
   if (!parsed.success) return fail("Check the response details.");
   const v = parsed.data;
   try {
-    await requirePermission("sales.write");
+    const session = await requirePermission("sales.write");
     const supabase = await createServerSupabase();
+    const { data: before } = await supabase.from("leads").select("owner_id").eq("id", v.lead_id).maybeSingle();
     const { error } = await supabase.rpc("log_lead_response", { p_lead_id: v.lead_id, p_kind: v.kind, p_channel: v.channel, p_body: blank(v.body) ?? undefined, p_reached: v.reached });
     if (error) return fail(error);
+    const { data: after } = await supabase
+      .from("leads")
+      .select("status, owner_id, source_channel, first_response_at, first_response_due_at, duplicate_of_lead_id, created_at")
+      .eq("id", v.lead_id)
+      .maybeSingle();
     revalidatePath(INBOX);
     revalidatePath("/");
-    return ok(undefined, v.reached ? "Response logged." : "Attempt logged.");
+    const logged = v.reached ? "Response logged." : "Attempt logged.";
+    if (!after) return ok(undefined, logged);
+    const where = whereSentence(
+      whereIsLead(
+        {
+          status: after.status ?? "new",
+          owner_id: after.owner_id,
+          source_channel: after.source_channel ?? "other",
+          first_response_at: after.first_response_at,
+          first_response_due_at: after.first_response_due_at,
+          // Reminders live on tasks; the drawer shows them, the toast only needs the home view.
+          next_follow_up_at: null,
+          duplicate_of_lead_id: after.duplicate_of_lead_id,
+          created_at: after.created_at ?? new Date().toISOString(),
+        },
+        session.userId,
+      ),
+    );
+    const claimed = !before?.owner_id && after.owner_id === session.userId ? " This lead is now yours." : "";
+    return ok(undefined, `${logged} ${where}${claimed}`);
   } catch (e) {
     return fail(e);
   }
