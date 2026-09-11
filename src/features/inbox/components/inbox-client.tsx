@@ -29,6 +29,8 @@ import { cn } from "@/lib/utils";
 
 const VIEW_MAP: Record<string, LeadView> = {
   New: "new",
+  "Waiting for reply": "waiting",
+  Contacted: "contacted",
   Unassigned: "unassigned",
   "My leads": "mine",
   "No response": "no-response",
@@ -43,6 +45,8 @@ const VIEW_MAP: Record<string, LeadView> = {
 /** What each saved view selects. Keyed by the view id so renamed saved views keep their meaning. */
 const VIEW_HINTS: Record<LeadView, string> = {
   new: "Leads that arrived and have not been responded to. The first-response clock is running.",
+  waiting: "You messaged or called and are waiting for the customer to reply. Set a reminder so each one also shows under Follow-ups due. Walk-ins are tracked on their own page.",
+  contacted: "You have spoken to the customer but have not qualified or closed the lead yet. Walk-ins are tracked on their own page.",
   unassigned: "Active leads with no salesperson yet. Nobody is on the clock for them.",
   mine: "Leads where you are the owner.",
   "no-response": "New leads with no logged call, message or email.",
@@ -93,6 +97,8 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
   const tabs = useMemo(() => {
     const countFor: Record<LeadView, number | undefined> = {
       new: counts.new,
+      waiting: counts.waiting,
+      contacted: counts.contacted,
       unassigned: counts.unassigned,
       mine: counts.mine,
       "no-response": counts.noResponse,
@@ -265,6 +271,8 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
         contact={selectedContact}
         members={members}
         initialSuggestions={selected ? suggestions[selected.id] : undefined}
+        view={view}
+        inCurrentView={selected ? leads.some((l) => l.id === selected.id) : true}
         onClose={() => setLeadParam(null)}
       />
 

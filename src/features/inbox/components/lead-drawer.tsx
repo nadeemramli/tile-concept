@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Check, ExternalLink, MessageCircle, MoreHorizontal, Search, UserPlus, X } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, MapPin, MessageCircle, MoreHorizontal, Search, UserPlus, X } from "lucide-react";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
@@ -25,6 +25,8 @@ import { FOLLOW_UP_OPTIONS, followUpDueAt, followUpTaskTitle } from "@/features/
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
+import { VIEW_LABELS, whereIsLead } from "@/features/inbox/lib/whereabouts";
+import type { LeadView } from "@/features/inbox/schema";
 import { cn } from "@/lib/utils";
 import type { IdentityCandidate, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { ProfileRef } from "@/server/queries/reference";
@@ -47,6 +49,9 @@ interface Props {
   contact: { id: string; display_name: string; lifecycle_state: string; customer_type: string | null } | null;
   members: ProfileRef[];
   initialSuggestions?: IdentityCandidate[];
+  /** The inbox view the drawer was opened from, and whether the lead still appears in it. */
+  view?: LeadView;
+  inCurrentView?: boolean;
   onClose: () => void;
 }
 
@@ -56,7 +61,7 @@ const TIMELINE_PREVIEW = 5;
 
 const MASKED_HINT = "Shown masked because your role does not include contact.reveal. Revealing a phone number or email is audited with who, when and which record.";
 
-export function LeadDrawer({ lead, intake, timeline, contact, members, initialSuggestions, onClose }: Props) {
+export function LeadDrawer({ lead, intake, timeline, contact, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
   const router = useRouter();
   const { can, session } = useSession();
   const [pending, start] = useTransition();
@@ -86,6 +91,8 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
   const OWNER_ONLY = `Only ${lead.owner_name ?? "the assigned salesperson"}, a sales manager or an administrator can act on this lead. You can still read it and message the customer.`;
   const canWrite = can("sales.write") && isOwner;
   const canReveal = can("contact.reveal");
+  const where = whereIsLead(lead, session.userId);
+  const viewHref = (v: LeadView) => `/sales/inbox?view=${v}&lead=${lead.id}`;
   const terminal = ["converted", "disqualified", "duplicate"].includes(lead.status);
   const slaOverdue = !lead.first_response_at && isOverdue(lead.first_response_due_at);
   const whatsappUrl = canReveal
@@ -135,6 +142,38 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         }
         description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)} · ${responseLine}`}
       >
+        {/* Where the lead lives now, so a response never makes it vanish. */}
+        {view && inCurrentView === false && view !== "all" && view !== where.home && (
+          <p className="rounded-md border border-info/30 bg-info/10 px-3 py-2 text-sm">
+            This lead is no longer in the <span className="font-medium">{VIEW_LABELS[view]}</span> view. It now sits under{" "}
+            <Link href={viewHref(where.home)} className="font-medium underline underline-offset-2">
+              {VIEW_LABELS[where.home]}
+            </Link>
+            .
+          </p>
+        )}
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-muted-foreground">
+          <MapPin className="size-3 shrink-0" aria-hidden />
+          <span>In view</span>
+          <Link href={viewHref(where.home)} className="font-medium text-foreground hover:underline">
+            {VIEW_LABELS[where.home]}
+          </Link>
+          {where.also.map((v) => (
+            <Link key={v} href={viewHref(v)} className="rounded bg-muted px-1.5 py-0.5 hover:underline">
+              {VIEW_LABELS[v]}
+            </Link>
+          ))}
+          <span>·</span>
+          {lead.owner_id ? (
+            <span>owner {lead.owner_id === session.userId ? "you" : (lead.owner_name ?? "set")}</span>
+          ) : (
+            <Hint content="Nobody has been assigned. The first person to log a message or call becomes the owner, and the lead then appears under their My leads." focusable>
+              <span>no owner yet</span>
+            </Hint>
+          )}
+          {!terminal && !lead.next_follow_up_at && <span>· no reminder</span>}
+        </p>
+
         {/* Primary actions: what a rep does most, in the order they do it. */}
         <div className="flex flex-wrap items-center gap-2">
           {whatsappUrl && (
@@ -155,7 +194,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
           )}
           {whatsappUrl && !terminal && isOwner && (
             <Gated permission="sales.write">
-              <Hint content="One tap: records that you messaged this customer, under your name. Counts as an attempt, not a reply, so the status becomes Contact attempted.">
+              <Hint content="One tap: records that you messaged this customer, under your name. Counts as an attempt, not a reply, so the status becomes Contact attempted and the lead moves from New to Waiting for reply. If nobody owned it yet, it becomes yours.">
                 <Button
                   size="sm"
                   variant="outline"
@@ -345,7 +384,11 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
                     <span className="text-muted-foreground">No follow-up needed.</span>
                   ) : canWrite ? (
                     <div className="space-y-1.5">
-                      <p className="text-muted-foreground">{nudgeFollowUpFor === lead.id ? "Logged. When should we remind you?" : "No reminder set. Remind me:"}</p>
+                      <p className="text-muted-foreground">
+                        {nudgeFollowUpFor === lead.id
+                          ? `Logged. This lead now sits under ${VIEW_LABELS[where.home]}. Set a reminder so it also shows in Follow-ups due:`
+                          : "No reminder set. Remind me:"}
+                      </p>
                       <div className="flex flex-wrap gap-1.5">
                         {FOLLOW_UP_OPTIONS.map((o) => (
                           <Button

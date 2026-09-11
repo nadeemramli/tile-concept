@@ -72,6 +72,8 @@ export interface IntakeEventRow {
 
 export interface InboxCounts {
   new: number;
+  waiting: number;
+  contacted: number;
   unassigned: number;
   mine: number;
   noResponse: number;

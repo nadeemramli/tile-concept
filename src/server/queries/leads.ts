@@ -89,6 +89,14 @@ export async function listLeads(view: LeadView, session: AppSession): Promise<Le
     case "new":
       q = q.eq("status", "new");
       break;
+    // Walk-in visits mirror into the inbox as contacted leads; they are tracked
+    // on the walk-in page and would drown these two views.
+    case "waiting":
+      q = q.eq("status", "contact_attempted").neq("source_channel", "walk_in");
+      break;
+    case "contacted":
+      q = q.eq("status", "contacted").neq("source_channel", "walk_in");
+      break;
     case "unassigned":
       q = q.is("owner_id", null).in("status", ["new", "contact_attempted", "contacted"]);
       break;
@@ -147,7 +155,7 @@ export async function getInboxCounts(session: AppSession): Promise<InboxCounts> 
   const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
   const now = new Date().toISOString();
   const head = () => supabase.from("leads").select("id", { count: "exact", head: true });
-  const [n, u, m, nr, fu, d, a, ft] = await Promise.all([
+  const [n, u, m, nr, fu, d, a, ft, w, c] = await Promise.all([
     head().eq("status", "new"),
     head().is("owner_id", null).in("status", ["new", "contact_attempted", "contacted"]),
     head().eq("owner_id", session.userId).in("status", ACTIVE),
@@ -157,9 +165,13 @@ export async function getInboxCounts(session: AppSession): Promise<InboxCounts> 
     head().in("status", ["new", "contact_attempted"]).lt("created_at", twoDaysAgo),
     // Distinct-lead count so the card matches the "Follow-ups due" view rows.
     supabase.from("tasks").select("lead_id").eq("status", "open").not("lead_id", "is", null).lte("due_at", endOfTodayKualaLumpur()).limit(1000),
+    head().eq("status", "contact_attempted").neq("source_channel", "walk_in"),
+    head().eq("status", "contacted").neq("source_channel", "walk_in"),
   ]);
   return {
     new: n.count ?? 0,
+    waiting: w.count ?? 0,
+    contacted: c.count ?? 0,
     unassigned: u.count ?? 0,
     mine: m.count ?? 0,
     noResponse: nr.count ?? 0,
