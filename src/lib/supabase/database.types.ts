@@ -10105,6 +10105,15 @@ export type Database = {
           title: string
         }[]
       }
+      link_lead_contact: {
+        Args: {
+          p_account_id?: string
+          p_contact_id?: string
+          p_lead_id: string
+          p_reason?: string
+        }
+        Returns: undefined
+      }
       log_feedback_customer_event: {
         Args: { p_event_type: string; p_token_hash: string }
         Returns: boolean

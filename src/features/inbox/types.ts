@@ -30,13 +30,29 @@ export interface LeadRow {
   updated_at: string;
 }
 
+/**
+ * A match reason. `prior_enquiry` is a zero-weight reason that carries the
+ * enquiry facts (how many, latest channel/status/date) so the walk-in counter
+ * can say "they enquired before" without changing the score.
+ */
+export interface CandidateReason {
+  code: string;
+  field: string;
+  weight?: number;
+  count?: number;
+  channel?: string | null;
+  status?: string | null;
+  at?: string | null;
+}
+
 export interface IdentityCandidate {
-  entity_type: "contact" | "account";
+  /** `lead` is an enquiry nobody has linked to a contact yet. */
+  entity_type: "contact" | "account" | "lead";
   entity_id: string;
   display_name: string;
   confidence: "high" | "medium" | "low";
   score: number;
-  reasons: { code: string; field: string; weight?: number }[];
+  reasons: CandidateReason[];
   masked_phone: string | null;
   masked_email: string | null;
   lifecycle_state: string | null;

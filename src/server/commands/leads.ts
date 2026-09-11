@@ -24,6 +24,11 @@ export async function createInquiryAction(input: NewInquiryInput): Promise<Actio
     const supabase = await createServerSupabase();
     const phoneNorm = normalizePhone(v.raw_phone);
     const idem = crypto.randomUUID();
+
+    // Same rule as api.accept_intake: an exact phone or email match links the
+    // enquiry to the existing customer at once. Names alone never link.
+    const suggestions = await findCandidates({ phone: v.raw_phone, email: v.raw_email, name: v.raw_name, company: v.raw_company });
+    const exact = suggestions.find((c) => c.entity_type === "contact" && c.reasons.some((r) => r.code === "exact_phone" || r.code === "exact_email"));
     const { data: intake, error: intakeErr } = await supabase
       .from("intake_events")
       .insert({
@@ -48,6 +53,7 @@ export async function createInquiryAction(input: NewInquiryInput): Promise<Actio
         status: "new",
         source_channel: v.source_channel,
         source_detail: blank(v.source_detail),
+        contact_id: exact?.entity_id ?? null,
         raw_name: blank(v.raw_name),
         raw_phone: blank(v.raw_phone),
         raw_phone_normalized: phoneNorm,
@@ -69,10 +75,9 @@ export async function createInquiryAction(input: NewInquiryInput): Promise<Actio
     await supabase.from("intake_events").update({ lead_id: lead.id }).eq("id", intake.id!);
     await supabase.from("lead_intake_links").insert({ lead_id: lead.id!, intake_event_id: intake.id! });
 
-    const suggestions = await findCandidates({ phone: v.raw_phone, email: v.raw_email, name: v.raw_name, company: v.raw_company });
     revalidatePath(INBOX);
     revalidatePath("/");
-    return ok({ lead_id: String(lead.id), suggestions }, "Inquiry recorded.");
+    return ok({ lead_id: String(lead.id), suggestions }, exact ? `Inquiry recorded and linked to ${exact.display_name}.` : "Inquiry recorded.");
   } catch (e) {
     return fail(e);
   }
@@ -88,12 +93,12 @@ async function findCandidates(input: { phone?: string | null; email?: string | n
     p_limit: 10,
   });
   return (data ?? []).map((c) => ({
-    entity_type: c.entity_type as "contact" | "account",
+    entity_type: c.entity_type as IdentityCandidate["entity_type"],
     entity_id: String(c.entity_id),
     display_name: String(c.display_name ?? ""),
     confidence: (c.confidence as IdentityCandidate["confidence"]) ?? "low",
     score: Number(c.score ?? 0),
-    reasons: (c.reasons as IdentityCandidate["reasons"]) ?? [],
+    reasons: (c.reasons as unknown as IdentityCandidate["reasons"]) ?? [],
     masked_phone: c.masked_phone,
     masked_email: c.masked_email,
     lifecycle_state: c.lifecycle_state,
@@ -113,17 +118,24 @@ export async function findLeadMatchesAction(leadId: string): Promise<ActionResul
   }
 }
 
+/**
+ * Links an enquiry to a customer record through api.link_lead_contact, which
+ * carries the enquiry's phone/email onto the contact, moves activity logged
+ * before the link, checks owner scope and audits it.
+ */
 export async function linkLeadIdentityAction(input: { lead_id: string; contact_id?: string | null; account_id?: string | null }): Promise<ActionResult> {
   try {
     await requirePermission("sales.write");
     const supabase = await createServerSupabase();
-    const patch: { contact_id?: string; account_id?: string } = {};
-    if (input.contact_id) patch.contact_id = input.contact_id;
-    if (input.account_id) patch.account_id = input.account_id;
-    const { error } = await supabase.from("leads").update(patch).eq("id", input.lead_id);
+    const { error } = await supabase.rpc("link_lead_contact", {
+      p_lead_id: input.lead_id,
+      p_contact_id: blank(input.contact_id) ?? undefined,
+      p_account_id: blank(input.account_id) ?? undefined,
+    });
     if (error) return fail(error);
     revalidatePath(INBOX);
-    return ok(undefined, "Identity linked.");
+    revalidatePath("/sales/accounts");
+    return ok(undefined, "Enquiry linked to the customer record.");
   } catch (e) {
     return fail(e);
   }
@@ -147,9 +159,11 @@ export async function createContactForLeadAction(input: { lead_id: string; displ
       p_is_provisional: false,
     });
     if (error || !contactId) return fail(error ?? "Could not create contact");
-    await supabase.from("leads").update({ contact_id: contactId }).eq("id", input.lead_id);
+    const { error: linkErr } = await supabase.rpc("link_lead_contact", { p_lead_id: input.lead_id, p_contact_id: contactId, p_account_id: lead.account_id ?? undefined });
+    if (linkErr) return fail(linkErr);
     await supabase.rpc("suggest_contact_duplicates", { p_contact_id: contactId });
     revalidatePath(INBOX);
+    revalidatePath("/sales/accounts");
     return ok({ contact_id: contactId }, "Contact created and linked.");
   } catch (e) {
     return fail(e);
