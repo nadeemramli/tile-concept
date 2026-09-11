@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusPill } from "@/components/patterns/status-pill";
 import { FreshnessBadge } from "@/components/patterns/freshness-badge";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Gated, Hint, InfoTip } from "@/components/patterns/explain";
 import { APP_MODE, CONNECTOR_STATUS } from "@/lib/domain/status-maps";
+import { CONTRACT as CONTRACT_ITEMS } from "@/features/connectors/status";
 import { formatDateTime } from "@/lib/format";
 import type { IntegrationRow } from "@/server/queries/platform";
 import { toggleIntegrationAction, updateIntegrationAction } from "@/server/commands/platform";
@@ -31,7 +32,13 @@ const PROVIDER_META: Record<string, { icon: LucideIcon; gate: string }> = {
 
 const CONTRACT = ["manifest", "test", "pull / webhook", "normalize", "reconcile", "retry", "rotate", "disable"];
 
-export function IntegrationCards({ rows, canManage, members }: { rows: IntegrationRow[]; canManage: boolean; members: { user_id: string; full_name: string }[] }) {
+/** What each contract item means, from the connector console's definitions. */
+const CONTRACT_DETAIL: Record<string, string> = Object.fromEntries(CONTRACT_ITEMS.map((i) => [i.key === "pull" ? "pull / webhook" : i.key, i.detail]));
+
+const CREDENTIAL_HINT = "No secret is stored in this app. This is only the name of the entry in the secret manager; none (reference only) means nothing has been set up yet.";
+const CONTRACT_HINT = "The eight things every connector must be able to do before it leaves demo mode. A ticked item exists today; an unticked one is not built. Hover an item for what it means.";
+
+export function IntegrationCards({ rows, members }: { rows: IntegrationRow[]; members: { user_id: string; full_name: string }[] }) {
   const [editFor, setEditFor] = useState<IntegrationRow | null>(null);
   const [owner, setOwner] = useState("");
   const [purpose, setPurpose] = useState("");
@@ -78,53 +85,57 @@ export function IntegrationCards({ rows, canManage, members }: { rows: Integrati
                     <FreshnessBadge lastSuccessAt={c.last_success_at} slaMinutes={240} />
                   </dd>
                   <dt className="text-muted-foreground">Credential</dt>
-                  <dd className="font-mono">{c.credential_ref ?? "none (reference only)"}</dd>
+                  <dd className="font-mono">
+                    <Hint content={CREDENTIAL_HINT} focusable>
+                      <span>{c.credential_ref ?? "none (reference only)"}</span>
+                    </Hint>
+                  </dd>
                   <dt className="text-muted-foreground">Scopes</dt>
                   <dd>{c.scopes.length ? c.scopes.join(", ") : "—"}</dd>
                 </dl>
                 {c.last_error && <p className="rounded border border-destructive/25 bg-destructive/10 px-2 py-1 text-xs text-destructive">{c.last_error}</p>}
                 <div>
-                  <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Connector contract (PRD §11.1)</div>
+                  <div className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Connector contract
+                    <InfoTip label="Connector contract" content={CONTRACT_HINT} />
+                  </div>
                   <ul className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
                     {CONTRACT.map((k) => (
                       <li key={k} className="flex items-center gap-1.5">
                         <Checkbox checked={!!contract[k]} disabled aria-label={k} className="size-3.5" />
-                        <span className={contract[k] ? "" : "text-muted-foreground"}>{k}</span>
+                        <Hint content={CONTRACT_DETAIL[k]} focusable>
+                          <span className={contract[k] ? "" : "text-muted-foreground"}>{k}</span>
+                        </Hint>
                       </li>
                     ))}
                   </ul>
                 </div>
                 <div className="flex flex-wrap items-center gap-1 pt-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled>
-                          <Settings2 className="size-3" aria-hidden /> Configure
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-72">{meta.gate}</TooltipContent>
-                  </Tooltip>
-                  {canManage && (
-                    <>
-                      <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" disabled={toggle.pending} onClick={() => toggle.run(c.id, c.status !== "paused")}>
-                        {c.status === "paused" ? <Play className="size-3" aria-hidden /> : <Pause className="size-3" aria-hidden />}
-                        {c.status === "paused" ? "Resume" : "Pause"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() => {
-                          setEditFor(c);
-                          setOwner(c.owner_id ?? "");
-                          setPurpose(c.business_purpose ?? "");
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </>
-                  )}
+                  <DisabledHint reason={{ title: "Not configurable yet", body: meta.gate }}>
+                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled>
+                      <Settings2 className="size-3" aria-hidden /> Configure
+                    </Button>
+                  </DisabledHint>
+                  <Gated permission="settings.manage">
+                    <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" disabled={toggle.pending} onClick={() => toggle.run(c.id, c.status !== "paused")}>
+                      {c.status === "paused" ? <Play className="size-3" aria-hidden /> : <Pause className="size-3" aria-hidden />}
+                      {c.status === "paused" ? "Resume" : "Pause"}
+                    </Button>
+                  </Gated>
+                  <Gated permission="settings.manage">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        setEditFor(c);
+                        setOwner(c.owner_id ?? "");
+                        setPurpose(c.business_purpose ?? "");
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </Gated>
                 </div>
               </CardContent>
             </Card>

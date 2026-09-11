@@ -32,7 +32,7 @@ export default async function ShootCalendarPage({ searchParams }: PageProps<"/ma
     <PageBody>
       <PageHeader
         title="Shoot Calendar"
-        description="Tentative holds, standby crew and confirmed bookings stay distinct. Confirming checks for clashes; rescheduling keeps the previous slot."
+        description="Tentative holds, standby crew and confirmed bookings stay distinct. Confirming checks for clashes; rescheduling keeps the previous slot. A shield on a booking means the customer has not yet approved media permission for that project — hover or focus any booking to see why."
       />
       <CalendarClient bookings={bookings} upcoming={upcoming} members={members} opportunities={opportunities} detail={detail} view={view} anchor={anchor} />
     </PageBody>

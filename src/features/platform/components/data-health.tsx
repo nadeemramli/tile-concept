@@ -6,17 +6,31 @@ import { parseAsString, useQueryState } from "nuqs";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/patterns/data-table";
 import { StatusPill } from "@/components/patterns/status-pill";
-import { ISSUE_SEVERITY, ISSUE_STATUS, CONNECTOR_STATUS } from "@/lib/domain/status-maps";
+import { ISSUE_SEVERITY, ISSUE_STATUS, ISSUE_TYPE, CONNECTOR_STATUS } from "@/lib/domain/status-maps";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/patterns/states";
+import { Hint, InfoTip } from "@/components/patterns/explain";
 import { formatRelative } from "@/lib/format";
 import type { IssueRow, IntegrationRow } from "@/server/queries/platform";
 import { updateIssueStatusAction } from "@/server/commands/platform";
 import { useAction } from "@/features/catalog/use-action";
 import { FreshnessBadge } from "@/components/patterns/freshness-badge";
+
+const HINTS = {
+  severity: "How much the issue blocks. High blocks quoting, publishing or intake; medium affects trust in a record; low is cosmetic.",
+  summary: "What the check found, in one line.",
+  object: "The kind of record affected and the first eight characters of its id. Click to open the record where a page exists for it.",
+  status: "Open means nobody has looked. Acknowledged means someone owns it. Resolved and Ignored both close it, with a note; Ignored can be reopened.",
+  assigned: "Who took ownership when it was acknowledged.",
+  acknowledge: "Take ownership. The issue stays open but shows who is on it.",
+  resolve: "Close it as fixed. Say what was done so the next person can see it.",
+  ignore: "Close it as not worth fixing, with a note. It can be reopened later.",
+  reopen: "Put it back in the open queue because the fix did not hold or the decision to ignore was wrong.",
+  tabs: "Data quality issues is the exception queue this page owns. The other tabs count records waiting elsewhere (Identity Review, Catalog, Pricing) and link across; Connectors shows intake health.",
+} as const;
 
 interface Props {
   issues: IssueRow[];
@@ -37,12 +51,13 @@ export function DataHealthTabs({ issues, integrations, counts }: Props) {
 
   const columns = useMemo<ColumnDef<IssueRow, unknown>[]>(
     () => [
-      { accessorKey: "issue_type", header: "Type", cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.issue_type}</span> },
-      { accessorKey: "severity", header: "Severity", cell: ({ row }) => <StatusPill map={ISSUE_SEVERITY} value={row.original.severity} /> },
-      { accessorKey: "summary", header: "Summary", cell: ({ row }) => <span className="max-w-96 truncate" title={row.original.summary}>{row.original.summary}</span> },
+      { accessorKey: "issue_type", header: "Type", meta: { hint: "What kind of exception this is. Each type has its own fix; hover the pill." }, cell: ({ row }) => <StatusPill map={ISSUE_TYPE} value={row.original.issue_type} /> },
+      { accessorKey: "severity", header: "Severity", meta: { hint: HINTS.severity }, cell: ({ row }) => <StatusPill map={ISSUE_SEVERITY} value={row.original.severity} /> },
+      { accessorKey: "summary", header: "Summary", meta: { hint: HINTS.summary }, cell: ({ row }) => <span className="max-w-96 truncate" title={row.original.summary}>{row.original.summary}</span> },
       {
         id: "object",
         header: "Object",
+        meta: { hint: HINTS.object },
         cell: ({ row }) =>
           row.original.href ? (
             <Link href={row.original.href} className="font-mono text-[12px] hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -52,8 +67,8 @@ export function DataHealthTabs({ issues, integrations, counts }: Props) {
             <span className="font-mono text-[12px] text-muted-foreground">{row.original.object_type ?? "—"}{row.original.object_id ? ` · ${row.original.object_id.slice(0, 8)}` : ""}</span>
           ),
       },
-      { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={ISSUE_STATUS} value={row.original.status} /> },
-      { accessorKey: "assigned_name", header: "Assigned", cell: ({ row }) => row.original.assigned_name ?? "—" },
+      { accessorKey: "status", header: "Status", meta: { hint: HINTS.status }, cell: ({ row }) => <StatusPill map={ISSUE_STATUS} value={row.original.status} /> },
+      { accessorKey: "assigned_name", header: "Assigned", meta: { hint: HINTS.assigned }, cell: ({ row }) => row.original.assigned_name ?? "—" },
       { accessorKey: "created_at", header: "Opened", cell: ({ row }) => <span className="tnum text-muted-foreground">{formatRelative(row.original.created_at)}</span> },
       {
         id: "actions",
@@ -64,24 +79,32 @@ export function DataHealthTabs({ issues, integrations, counts }: Props) {
           return (
             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
               {i.status === "open" && (
-                <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setAction({ issue: i, status: "acknowledged" })}>
-                  Acknowledge
-                </Button>
+                <Hint content={HINTS.acknowledge}>
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setAction({ issue: i, status: "acknowledged" })}>
+                    Acknowledge
+                  </Button>
+                </Hint>
               )}
               {(i.status === "open" || i.status === "acknowledged") && (
                 <>
-                  <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setAction({ issue: i, status: "resolved" })}>
-                    Resolve
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-muted-foreground" onClick={() => setAction({ issue: i, status: "ignored" })}>
-                    Ignore
-                  </Button>
+                  <Hint content={HINTS.resolve}>
+                    <Button size="sm" className="h-6 px-2 text-xs" onClick={() => setAction({ issue: i, status: "resolved" })}>
+                      Resolve
+                    </Button>
+                  </Hint>
+                  <Hint content={HINTS.ignore}>
+                    <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-muted-foreground" onClick={() => setAction({ issue: i, status: "ignored" })}>
+                      Ignore
+                    </Button>
+                  </Hint>
                 </>
               )}
               {(i.status === "resolved" || i.status === "ignored") && (
-                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setAction({ issue: i, status: "open" })}>
-                  Reopen
-                </Button>
+                <Hint content={HINTS.reopen}>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setAction({ issue: i, status: "open" })}>
+                    Reopen
+                  </Button>
+                </Hint>
               )}
             </div>
           );
@@ -93,15 +116,18 @@ export function DataHealthTabs({ issues, integrations, counts }: Props) {
 
   return (
     <>
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList variant="line" className="flex-wrap">
-          <TabsTrigger value="issues">Data quality issues ({issues.filter((i) => i.status === "open").length})</TabsTrigger>
-          <TabsTrigger value="duplicates">Duplicate candidates ({counts.duplicates})</TabsTrigger>
-          <TabsTrigger value="unreviewed">Unreviewed products ({counts.unreviewed})</TabsTrigger>
-          <TabsTrigger value="prices">Conflicted prices ({counts.conflicted})</TabsTrigger>
-          <TabsTrigger value="connectors">Connectors</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center gap-2">
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList variant="line" className="flex-wrap">
+            <TabsTrigger value="issues">Data quality issues ({issues.filter((i) => i.status === "open").length})</TabsTrigger>
+            <TabsTrigger value="duplicates">Duplicate candidates ({counts.duplicates})</TabsTrigger>
+            <TabsTrigger value="unreviewed">Unreviewed products ({counts.unreviewed})</TabsTrigger>
+            <TabsTrigger value="prices">Conflicted prices ({counts.conflicted})</TabsTrigger>
+            <TabsTrigger value="connectors">Connectors</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <InfoTip label="Data health tabs" content={HINTS.tabs} />
+      </div>
       {tab === "issues" && <DataTable columns={columns} data={issues} rowKey={(r) => r.id} searchable columnToggle emptyTitle="No data quality issues" emptyDescription="Duplicates, unmapped units, overlapping prices and stale snapshots will be queued here." initialSorting={[{ id: "status", desc: false }]} />}
       {tab === "duplicates" && (
         <EmptyState title={`${counts.duplicates} suggested identity match${counts.duplicates === 1 ? "" : "es"} awaiting review`} description="Ambiguous people or companies are never merged automatically. Review candidate pairs with reason codes, then confirm or reject." action={{ label: "Open Identity Review", href: "/sales/identity-review" }} />

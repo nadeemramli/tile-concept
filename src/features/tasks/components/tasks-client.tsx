@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DataTable } from "@/components/patterns/data-table";
 import { MetricCard } from "@/components/patterns/metric-card";
 import { StatusPill } from "@/components/patterns/status-pill";
+import { DisabledHint, Gated } from "@/components/patterns/explain";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Field } from "@/components/patterns/field";
 import { ViewsBar } from "@/features/inbox/components/views-bar";
@@ -34,6 +35,19 @@ interface Props {
   members: ProfileRef[];
   prefill: { contact_id?: string; opportunity_id?: string; lead_id?: string; account_id?: string; project_id?: string };
 }
+
+const COLUMN_HINTS = {
+  due: "When the task is due. Red means an open task is overdue; done or cancelled tasks are never overdue.",
+  assignee: "Who is expected to do it. Unassigned tasks appear in All open but in nobody's My work.",
+  links: "The customer record and opportunity this task belongs to. Completing the task writes the outcome to their timeline.",
+} as const;
+
+const VIEW_HINTS = {
+  mine: "Open tasks assigned to you, soonest due first.",
+  overdue: "Open tasks past their due time, for every owner you can see.",
+  all: "Every open task within your scope, whoever it is assigned to.",
+  done: "Completed and cancelled tasks, most recent first.",
+} as const;
 
 function toLocalInput(iso: string | null) {
   if (!iso) return "";
@@ -72,6 +86,7 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
       {
         accessorKey: "due_at",
         header: "Due",
+        meta: { hint: COLUMN_HINTS.due },
         cell: ({ row }) => {
           const t = row.original;
           if (!t.due_at) return <span className="text-muted-foreground">—</span>;
@@ -79,10 +94,11 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
           return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")} title={formatDateTime(t.due_at)}>{formatRelative(t.due_at)}</span>;
         },
       },
-      { accessorKey: "assignee_name", header: "Assignee", cell: ({ row }) => row.original.assignee_name ?? <span className="text-muted-foreground">Unassigned</span> },
+      { accessorKey: "assignee_name", header: "Assignee", meta: { hint: COLUMN_HINTS.assignee }, cell: ({ row }) => row.original.assignee_name ?? <span className="text-muted-foreground">Unassigned</span> },
       {
         id: "links",
         header: "Linked to",
+        meta: { hint: COLUMN_HINTS.links },
         accessorFn: (r) => `${r.contact_name ?? ""} ${r.opportunity_name ?? ""}`,
         cell: ({ row }) => (
           <div className="flex flex-col text-xs">
@@ -108,14 +124,20 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
 
       <ViewsBar
         tabs={[
-          { key: "mine", label: "My work", count: counts.mine },
-          { key: "overdue", label: "Overdue", count: counts.overdue },
-          { key: "all", label: "All open", count: counts.open },
-          { key: "done", label: "Done / cancelled" },
+          { key: "mine", label: "My work", count: counts.mine, hint: VIEW_HINTS.mine },
+          { key: "overdue", label: "Overdue", count: counts.overdue, hint: VIEW_HINTS.overdue },
+          { key: "all", label: "All open", count: counts.open, hint: VIEW_HINTS.all },
+          { key: "done", label: "Done / cancelled", hint: VIEW_HINTS.done },
         ]}
         active={view}
         basePath="/sales/tasks"
-        extra={can("sales.write") ? <Button size="sm" className="h-7" onClick={() => setNewParam("1")}><Plus className="size-3.5" aria-hidden /> New task</Button> : null}
+        extra={
+          <Gated permission="sales.write">
+            <Button size="sm" className="h-7" onClick={() => setNewParam("1")}>
+              <Plus className="size-3.5" aria-hidden /> New task
+            </Button>
+          </Gated>
+        }
       />
 
       <DataTable columns={columns} data={tasks} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setTaskId(r.id)} isRowActive={(r) => r.id === taskId} emptyTitle="No tasks here" emptyDescription="Tasks are created from leads, opportunities and contacts, or directly." />
@@ -130,14 +152,26 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
         {task && (
           <>
             <div className="flex flex-wrap gap-2">
-              {task.status === "open" && can("sales.write") && (
+              {task.status === "open" && (
                 <>
-                  <Button size="sm" className="h-7" onClick={() => setCompleting(true)}><Check className="size-3.5" aria-hidden /> Complete</Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-destructive" disabled={pending} onClick={() => run(() => cancelTaskAction(task.id))}><X className="size-3.5" aria-hidden /> Cancel</Button>
+                  <Gated permission="sales.write">
+                    <Button size="sm" className="h-7" onClick={() => setCompleting(true)}>
+                      <Check className="size-3.5" aria-hidden /> Complete
+                    </Button>
+                  </Gated>
+                  <Gated permission="sales.write">
+                    <Button size="sm" variant="ghost" className="h-7 text-destructive" disabled={pending} onClick={() => run(() => cancelTaskAction(task.id))}>
+                      <X className="size-3.5" aria-hidden /> Cancel
+                    </Button>
+                  </Gated>
                 </>
               )}
-              {task.status !== "open" && can("sales.write") && (
-                <Button size="sm" variant="outline" className="h-7" disabled={pending} onClick={() => run(() => reopenTaskAction(task.id))}><RotateCcw className="size-3.5" aria-hidden /> Reopen</Button>
+              {task.status !== "open" && (
+                <Gated permission="sales.write">
+                  <Button size="sm" variant="outline" className="h-7" disabled={pending} onClick={() => run(() => reopenTaskAction(task.id))}>
+                    <RotateCcw className="size-3.5" aria-hidden /> Reopen
+                  </Button>
+                </Gated>
               )}
             </div>
             <DrawerSection title="Details">
@@ -247,6 +281,7 @@ export function NewTaskDialog({ open, onOpenChange, members, defaultAssignee, pr
           </div>
         </div>
         <DialogFooter>
+          <DisabledHint reason={title.trim().length < 2 ? "Give the task a title of at least 2 characters." : null}>
           <Button
             disabled={pending || title.trim().length < 2}
             onClick={() =>
@@ -265,6 +300,7 @@ export function NewTaskDialog({ open, onOpenChange, members, defaultAssignee, pr
           >
             {pending ? "Saving…" : "Create task"}
           </Button>
+          </DisabledHint>
         </DialogFooter>
       </DialogContent>
     </Dialog>

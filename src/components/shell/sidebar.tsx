@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { SIDEBAR_GROUPS, isRouteActive, sidebarRoutes } from "@/lib/nav/routes";
 import { useSession } from "@/components/shell/session-context";
 import { Badge } from "@/components/ui/badge";
+import { Hint } from "@/components/patterns/explain";
 import { LogoMark } from "@/components/brand/logo";
 
 export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
@@ -33,11 +34,11 @@ export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () 
                 const active = isRouteActive(r, pathname);
                 return (
                   <li key={r.key}>
+                    <Hint content={collapsed ? r.label : undefined} side="right">
                     <Link
                       href={r.path}
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
-                      title={collapsed ? r.label : undefined}
                       className={cn(
                         "group relative flex items-center rounded-md text-sm outline-none transition-colors",
                         "focus-visible:ring-2 focus-visible:ring-ring",
@@ -57,6 +58,7 @@ export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () 
                         </Badge>
                       )}
                     </Link>
+                    </Hint>
                   </li>
                 );
               })}
@@ -114,16 +116,17 @@ export function Sidebar() {
     <aside className={cn("hidden h-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 lg:flex", collapsed ? "w-14" : "w-60")}>
       <SidebarBrand collapsed={collapsed} />
       <div className={cn("flex shrink-0 border-b border-sidebar-border/60 py-1.5", collapsed ? "justify-center px-0" : "justify-end px-2")}>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-pressed={collapsed}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {collapsed ? <ChevronsRight className="size-4" aria-hidden /> : <><ChevronsLeft className="size-4" aria-hidden /> Collapse</>}
-        </button>
+        <Hint content={collapsed ? "Expand sidebar" : undefined} side="right">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-pressed={collapsed}
+            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {collapsed ? <ChevronsRight className="size-4" aria-hidden /> : <><ChevronsLeft className="size-4" aria-hidden /> Collapse</>}
+          </button>
+        </Hint>
       </div>
       <SidebarNav collapsed={collapsed} />
     </aside>

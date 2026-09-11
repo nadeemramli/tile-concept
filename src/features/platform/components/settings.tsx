@@ -12,8 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
-import { TonePill } from "@/components/patterns/status-pill";
+import { StatusPill } from "@/components/patterns/status-pill";
 import { EmptyState } from "@/components/patterns/states";
+import { Hint, InfoTip } from "@/components/patterns/explain";
+import { INVITE_STATUS, MEMBER_STATUS, OPPORTUNITY_STATUS } from "@/lib/domain/status-maps";
 import { formatDateTime } from "@/lib/format";
 import { ROLE_LABELS, type RoleKey } from "@/lib/rbac/matrix";
 import { SimpleSelect } from "@/features/catalog/components/selects";
@@ -127,7 +129,7 @@ function UsersTab({ data }: { data: SettingsData }) {
                 </div>
               </TableCell>
               <TableCell className="py-1.5">
-                <TonePill tone={u.status === "active" ? "success" : "warning"} label={u.status} />
+                <StatusPill map={MEMBER_STATUS} value={u.status} />
               </TableCell>
               <TableCell className="tnum py-1.5 text-[13px] text-muted-foreground">{formatDateTime(u.created_at)}</TableCell>
               <TableCell className="py-1.5">
@@ -201,7 +203,7 @@ function InvitesTab({ data }: { data: SettingsData }) {
                   <TableCell className="py-1.5 text-[13px]">{i.email}</TableCell>
                   <TableCell className="py-1.5 text-[13px]">{ROLE_LABELS[i.role_key as RoleKey] ?? i.role_key}</TableCell>
                   <TableCell className="py-1.5">
-                    <TonePill tone={i.status === "accepted" ? "success" : i.status === "pending" ? "info" : "neutral"} label={i.status} />
+                    <StatusPill map={INVITE_STATUS} value={i.status} />
                   </TableCell>
                   <TableCell className="tnum py-1.5 text-[13px] text-muted-foreground">
                     {formatDateTime(i.created_at)}
@@ -398,9 +400,24 @@ function StagesTab({ data }: { data: SettingsData }) {
               <TableHead className="h-9 w-12 text-xs">#</TableHead>
               <TableHead className="h-9 text-xs">Key</TableHead>
               <TableHead className="h-9 text-xs">Label</TableHead>
-              <TableHead className="h-9 text-xs">Group</TableHead>
-              <TableHead className="h-9 text-xs">Reason</TableHead>
-              <TableHead className="h-9 text-xs">Next action</TableHead>
+              <TableHead className="h-9 text-xs">
+                <span className="inline-flex items-center gap-1">
+                  Group
+                  <InfoTip label="Group" content="The stable reporting group the stage rolls up to. Reports and the Command Centre count by group, so labels can change without breaking history." />
+                </span>
+              </TableHead>
+              <TableHead className="h-9 text-xs">
+                <span className="inline-flex items-center gap-1">
+                  Reason
+                  <InfoTip label="Reason" content="Required means moving an opportunity into this stage only saves with a written reason, kept in the audit trail. Backward moves always need one regardless." />
+                </span>
+              </TableHead>
+              <TableHead className="h-9 text-xs">
+                <span className="inline-flex items-center gap-1">
+                  Next action
+                  <InfoTip label="Next action" content="Required means an opportunity in this stage must carry a next action and due date. It feeds the Missing next action and Overdue views." />
+                </span>
+              </TableHead>
               <TableHead className="h-9 text-xs">Active</TableHead>
               <TableHead className="h-9 text-xs" />
             </TableRow>
@@ -412,7 +429,7 @@ function StagesTab({ data }: { data: SettingsData }) {
                 <TableCell className="py-1 font-mono text-[12px]">{s.key}</TableCell>
                 <TableCell className="py-1 text-[13px] font-medium">{s.label}</TableCell>
                 <TableCell className="py-1">
-                  <TonePill tone={s.reporting_group === "won" ? "success" : s.reporting_group === "lost" ? "destructive" : s.reporting_group === "deferred" ? "neutral" : "info"} label={s.reporting_group} />
+                  <StatusPill map={OPPORTUNITY_STATUS} value={s.reporting_group} />
                 </TableCell>
                 <TableCell className="py-1 text-[13px]">{s.requires_reason ? "Required" : "—"}</TableCell>
                 <TableCell className="py-1 text-[13px]">{s.requires_next_action ? "Required" : "—"}</TableCell>
@@ -504,7 +521,11 @@ function ViewsTab({ data }: { data: SettingsData }) {
                       {v.name}
                       {v.is_default && <span className="ml-1 text-[11px] text-muted-foreground">(default)</span>}
                     </TableCell>
-                    <TableCell className="py-1 font-mono text-[11px] text-muted-foreground">{JSON.stringify(v.filters)}</TableCell>
+                    <TableCell className="py-1 font-mono text-[11px] text-muted-foreground">
+                      <Hint content="The saved filter state, as the surface stores it. Opening the view applies exactly these filters." focusable>
+                        <span>{JSON.stringify(v.filters)}</span>
+                      </Hint>
+                    </TableCell>
                     <TableCell className="w-32 py-1">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setEditing({ id: v.id, surface: v.surface, name: v.name, filters: JSON.stringify(v.filters), position: String(v.position), is_default: v.is_default })}>

@@ -7,10 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field } from "@/components/patterns/field";
+import { Hint } from "@/components/patterns/explain";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
 import { useSession } from "@/components/shell/session-context";
 import { recordPermissionAction } from "@/server/commands/marketing";
-import { CAPTURE_TYPES, PERMISSION_OPTIONS, PERMITTED_USES, meta, PERMISSION_STATUS } from "@/features/marketing/lib/status";
+import { CAPTURE_TYPES, CUSTOMER_MEDIA_PERMISSION_HINT, PERMISSION_OPTIONS, PERMITTED_USES, meta, PERMISSION_STATUS } from "@/features/marketing/lib/status";
 import { BUCKET_RULES, uploadPrivateFile } from "@/features/marketing/lib/upload";
 import type { PermissionRecord } from "@/server/queries/marketing";
 import { toLocalInput } from "@/features/marketing/lib/time";
@@ -55,8 +56,8 @@ export function PermissionDialog({
         }
         onOpenChange(o);
       }}
-      title="Record media permission"
-      description="What the customer has agreed to, who agreed, and any limits. Publishing an asset later checks this record."
+      title="Record customer media permission"
+      description="What the customer has agreed to, who agreed, and any limits. This is the customer's consent, not your access. Marking an asset usable later checks this record."
       submitLabel="Save permission"
       className="sm:max-w-2xl"
       action={async (fd) => {
@@ -83,7 +84,7 @@ export function PermissionDialog({
         });
       }}
     >
-      <Field label="Permission state" required hint={meta(PERMISSION_STATUS, status).label}>
+      <Field label="Permission state" required hint={meta(PERMISSION_STATUS, status).hint} tip={CUSTOMER_MEDIA_PERMISSION_HINT.body as string}>
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -112,10 +113,12 @@ export function PermissionDialog({
       <Field label="Permitted capture" hint="What may be recorded on site.">
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           {CAPTURE_TYPES.map((c) => (
-            <label key={c.value} className="flex items-center gap-2 text-sm">
-              <Checkbox checked={capture.includes(c.value)} onCheckedChange={() => toggle(capture, setCapture, c.value)} />
-              {c.label}
-            </label>
+            <Hint key={c.value} content={c.hint}>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={capture.includes(c.value)} onCheckedChange={() => toggle(capture, setCapture, c.value)} />
+                {c.label}
+              </label>
+            </Hint>
           ))}
         </div>
       </Field>
@@ -128,10 +131,12 @@ export function PermissionDialog({
       >
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           {PERMITTED_USES.map((u) => (
-            <label key={u.value} className="flex items-center gap-2 text-sm">
-              <Checkbox checked={uses.includes(u.value)} onCheckedChange={() => toggle(uses, setUses, u.value)} />
-              {u.label}
-            </label>
+            <Hint key={u.value} content={u.hint}>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={uses.includes(u.value)} onCheckedChange={() => toggle(uses, setUses, u.value)} />
+                {u.label}
+              </label>
+            </Hint>
           ))}
         </div>
       </Field>

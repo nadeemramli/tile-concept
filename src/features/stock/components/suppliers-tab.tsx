@@ -8,12 +8,20 @@ import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/patterns/data-table";
 import { StatusPill } from "@/components/patterns/status-pill";
 import { FreshnessBadge } from "@/components/patterns/freshness-badge";
+import { Gated } from "@/components/patterns/explain";
 import { FRESHNESS_STATUS } from "@/features/stock/status";
 import { QuickEntry } from "@/features/stock/components/quick-entry";
 import { BulkEntry } from "@/features/stock/components/bulk-entry";
 import { useAction } from "@/features/catalog/use-action";
 import { flagStaleSuppliersAction } from "@/server/commands/stock";
 import { useSession } from "@/components/shell/session-context";
+
+const COLUMN_HINTS = {
+  freshness: "How the latest update compares with this supplier's own policy. Stale or never updated means do not quote from it.",
+  lastUpdate: "When the most recent figure for this supplier was recorded, against the fresh window.",
+  snapshots: "How many supplier updates have been recorded in total.",
+  policy: "This supplier's freshness policy. A figure is fresh up to the first number of hours, aging up to the second, and stale after that.",
+} as const;
 import type { VariantOption } from "@/features/stock/components/variant-combobox";
 import type { StaleSupplierRow } from "@/server/queries/stock";
 
@@ -33,16 +41,18 @@ export function SuppliersTab({ stale, suppliers, variants, units }: Props) {
   const columns = useMemo<ColumnDef<StaleSupplierRow, unknown>[]>(
     () => [
       { accessorKey: "supplier_name", header: "Supplier", cell: ({ row }) => <span className="font-medium">{row.original.supplier_name}</span> },
-      { accessorKey: "freshness", header: "Freshness", cell: ({ row }) => <StatusPill map={FRESHNESS_STATUS} value={row.original.freshness} /> },
+      { accessorKey: "freshness", header: "Freshness", meta: { hint: COLUMN_HINTS.freshness }, cell: ({ row }) => <StatusPill map={FRESHNESS_STATUS} value={row.original.freshness} /> },
       {
         accessorKey: "last_update_at",
         header: "Last update",
+        meta: { hint: COLUMN_HINTS.lastUpdate },
         cell: ({ row }) => <FreshnessBadge lastSuccessAt={row.original.last_update_at} slaMinutes={row.original.fresh_hours * 60} />,
       },
-      { accessorKey: "snapshot_count", header: "Snapshots", cell: ({ row }) => <span className="tnum">{row.original.snapshot_count}</span> },
+      { accessorKey: "snapshot_count", header: "Snapshots", meta: { hint: COLUMN_HINTS.snapshots }, cell: ({ row }) => <span className="tnum">{row.original.snapshot_count}</span> },
       {
         id: "policy",
         header: "Policy",
+        meta: { hint: COLUMN_HINTS.policy },
         cell: ({ row }) => (
           <span className="tnum text-muted-foreground">
             fresh ≤ {row.original.fresh_hours}h · aging ≤ {row.original.aging_hours}h
@@ -53,8 +63,8 @@ export function SuppliersTab({ stale, suppliers, variants, units }: Props) {
         id: "actions",
         header: "",
         enableSorting: false,
-        cell: ({ row }) =>
-          canWrite ? (
+        cell: ({ row }) => (
+          <Gated permission="stock.write">
             <Button
               size="sm"
               variant="outline"
@@ -67,10 +77,11 @@ export function SuppliersTab({ stale, suppliers, variants, units }: Props) {
             >
               Record update
             </Button>
-          ) : null,
+          </Gated>
+        ),
       },
     ],
-    [canWrite],
+    [],
   );
 
   const overdue = stale.filter((s) => s.freshness === "stale" || s.freshness === "unknown");
@@ -86,11 +97,11 @@ export function SuppliersTab({ stale, suppliers, variants, units }: Props) {
             </p>
             <p className="text-xs text-muted-foreground">Flagging opens a data-health issue per supplier so the weekly chase has a queue. Recording an update clears it automatically.</p>
           </div>
-          {canWrite && (
+          <Gated permission="stock.write">
             <Button size="sm" variant="outline" className="h-8" onClick={() => flag.run()} disabled={flag.pending}>
               {flag.pending ? "Flagging…" : "Flag stale suppliers"}
             </Button>
-          )}
+          </Gated>
         </Card>
       )}
 

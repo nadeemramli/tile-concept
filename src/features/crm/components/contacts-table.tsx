@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable, MonoCell } from "@/components/patterns/data-table";
 import { StatusPill } from "@/components/patterns/status-pill";
+import { Gated, Hint, InfoTip } from "@/components/patterns/explain";
 import { LIFECYCLE_STATE, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatRelative, maskValue, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,21 @@ const ACTIVITY_OPTIONS = [
   { value: "90", label: "Last 90 days" },
 ];
 
+export const PROVISIONAL_HINT = "Created from an inquiry or walk-in without a confirmed identity. Possible duplicates are queued in Identity Review; work with it normally meanwhile.";
+export const MERGED_HINT = "This record was merged into another and is kept for audit only. Work on the surviving record; the merge can be reversed from Identity Review.";
+const MASKED_HINT = "Masked in lists. Revealing a phone number or email needs the contact.reveal permission and is audited.";
+
+const COLUMN_HINTS = {
+  phone: MASKED_HINT,
+  email: MASKED_HINT,
+  openOpps: "Opportunities still being worked for this record.",
+  lastActivity: "The most recent call, message, visit, purchase or note.",
+  regNo: "Company registration number. An exact match here is strong evidence in duplicate review.",
+  owner: "The salesperson responsible for the account.",
+} as const;
+
+const FILTERS_HINT = "View is a saved segment: New has no purchase yet, Prospects have an open opportunity, Customers have bought (active, repeat or reactivated), Lapsed have not bought for over 12 months, Needs review are provisional identities. The quick filters narrow the view further; Activity is the most recent activity date.";
+
 function distinct(vals: (string | null)[]): string[] {
   return Array.from(new Set(vals.filter((v): v is string => !!v))).sort();
 }
@@ -70,7 +86,7 @@ function FilterSelect({ value, onChange, placeholder, options }: { value: string
 
 export function AccountsContactsView({ contacts, accounts, members, includeMerged }: { contacts: ContactListRow[]; accounts: AccountListRow[]; members: MemberOption[]; includeMerged: boolean }) {
   const router = useRouter();
-  const { can, session } = useSession();
+  const { session } = useSession();
   const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("contacts"));
   const [newParam, setNewParam] = useQueryState("new", parseAsString);
   const [showMerged, setShowMerged] = useQueryState("merged", parseAsString.withOptions({ shallow: false }));
@@ -152,14 +168,22 @@ export function AccountsContactsView({ contacts, accounts, members, includeMerge
         cell: ({ row }) => (
           <span className="flex items-center gap-1.5 font-medium">
             {row.original.display_name}
-            {row.original.is_provisional && <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal text-warning">provisional</Badge>}
-            {row.original.merged_into_contact_id && <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">merged</Badge>}
+            {row.original.is_provisional && (
+              <Hint content={PROVISIONAL_HINT} focusable>
+                <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal text-warning">provisional</Badge>
+              </Hint>
+            )}
+            {row.original.merged_into_contact_id && (
+              <Hint content={MERGED_HINT} focusable>
+                <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal">merged</Badge>
+              </Hint>
+            )}
           </span>
         ),
       },
       { accessorKey: "customer_type", header: "Type", cell: ({ getValue }) => titleCase(getValue<string | null>() ?? "") || "—" },
-      { accessorKey: "primary_phone", header: "Phone", cell: ({ getValue }) => <MonoCell value={maskValue(getValue<string | null>(), "phone")} /> },
-      { accessorKey: "primary_email", header: "Email", cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{maskValue(getValue<string | null>(), "email")}</span> },
+      { accessorKey: "primary_phone", header: "Phone", meta: { hint: COLUMN_HINTS.phone }, cell: ({ getValue }) => <MonoCell value={maskValue(getValue<string | null>(), "phone")} /> },
+      { accessorKey: "primary_email", header: "Email", meta: { hint: COLUMN_HINTS.email }, cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{maskValue(getValue<string | null>(), "email")}</span> },
       { accessorKey: "lifecycle_state", header: "Lifecycle", cell: ({ getValue }) => <StatusPill map={LIFECYCLE_STATE} value={getValue<string>()} /> },
       { accessorKey: "original_acquisition_source", header: "Source", cell: ({ getValue }) => (getValue<string | null>() ? <StatusPill map={SOURCE_CHANNEL} value={getValue<string>()} /> : "—") },
       {
@@ -174,8 +198,8 @@ export function AccountsContactsView({ contacts, accounts, members, includeMerge
             "—"
           ),
       },
-      { accessorKey: "open_opportunities", header: "Open opps", cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
-      { accessorKey: "last_activity_at", header: "Last activity", cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{getValue<string | null>() ? formatRelative(getValue<string>()) : "—"}</span> },
+      { accessorKey: "open_opportunities", header: "Open opps", meta: { hint: COLUMN_HINTS.openOpps }, cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
+      { accessorKey: "last_activity_at", header: "Last activity", meta: { hint: COLUMN_HINTS.lastActivity }, cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{getValue<string | null>() ? formatRelative(getValue<string>()) : "—"}</span> },
       { accessorKey: "created_at", header: "Created", cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{formatRelative(getValue<string>())}</span> },
     ],
     [],
@@ -183,13 +207,26 @@ export function AccountsContactsView({ contacts, accounts, members, includeMerge
 
   const accountCols = useMemo<ColumnDef<AccountListRow, unknown>[]>(
     () => [
-      { accessorKey: "name", header: "Name", cell: ({ row }) => <span className="font-medium">{row.original.name}{row.original.merged_into_account_id && <Badge variant="outline" className="ml-1.5 h-4 px-1 text-[10px] font-normal">merged</Badge>}</span> },
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.name}
+            {row.original.merged_into_account_id && (
+              <Hint content={MERGED_HINT} focusable>
+                <Badge variant="outline" className="ml-1.5 h-4 px-1 text-[10px] font-normal">merged</Badge>
+              </Hint>
+            )}
+          </span>
+        ),
+      },
       { accessorKey: "account_type", header: "Type", cell: ({ getValue }) => titleCase(getValue<string | null>() ?? "") || "—" },
-      { accessorKey: "registration_number", header: "Reg. no", cell: ({ getValue }) => <MonoCell value={getValue<string | null>()} /> },
-      { accessorKey: "owner_id", header: "Owner", cell: ({ getValue }) => memberName.get(getValue<string | null>() ?? "") ?? "—" },
+      { accessorKey: "registration_number", header: "Reg. no", meta: { hint: COLUMN_HINTS.regNo }, cell: ({ getValue }) => <MonoCell value={getValue<string | null>()} /> },
+      { accessorKey: "owner_id", header: "Owner", meta: { hint: COLUMN_HINTS.owner }, cell: ({ getValue }) => memberName.get(getValue<string | null>() ?? "") ?? "—" },
       { accessorKey: "contacts_count", header: "Contacts", cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
       { accessorKey: "projects_count", header: "Projects", cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
-      { accessorKey: "open_opportunities", header: "Open opps", cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
+      { accessorKey: "open_opportunities", header: "Open opps", meta: { hint: COLUMN_HINTS.openOpps }, cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
       { accessorKey: "lifecycle_state", header: "Lifecycle", cell: ({ getValue }) => <StatusPill map={LIFECYCLE_STATE} value={getValue<string>()} /> },
       { accessorKey: "original_acquisition_source", header: "Source", cell: ({ getValue }) => (getValue<string | null>() ? <StatusPill map={SOURCE_CHANNEL} value={getValue<string>()} /> : "—") },
     ],
@@ -211,25 +248,30 @@ export function AccountsContactsView({ contacts, accounts, members, includeMerge
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Checkbox checked={includeMerged} onCheckedChange={(v) => setShowMerged(v ? "1" : null)} /> Show merged
-          </label>
-          {can("sales.write") && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setNewParam("account")}>
-                <Plus className="size-3.5" aria-hidden /> Account
-              </Button>
-              <Button size="sm" onClick={() => setNewParam("contact")}>
-                <Plus className="size-3.5" aria-hidden /> Contact
-              </Button>
-            </>
-          )}
+          <Hint content="Include records that were merged into another one. They are kept for audit and normally hidden.">
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Checkbox checked={includeMerged} onCheckedChange={(v) => setShowMerged(v ? "1" : null)} /> Show merged
+            </label>
+          </Hint>
+          <Gated permission="sales.write">
+            <Button size="sm" variant="outline" onClick={() => setNewParam("account")}>
+              <Plus className="size-3.5" aria-hidden /> Account
+            </Button>
+          </Gated>
+          <Gated permission="sales.write">
+            <Button size="sm" onClick={() => setNewParam("contact")}>
+              <Plus className="size-3.5" aria-hidden /> Contact
+            </Button>
+          </Gated>
         </div>
       </div>
 
       {/* Salesforce-style list views: a saved segment plus composable quick filters. */}
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card/40 px-2.5 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">View</span>
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          View
+          <InfoTip label="Views and filters" content={FILTERS_HINT} />
+        </span>
         <Select value={activeView} onValueChange={(v) => setView(v)}>
           <SelectTrigger className="h-8 w-auto min-w-[9.5rem] gap-1 text-xs font-medium">
             <SelectValue />

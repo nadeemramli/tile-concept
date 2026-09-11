@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type RowData,
   type RowSelectionState,
   type SortingState,
   type VisibilityState,
@@ -29,6 +30,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/patterns/states";
+import { InfoTip } from "@/components/patterns/explain";
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Explains the column's meaning; rendered as an ⓘ beside the header. */
+    hint?: string;
+  }
+}
 
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[];
@@ -141,20 +151,27 @@ export function DataTable<T>({
           {hg.headers.map((h) => {
             const sortable = h.column.getCanSort();
             const sorted = h.column.getIsSorted();
+            const hint = h.column.columnDef.meta?.hint;
+            const headerLabel = typeof h.column.columnDef.header === "string" ? h.column.columnDef.header : h.column.id;
             return (
               <TableHead key={h.id} className="h-9 whitespace-nowrap text-xs" style={h.column.columnDef.size ? { width: h.column.columnDef.size } : undefined}>
-                {h.isPlaceholder ? null : sortable ? (
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={h.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(h.column.columnDef.header, h.getContext())}
-                    {sorted === "asc" && <ChevronUp className="size-3" aria-hidden />}
-                    {sorted === "desc" && <ChevronDown className="size-3" aria-hidden />}
-                  </button>
-                ) : (
-                  flexRender(h.column.columnDef.header, h.getContext())
+                {h.isPlaceholder ? null : (
+                  <span className="inline-flex items-center gap-1">
+                    {sortable ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={h.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                        {sorted === "asc" && <ChevronUp className="size-3" aria-hidden />}
+                        {sorted === "desc" && <ChevronDown className="size-3" aria-hidden />}
+                      </button>
+                    ) : (
+                      flexRender(h.column.columnDef.header, h.getContext())
+                    )}
+                    {hint && <InfoTip content={hint} label={headerLabel} />}
+                  </span>
                 )}
               </TableHead>
             );

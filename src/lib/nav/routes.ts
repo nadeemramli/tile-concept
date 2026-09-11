@@ -5,6 +5,7 @@ import {
   Boxes,
   Cable,
   CalendarDays,
+  CircleHelp,
   ClipboardCheck,
   Contact,
   FileSearch,
@@ -91,6 +92,8 @@ export const ROUTES: RouteDef[] = [
   { key: "data-health", label: "Data Health", path: "/platform/data-health", icon: Activity, group: "Platform", status: "live", permission: "audit.read" },
   { key: "audit", label: "Audit", path: "/platform/audit", icon: ScrollText, group: "Platform", status: "live", permission: "audit.read" },
   { key: "settings", label: "Settings", path: "/platform/settings", icon: Settings, group: "Platform", status: "live", permission: "settings.manage" },
+  // Everyone with a membership. Generated from the status maps, so it never drifts from the tooltips.
+  { key: "help", label: "Help & glossary", path: "/platform/help", icon: CircleHelp, group: "Platform", status: "live", description: "Every status and term, what it means, and who can do what." },
 ];
 
 export function visibleRoutes(perms: ReadonlySet<string>): RouteDef[] {

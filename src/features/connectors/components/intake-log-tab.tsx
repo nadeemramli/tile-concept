@@ -7,6 +7,7 @@ import { RotateCcw } from "lucide-react";
 import { DataTable } from "@/components/patterns/data-table";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { StatusPill } from "@/components/patterns/status-pill";
+import { DisabledHint, Gated, Hint, InfoTip } from "@/components/patterns/explain";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/format";
 import { useAction } from "@/features/catalog/use-action";
@@ -14,7 +15,17 @@ import { replayIntakeAction } from "@/server/commands/connectors";
 import { INTAKE_STATUS } from "@/features/connectors/status";
 import type { IntakeEventRow } from "@/server/queries/connectors";
 
-export function IntakeLogTab({ rows, canReplay }: { rows: IntakeEventRow[]; canReplay: boolean }) {
+const HINTS = {
+  providerId: "The id the provider gave the submission. Two events with the same provider id are the same submission sent twice.",
+  status: "Received is stored but not yet a lead; Processed became a lead; Deduplicated was a repeat; Failed needs a replay once the cause is fixed.",
+  lead: "The lead this submission became. None means it was accepted but never linked, which is the one outcome worth chasing: replay it.",
+  submission: "The raw evidence of what arrived. The idempotency key is what stops a retry from creating a second lead: the same key is processed once.",
+  replay: "Runs this submission through intake again, using the stored payload, so the provider does not have to resend it.",
+  replayHasLead: "Already linked to a lead, so there is nothing to replay.",
+  replayDuplicate: "This was a repeat of an earlier submission. Replaying it would only find the same lead again.",
+} as const;
+
+export function IntakeLogTab({ rows }: { rows: IntakeEventRow[] }) {
   const [selected, setSelected] = useState<IntakeEventRow | null>(null);
   const replay = useAction(replayIntakeAction, { onSuccess: () => setSelected(null) });
 
@@ -23,11 +34,12 @@ export function IntakeLogTab({ rows, canReplay }: { rows: IntakeEventRow[]; canR
       { accessorKey: "received_at", header: "Received", cell: ({ row }) => <span className="tnum">{formatDateTime(row.original.received_at)}</span> },
       { accessorKey: "provider", header: "Provider", cell: ({ row }) => row.original.provider ?? <span className="text-muted-foreground">manual</span> },
       { accessorKey: "source_channel", header: "Channel" },
-      { accessorKey: "external_id", header: "Provider id", cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.external_id || "—"}</span> },
-      { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={INTAKE_STATUS} value={row.original.status} /> },
+      { accessorKey: "external_id", header: "Provider id", meta: { hint: HINTS.providerId }, cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.external_id || "—"}</span> },
+      { accessorKey: "status", header: "Status", meta: { hint: HINTS.status }, cell: ({ row }) => <StatusPill map={INTAKE_STATUS} value={row.original.status} /> },
       {
         id: "lead",
         header: "Lead",
+        meta: { hint: HINTS.lead },
         accessorFn: (r) => r.lead_id ?? "",
         cell: ({ row }) =>
           row.original.lead_id ? (
@@ -70,16 +82,28 @@ export function IntakeLogTab({ rows, canReplay }: { rows: IntakeEventRow[]; canR
         description={selected ? formatDateTime(selected.received_at) : undefined}
         width="lg"
         actions={
-          canReplay && replayable ? (
-            <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={replay.pending} onClick={() => selected && replay.run(selected.id)}>
-              <RotateCcw className="size-3.5" aria-hidden /> {replay.pending ? "Replaying…" : "Replay"}
-            </Button>
+          selected ? (
+            replayable ? (
+              <Gated permission="sales.assign">
+                <Hint content={HINTS.replay}>
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={replay.pending} onClick={() => replay.run(selected.id)}>
+                    <RotateCcw className="size-3.5" aria-hidden /> {replay.pending ? "Replaying…" : "Replay"}
+                  </Button>
+                </Hint>
+              </Gated>
+            ) : (
+              <DisabledHint reason={selected.lead_id ? HINTS.replayHasLead : HINTS.replayDuplicate}>
+                <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled>
+                  <RotateCcw className="size-3.5" aria-hidden /> Replay
+                </Button>
+              </DisabledHint>
+            )
           ) : undefined
         }
       >
         {selected && (
           <>
-            <DrawerSection title="Submission">
+            <DrawerSection title="Submission" action={<InfoTip label="Submission" content={HINTS.submission} />}>
               <FactList
                 items={[
                   { label: "Status", value: <StatusPill map={INTAKE_STATUS} value={selected.status} /> },

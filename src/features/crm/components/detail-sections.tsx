@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StatusPill } from "@/components/patterns/status-pill";
+import { Hint } from "@/components/patterns/explain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OPPORTUNITY_STATUS, PURCHASE_STATUS } from "@/lib/domain/status-maps";
 import { formatDate, formatMoney, formatRelative, isOverdue, titleCase } from "@/lib/format";
@@ -56,7 +57,11 @@ export function PurchasesList({ items }: { items: PurchaseSummary[] }) {
           <span className="w-28 font-mono text-[12px] tnum">{p.external_ref ?? "—"}</span>
           <span className="tnum w-28 font-medium">{formatMoney(p.amount, p.currency)}</span>
           <span className="flex-1 truncate text-xs text-muted-foreground">{p.payments.map((m) => titleCase(m)).join(", ") || "—"}</span>
-          {p.is_repeat && <span className="rounded-full border border-ai/25 bg-ai/12 px-2 text-[11px] text-ai">repeat</span>}
+          {p.is_repeat && (
+            <Hint content="Not this customer's first purchase recorded in the app. Derived from app-recorded purchases only, not from SQL Account history." focusable>
+              <span className="rounded-full border border-ai/25 bg-ai/12 px-2 text-[11px] text-ai">repeat</span>
+            </Hint>
+          )}
           <StatusPill map={PURCHASE_STATUS} value={p.status} />
         </li>
       ))}
@@ -77,9 +82,11 @@ export function QuotesList({ items }: { items: QuoteSummary[] }) {
               {q.opportunity_name}
             </Link>
             {q.external_docs.map((d) => (
-              <span key={d.document_number} className="rounded border px-1.5 text-[11px] text-muted-foreground">
-                {d.system}: {d.document_type} {d.document_number}
-              </span>
+              <Hint key={d.document_number} content={`A ${d.document_type} in ${d.system}, linked by document number. The external system holds the authoritative document; this is a reference.`} focusable>
+                <span className="rounded border px-1.5 text-[11px] text-muted-foreground">
+                  {d.system}: {d.document_type} {d.document_number}
+                </span>
+              </Hint>
             ))}
           </div>
           <ul className="mt-1 space-y-0.5 pl-3 text-xs text-muted-foreground">

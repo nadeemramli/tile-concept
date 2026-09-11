@@ -7,10 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field } from "@/components/patterns/field";
+import { TonePill } from "@/components/patterns/status-pill";
+import { Hint, InfoTip, gateReason } from "@/components/patterns/explain";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
 import { useSession } from "@/components/shell/session-context";
 import { checkConflictsAction, listProjectSitesAction, upsertBookingAction, type ShootConflict, type SiteOption } from "@/server/commands/marketing";
-import { PARTICIPANT_ROLES, PERMISSION_APPROVED, PERMISSION_STATUS, READINESS_STATE, SCHEDULABLE_STATUSES, meta, BOOKING_STATUS } from "@/features/marketing/lib/status";
+import { PARTICIPANT_ROLES, PARTICIPANT_ROLE_HINTS, PERMISSION_APPROVED, PERMISSION_STATUS, READINESS_STATE, SCHEDULABLE_STATUSES, meta, BOOKING_STATUS, permissionHint } from "@/features/marketing/lib/status";
 import { APP_TZ_LABEL, fromLocalInput, toLocalInput } from "@/features/marketing/lib/time";
 import type { BookingDetail, SchedulableOpportunity } from "@/server/queries/marketing";
 import type { ProfileRef } from "@/server/queries/reference";
@@ -172,10 +174,14 @@ export function BookingDialog({
 
       {opportunityId && (
         <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Permission</span>
-          <span className={cn(permissionOk ? "text-success" : "text-warning")}>{meta(PERMISSION_STATUS, permissionStatus ?? "not_requested").label}</span>
+          <span className="text-muted-foreground">Customer media permission</span>
+          <Hint content={permissionHint(permissionStatus, booking?.permission_expires_at ?? null)} focusable>
+            <span className={cn(permissionOk ? "text-success" : "text-warning")}>{meta(PERMISSION_STATUS, permissionStatus ?? "not_requested").label}</span>
+          </Hint>
           <span className="text-muted-foreground">· Readiness</span>
-          <span>{meta(READINESS_STATE, readiness ?? "in_progress").label}</span>
+          <Hint content={meta(READINESS_STATE, readiness ?? "in_progress").hint} focusable>
+            <span>{meta(READINESS_STATE, readiness ?? "in_progress").label}</span>
+          </Hint>
         </div>
       )}
 
@@ -214,7 +220,7 @@ export function BookingDialog({
             ))}
           </SelectContent>
         </Select>
-        {!canConfirm && <p className="mt-1 text-[11px] text-muted-foreground">Confirming crew capacity needs the marketing coordinator role.</p>}
+        {!canConfirm && <p className="mt-1 text-[11px] text-muted-foreground">{gateReason("marketing.confirm", session.roleLabel)}</p>}
       </Field>
 
       <Field label="Crew and participants" hint="Standby assignments are held in reserve and still checked for clashes.">
@@ -236,7 +242,10 @@ export function BookingDialog({
                     <SelectContent>
                       {PARTICIPANT_ROLES.map((r) => (
                         <SelectItem key={r} value={r}>
-                          {titleCase(r)}
+                          <span className="flex flex-col">
+                            {titleCase(r)}
+                            <span className="text-[10px] text-muted-foreground">{PARTICIPANT_ROLE_HINTS[r]}</span>
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -270,6 +279,7 @@ export function BookingDialog({
         <div className="flex items-center gap-2 border-b px-3 py-1.5 text-xs font-medium">
           <CalendarClock className="size-3.5 text-muted-foreground" aria-hidden />
           Conflict check
+          <InfoTip label="Conflict check" content="Checked live as you change the time or crew. Blocking: a confirmed booking already has one of these people, so confirming needs an audited override. Warning: a hold, a site double-booking or a travel buffer under 45 minutes; you can proceed but should look." />
           {checking && <Loader2 className="size-3 animate-spin text-muted-foreground" aria-hidden />}
           {!checking && conflicts.length === 0 && <span className="ml-auto text-success">No clashes found</span>}
           {!checking && conflicts.length > 0 && <span className="ml-auto text-warning">{conflicts.length} to consider</span>}
@@ -279,8 +289,13 @@ export function BookingDialog({
             {[...blocking, ...warnings].map((c, i) => (
               <li key={`${c.kind}-${c.booking_id}-${i}`} className="flex items-start gap-2 px-3 py-1.5">
                 <TriangleAlert className={cn("mt-0.5 size-3.5 shrink-0", c.severity === "blocking" ? "text-destructive" : "text-warning")} aria-hidden />
+                <TonePill
+                  tone={c.severity === "blocking" ? "destructive" : "warning"}
+                  label={c.severity === "blocking" ? "Blocking" : "Warning"}
+                  hint={c.severity === "blocking" ? "A confirmed booking already commits this person. Confirming needs the override box and a reason." : "Worth checking, not enforced. You can save without an override."}
+                />
                 <span className="min-w-0 flex-1">
-                  <span className={cn("font-medium", c.severity === "blocking" ? "text-destructive" : "text-warning")}>{titleCase(c.kind)}</span> — {c.detail}
+                  <span className="font-medium">{titleCase(c.kind)}</span> — {c.detail}
                 </span>
               </li>
             ))}

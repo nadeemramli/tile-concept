@@ -11,12 +11,19 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DataTable } from "@/components/patterns/data-table";
 import { StatusPill } from "@/components/patterns/status-pill";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint, Gated } from "@/components/patterns/explain";
 import { CASE_STATUS } from "@/features/stock/status";
+
+const COLUMN_HINTS = {
+  expected: "What the source (SQL Account or the supplier) says the quantity is.",
+  observed: "What was actually counted or seen. The disagreement between the two is the case.",
+  variance: "Observed minus expected. Negative means less was found than the source claims; positive means more.",
+  notes: "What was found, written by whoever investigated. The only place the outcome is recorded.",
+} as const;
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { VariantCombobox, type VariantOption } from "@/features/stock/components/variant-combobox";
 import { fieldError, useAction } from "@/features/catalog/use-action";
 import { openReconciliationCaseAction, resolveReconciliationCaseAction } from "@/server/commands/stock";
-import { useSession } from "@/components/shell/session-context";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import type { ReconciliationRow } from "@/server/queries/stock";
 
@@ -27,8 +34,6 @@ interface Props {
 }
 
 export function ReconciliationTab({ cases, sources, variants }: Props) {
-  const { can } = useSession();
-  const canWrite = can("stock.write");
   const [opening, setOpening] = useState(false);
   const [resolving, setResolving] = useState<ReconciliationRow | null>(null);
   const [newCase, setNewCase] = useState({ variant_id: "", source_id: sources[0]?.id ?? "", expected: "", observed: "", notes: "" });
@@ -41,11 +46,12 @@ export function ReconciliationTab({ cases, sources, variants }: Props) {
     () => [
       { accessorKey: "variant_label", header: "Product", cell: ({ row }) => row.original.variant_label ?? "—" },
       { accessorKey: "source_name", header: "Source", cell: ({ row }) => row.original.source_name ?? "—" },
-      { accessorKey: "expected", header: "Expected", cell: ({ row }) => <span className="tnum">{formatNumber(row.original.expected, 2)}</span> },
-      { accessorKey: "observed", header: "Observed", cell: ({ row }) => <span className="tnum">{formatNumber(row.original.observed, 2)}</span> },
+      { accessorKey: "expected", header: "Expected", meta: { hint: COLUMN_HINTS.expected }, cell: ({ row }) => <span className="tnum">{formatNumber(row.original.expected, 2)}</span> },
+      { accessorKey: "observed", header: "Observed", meta: { hint: COLUMN_HINTS.observed }, cell: ({ row }) => <span className="tnum">{formatNumber(row.original.observed, 2)}</span> },
       {
         accessorKey: "variance",
         header: "Variance",
+        meta: { hint: COLUMN_HINTS.variance },
         cell: ({ row }) => {
           const v = row.original.variance;
           if (v === null) return <span className="text-muted-foreground">—</span>;
@@ -53,7 +59,7 @@ export function ReconciliationTab({ cases, sources, variants }: Props) {
         },
       },
       { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={CASE_STATUS} value={row.original.status} /> },
-      { accessorKey: "notes", header: "Notes", cell: ({ row }) => <span className="text-muted-foreground">{row.original.notes ?? "—"}</span> },
+      { accessorKey: "notes", header: "Notes", meta: { hint: COLUMN_HINTS.notes }, cell: ({ row }) => <span className="text-muted-foreground">{row.original.notes ?? "—"}</span> },
       { accessorKey: "opened_at", header: "Opened", cell: ({ row }) => <span className="tnum">{formatDateTime(row.original.opened_at)}</span> },
       { accessorKey: "resolved_at", header: "Resolved", cell: ({ row }) => <span className="tnum">{row.original.resolved_at ? formatDateTime(row.original.resolved_at) : "—"}</span> },
       {
@@ -61,23 +67,25 @@ export function ReconciliationTab({ cases, sources, variants }: Props) {
         header: "",
         enableSorting: false,
         cell: ({ row }) =>
-          canWrite && row.original.status !== "resolved" && row.original.status !== "accepted" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 px-2 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                setResolution({ status: "resolved", notes: "" });
-                setResolving(row.original);
-              }}
-            >
-              Update
-            </Button>
+          row.original.status !== "resolved" && row.original.status !== "accepted" ? (
+            <Gated permission="stock.write">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setResolution({ status: "resolved", notes: "" });
+                  setResolving(row.original);
+                }}
+              >
+                Update
+              </Button>
+            </Gated>
           ) : null,
       },
     ],
-    [canWrite],
+    [],
   );
 
   return (
@@ -89,13 +97,13 @@ export function ReconciliationTab({ cases, sources, variants }: Props) {
         </p>
       </Card>
 
-      {canWrite && (
-        <div>
+      <div>
+        <Gated permission="stock.write">
           <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => setOpening(true)}>
             <Plus className="size-3.5" aria-hidden /> Open a case
           </Button>
-        </div>
-      )}
+        </Gated>
+      </div>
 
       <DataTable columns={columns} data={cases} rowKey={(r) => r.id} emptyTitle="No discrepancies recorded" emptyDescription="Open a case when a physical count or an app-linked figure disagrees with the source." pageSize={25} />
 
@@ -127,9 +135,15 @@ export function ReconciliationTab({ cases, sources, variants }: Props) {
             <Button variant="outline" onClick={() => setOpening(false)}>
               Cancel
             </Button>
-            <Button disabled={open.pending || !newCase.variant_id || !newCase.expected || !newCase.observed} onClick={() => open.run(newCase)}>
-              {open.pending ? "Recording…" : "Record discrepancy"}
-            </Button>
+            {(() => {
+              const blocker = !newCase.variant_id ? "Choose the product the count is about." : !newCase.expected || !newCase.observed ? "Enter both figures: what the source says and what was counted." : null;
+              const button = (
+                <Button disabled={open.pending || blocker !== null} onClick={() => open.run(newCase)}>
+                  {open.pending ? "Recording…" : "Record discrepancy"}
+                </Button>
+              );
+              return blocker ? <DisabledHint reason={blocker}>{button}</DisabledHint> : button;
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -161,9 +175,15 @@ export function ReconciliationTab({ cases, sources, variants }: Props) {
             <Button variant="outline" onClick={() => setResolving(null)}>
               Cancel
             </Button>
-            <Button disabled={resolve.pending || resolution.notes.trim().length < 3} onClick={() => resolving && resolve.run({ case_id: resolving.id, status: resolution.status as "investigating" | "resolved" | "accepted", notes: resolution.notes })}>
-              {resolve.pending ? "Saving…" : "Save"}
-            </Button>
+            {(() => {
+              const blocker = resolution.notes.trim().length < 3 ? "Write what was found (at least 3 characters). The note is the record of the outcome." : null;
+              const button = (
+                <Button disabled={resolve.pending || blocker !== null} onClick={() => resolving && resolve.run({ case_id: resolving.id, status: resolution.status as "investigating" | "resolved" | "accepted", notes: resolution.notes })}>
+                  {resolve.pending ? "Saving…" : "Save"}
+                </Button>
+              );
+              return blocker ? <DisabledHint reason={blocker}>{button}</DisabledHint> : button;
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>

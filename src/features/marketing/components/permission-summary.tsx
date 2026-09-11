@@ -4,8 +4,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Paperclip, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/patterns/explain";
 import { MarketingPill, Chips } from "@/features/marketing/components/pills";
-import { CAPTURE_TYPES, PERMISSION_STATUS, PERMITTED_USES } from "@/features/marketing/lib/status";
+import { CAPTURE_TYPES, PERMISSION_STATUS, PERMITTED_USES, permissionHint } from "@/features/marketing/lib/status";
 import { createSignedUrlAction } from "@/server/commands/marketing";
 import { daysUntil } from "@/features/marketing/lib/time";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -13,29 +14,47 @@ import type { PermissionRecord } from "@/server/queries/marketing";
 import { cn } from "@/lib/utils";
 
 const CAPTURE_LABELS = Object.fromEntries(CAPTURE_TYPES.map((c) => [c.value, c.label]));
+const CAPTURE_HINTS = Object.fromEntries(CAPTURE_TYPES.map((c) => [c.value, c.hint]));
 const USE_LABELS = Object.fromEntries(PERMITTED_USES.map((u) => [u.value, u.label]));
+const USE_HINTS = Object.fromEntries(PERMITTED_USES.map((u) => [u.value, u.hint]));
 
 /** Expiry warning: inside 30 days is a nudge, past is a block. */
 export function PermissionExpiry({ expiresAt, className }: { expiresAt: string | null | undefined; className?: string }) {
   const days = daysUntil(expiresAt);
   if (days === null) return null;
-  if (days < 0) return <span className={cn("text-destructive", className)}>expired {formatDate(expiresAt)}</span>;
-  if (days <= 30) return <span className={cn("text-warning", className)}>expires in {days} day{days === 1 ? "" : "s"}</span>;
-  return <span className={cn("text-muted-foreground", className)}>expires {formatDate(expiresAt)}</span>;
+  if (days < 0)
+    return (
+      <Hint content="The customer's approval ended on this date. New assets cannot be marked usable until the customer approves again." focusable>
+        <span className={cn("text-destructive", className)}>expired {formatDate(expiresAt)}</span>
+      </Hint>
+    );
+  if (days <= 30)
+    return (
+      <Hint content="Inside the 30-day warning window. Ask the customer to extend before it lapses; once it does, new assets are blocked." focusable>
+        <span className={cn("text-warning", className)}>
+          expires in {days} day{days === 1 ? "" : "s"}
+        </span>
+      </Hint>
+    );
+  return (
+    <Hint content="The date the customer's approval ends. A warning shows 30 days before." focusable>
+      <span className={cn("text-muted-foreground", className)}>expires {formatDate(expiresAt)}</span>
+    </Hint>
+  );
 }
 
 export function PermissionSummary({ permission }: { permission: PermissionRecord | null }) {
   if (!permission) {
     return (
       <p className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-        <ShieldAlert className="size-4 shrink-0" aria-hidden /> No permission record yet.
+        <ShieldAlert className="size-4 shrink-0" aria-hidden /> No customer media permission recorded yet. Ask the customer and record their answer with the button above; assets cannot be marked usable until it is approved.
       </p>
     );
   }
   return (
     <div className="space-y-2 rounded-md border p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <MarketingPill map={PERMISSION_STATUS} value={permission.status} size="md" />
+        <MarketingPill map={PERMISSION_STATUS} value={permission.status} size="md" hint={permissionHint(permission.status, permission.expires_at)} />
         <PermissionExpiry expiresAt={permission.expires_at} className="text-xs" />
         {permission.granted_by_name && (
           <span className="text-xs text-muted-foreground">
@@ -48,13 +67,13 @@ export function PermissionSummary({ permission }: { permission: PermissionRecord
         <div>
           <dt className="text-[11px] text-muted-foreground">Permitted capture</dt>
           <dd>
-            <Chips values={permission.permitted_capture} labels={CAPTURE_LABELS} />
+            <Chips values={permission.permitted_capture} labels={CAPTURE_LABELS} hints={CAPTURE_HINTS} />
           </dd>
         </div>
         <div>
           <dt className="text-[11px] text-muted-foreground">Permitted uses</dt>
           <dd>
-            <Chips values={permission.permitted_uses} labels={USE_LABELS} />
+            <Chips values={permission.permitted_uses} labels={USE_LABELS} hints={USE_HINTS} />
           </dd>
         </div>
       </dl>

@@ -55,7 +55,7 @@ export function ConnectorsClient({
         <ReconciliationTab rows={reconciliation} />
       </TabsContent>
       <TabsContent value="log" className="mt-4">
-        <IntakeLogTab rows={events} canReplay={canAssign} />
+        <IntakeLogTab rows={events} />
       </TabsContent>
     </Tabs>
   );

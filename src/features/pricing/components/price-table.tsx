@@ -5,8 +5,9 @@ import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowRight, History } from "lucide-react";
 import { DataTable, MoneyCell, MonoCell } from "@/components/patterns/data-table";
-import { StatusPill, TonePill } from "@/components/patterns/status-pill";
-import { PRICE_STATE, REVIEW_STATE } from "@/lib/domain/status-maps";
+import { StatusPill } from "@/components/patterns/status-pill";
+import { DisabledHint, Gated } from "@/components/patterns/explain";
+import { APPROVAL_ACTION, PRICE_STATE, REVIEW_STATE } from "@/lib/domain/status-maps";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,17 @@ interface Props {
 }
 
 type Preview = NonNullable<Extract<Awaited<ReturnType<typeof previewPriceAction>>, { ok: true }>["data"]>;
+
+const COLUMN_HINTS = {
+  list: "The price list and its type. A variant carries one current price per list, basis and minimum quantity.",
+  basis: "The unit the amount is per, and the minimum quantity it applies from. A price with min 5 is not a price for one.",
+  validFrom: "The first day the price is in force.",
+  validTo: "The last day the price is in force. Open means no end date, so the next price for the same scope must supersede it.",
+  review: "Whether a person has checked the parsed price against its source. Rejected prices cannot be published.",
+  source: "Where the price came from: a price list page, an email, a spreadsheet.",
+  approved: "Who published it and when. Blank until it is published.",
+  actions: "Publish appears for drafts, scheduled and conflicted prices whose review is not rejected. Resolve is the same action on a conflicted price: it needs an override reason. Only drafts can be edited; anything published is superseded by a new version instead.",
+} as const;
 
 export function PriceTable({ rows, canPublish, productId, listId, showProduct = true, showList = true }: Props) {
   const [publishFor, setPublishFor] = useState<PriceRow | null>(null);
@@ -86,48 +98,62 @@ export function PriceTable({ rows, canPublish, productId, listId, showProduct = 
     } else {
       cols.push({ accessorKey: "sku", header: "Variant", cell: ({ row }) => <MonoCell value={row.original.sku} /> });
     }
-    if (showList) cols.push({ accessorKey: "price_list_name", header: "Price list", cell: ({ row }) => `${row.original.price_list_name} · ${row.original.price_type}` });
+    if (showList) cols.push({ accessorKey: "price_list_name", header: "Price list", meta: { hint: COLUMN_HINTS.list }, cell: ({ row }) => `${row.original.price_list_name} · ${row.original.price_type}` });
     cols.push(
       { accessorKey: "amount", header: "Amount", cell: ({ row }) => <MoneyCell value={row.original.amount} currency={row.original.currency} className="font-medium" /> },
-      { accessorKey: "unit_code", header: "Basis", cell: ({ row }) => <span className="tnum">{row.original.unit_code ? `per ${row.original.unit_code}` : "—"}{row.original.min_quantity > 1 ? ` · min ${row.original.min_quantity}` : ""}</span> },
-      { accessorKey: "valid_from", header: "Valid from", cell: ({ row }) => <span className="tnum">{formatDate(row.original.valid_from)}</span> },
-      { accessorKey: "valid_to", header: "Valid to", cell: ({ row }) => <span className="tnum">{row.original.valid_to ? formatDate(row.original.valid_to) : "open"}</span> },
+      { accessorKey: "unit_code", header: "Basis", meta: { hint: COLUMN_HINTS.basis }, cell: ({ row }) => <span className="tnum">{row.original.unit_code ? `per ${row.original.unit_code}` : "—"}{row.original.min_quantity > 1 ? ` · min ${row.original.min_quantity}` : ""}</span> },
+      { accessorKey: "valid_from", header: "Valid from", meta: { hint: COLUMN_HINTS.validFrom }, cell: ({ row }) => <span className="tnum">{formatDate(row.original.valid_from)}</span> },
+      { accessorKey: "valid_to", header: "Valid to", meta: { hint: COLUMN_HINTS.validTo }, cell: ({ row }) => <span className="tnum">{row.original.valid_to ? formatDate(row.original.valid_to) : "open"}</span> },
       { accessorKey: "state", header: "State", cell: ({ row }) => <StatusPill map={PRICE_STATE} value={row.original.state} /> },
-      { accessorKey: "review_state", header: "Review", cell: ({ row }) => <StatusPill map={REVIEW_STATE} value={row.original.review_state} /> },
-      { accessorKey: "source_ref", header: "Source", cell: ({ row }) => <span className="max-w-48 truncate text-muted-foreground" title={row.original.source_ref ?? ""}>{row.original.source_ref ?? "—"}</span> },
-      { id: "approved", header: "Approved", cell: ({ row }) => (row.original.approved_by_name ? <span className="text-xs text-muted-foreground">{row.original.approved_by_name} · {formatDate(row.original.approved_at)}</span> : "—") },
+      { accessorKey: "review_state", header: "Review", meta: { hint: COLUMN_HINTS.review }, cell: ({ row }) => <StatusPill map={REVIEW_STATE} value={row.original.review_state} /> },
+      { accessorKey: "source_ref", header: "Source", meta: { hint: COLUMN_HINTS.source }, cell: ({ row }) => <span className="max-w-48 truncate text-muted-foreground" title={row.original.source_ref ?? ""}>{row.original.source_ref ?? "—"}</span> },
+      { id: "approved", header: "Approved", meta: { hint: COLUMN_HINTS.approved }, cell: ({ row }) => (row.original.approved_by_name ? <span className="text-xs text-muted-foreground">{row.original.approved_by_name} · {formatDate(row.original.approved_at)}</span> : "—") },
       {
         id: "actions",
-        header: "",
+        header: "Actions",
+        meta: { hint: COLUMN_HINTS.actions },
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => {
           const r = row.original;
-          const publishable = ["draft", "scheduled", "conflicted"].includes(r.state) && r.review_state !== "rejected";
+          const stateOk = ["draft", "scheduled", "conflicted"].includes(r.state);
+          const publishable = stateOk && r.review_state !== "rejected";
+          const stateReason = !stateOk ? undefined : r.review_state === "rejected" ? "This price was rejected in review. Enter a new draft instead." : undefined;
           return (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              {canPublish && publishable && (
-                <Button size="sm" variant={r.state === "conflicted" ? "destructive" : "default"} className="h-6 px-2 text-xs" onClick={() => openPublish(r)}>
-                  {r.state === "conflicted" ? "Resolve" : "Publish"}
-                </Button>
+              {stateOk && (
+                <Gated permission="price.publish">
+                  <DisabledHint reason={stateReason}>
+                    <Button size="sm" variant={r.state === "conflicted" ? "destructive" : "default"} className="h-6 px-2 text-xs" disabled={!publishable} onClick={() => openPublish(r)}>
+                      {r.state === "conflicted" ? "Resolve" : "Publish"}
+                    </Button>
+                  </DisabledHint>
+                </Gated>
               )}
-              {canPublish && r.state === "draft" && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => {
-                    setEditFor(r);
-                    setEdit({ amount: String(r.amount), valid_from: r.valid_from, valid_to: r.valid_to ?? "", min_quantity: String(r.min_quantity), source_ref: r.source_ref ?? "", notes: r.notes ?? "" });
-                  }}
-                >
-                  Edit
-                </Button>
+              {stateOk && (
+                <Gated permission="price.publish">
+                  <DisabledHint reason={r.state !== "draft" ? "Only drafts can be edited. This price is already published; enter a new version to change it." : undefined}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs"
+                      disabled={r.state !== "draft"}
+                      onClick={() => {
+                        setEditFor(r);
+                        setEdit({ amount: String(r.amount), valid_from: r.valid_from, valid_to: r.valid_to ?? "", min_quantity: String(r.min_quantity), source_ref: r.source_ref ?? "", notes: r.notes ?? "" });
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </DisabledHint>
+                </Gated>
               )}
-              {canPublish && publishable && (
-                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-muted-foreground" onClick={() => setRejectFor(r)}>
-                  Reject
-                </Button>
+              {publishable && (
+                <Gated permission="price.publish">
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-muted-foreground" onClick={() => setRejectFor(r)}>
+                    Reject
+                  </Button>
+                </Gated>
               )}
               <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => openHistory(r)} aria-label="Price history">
                 <History className="size-3.5" />
@@ -217,9 +243,11 @@ export function PriceTable({ rows, canPublish, productId, listId, showProduct = 
               </Button>
             )}
             {needOverride && (
-              <Button variant="destructive" disabled={publish.pending || !publishFor || reason.trim().length < 5} onClick={() => publishFor && publish.run(publishFor.id, true, reason.trim(), productId ?? publishFor.product_id, listId ?? publishFor.price_list_id)}>
-                {publish.pending ? "Publishing…" : "Override and publish"}
-              </Button>
+              <DisabledHint reason={!publish.pending && reason.trim().length < 5 ? "The override reason needs at least 5 characters. It is recorded in the approval log against your name." : undefined}>
+                <Button variant="destructive" disabled={publish.pending || !publishFor || reason.trim().length < 5} onClick={() => publishFor && publish.run(publishFor.id, true, reason.trim(), productId ?? publishFor.product_id, listId ?? publishFor.price_list_id)}>
+                  {publish.pending ? "Publishing…" : "Override and publish"}
+                </Button>
+              </DisabledHint>
             )}
           </DialogFooter>
         </DialogContent>
@@ -239,9 +267,11 @@ export function PriceTable({ rows, canPublish, productId, listId, showProduct = 
             <Button variant="outline" onClick={() => setRejectFor(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" disabled={reject.pending || reason.trim().length < 3} onClick={() => rejectFor && reject.run(rejectFor.id, reason.trim(), productId ?? rejectFor.product_id, listId ?? rejectFor.price_list_id)}>
-              Reject
-            </Button>
+            <DisabledHint reason={!reject.pending && reason.trim().length < 3 ? "Say why (at least 3 characters). The reason stays with the draft as evidence." : undefined}>
+              <Button variant="destructive" disabled={reject.pending || reason.trim().length < 3} onClick={() => rejectFor && reject.run(rejectFor.id, reason.trim(), productId ?? rejectFor.product_id, listId ?? rejectFor.price_list_id)}>
+                Reject
+              </Button>
+            </DisabledHint>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -317,7 +347,7 @@ export function PriceTable({ rows, canPublish, productId, listId, showProduct = 
                 <ul className="space-y-1 text-sm">
                   {preview.events.map((e) => (
                     <li key={e.id} className="flex flex-wrap items-baseline gap-x-2">
-                      <TonePill tone={e.action === "approved" ? "success" : e.action === "rejected" ? "destructive" : e.action === "override" ? "warning" : "neutral"} label={e.action} />
+                      <StatusPill map={APPROVAL_ACTION} value={e.action} />
                       <span className="text-xs text-muted-foreground">
                         {e.actor_name ?? "system"} · {formatDateTime(e.occurred_at)}
                       </span>

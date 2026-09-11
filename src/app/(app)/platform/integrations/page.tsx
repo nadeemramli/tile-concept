@@ -15,7 +15,7 @@ export default async function IntegrationsPage() {
   return (
     <PageBody>
       <PageHeader title="Integrations" description="Each connector shows provider, environment, direction, owner, credential reference, freshness and error state. Configuration unlocks per PRD phase once access, scopes and credentials are approved." />
-      <IntegrationCards rows={rows} canManage={hasPermission(session, "settings.manage")} members={members.map((m) => ({ user_id: m.user_id, full_name: m.full_name }))} />
+      <IntegrationCards rows={rows} members={members.map((m) => ({ user_id: m.user_id, full_name: m.full_name }))} />
     </PageBody>
   );
 }

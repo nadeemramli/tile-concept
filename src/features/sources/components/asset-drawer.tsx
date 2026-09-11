@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
 import { EmptyState } from "@/components/patterns/states";
+import { DisabledHint, Gated, InfoTip } from "@/components/patterns/explain";
+
+const NO_ORIGINAL = "The original file is not stored in this workspace, so there is nothing to open or re-read. Web and manual sources, and demo data, have no stored file.";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { ASSET_KIND, ASSET_STATUS, JOB_STATUS, formatBytes } from "@/features/sources/status-maps";
 import type { SourceAssetDetail } from "@/server/queries/sources";
@@ -14,7 +17,7 @@ import { useAction } from "@/features/catalog/use-action";
 import { archiveSourceAssetAction, parseSourceAssetAction, signedSourceUrlAction } from "@/server/commands/sources";
 import { toast } from "sonner";
 
-export function AssetDrawer({ detail, canWrite, onClose }: { detail: SourceAssetDetail | null; canWrite: boolean; onClose: () => void }) {
+export function AssetDrawer({ detail, onClose }: { detail: SourceAssetDetail | null; onClose: () => void }) {
   const [downloading, setDownloading] = useState(false);
   const reparse = useAction(parseSourceAssetAction);
   const archive = useAction(archiveSourceAssetAction, { onSuccess: onClose });
@@ -48,20 +51,36 @@ export function AssetDrawer({ detail, canWrite, onClose }: { detail: SourceAsset
         <span className="flex flex-wrap items-center gap-1.5">
           <StatusPill map={ASSET_KIND} value={asset.kind} />
           <StatusPill map={ASSET_STATUS} value={asset.status} />
-          {asset.pending_reviews > 0 && <TonePill tone="warning" label={`${asset.pending_reviews} to review`} />}
+          {asset.pending_reviews > 0 && <TonePill tone="warning" label={`${asset.pending_reviews} to review`} hint="Parsed rows waiting in Imports & OCR Review. Nothing reaches the catalog until they are approved." />}
         </span>
       }
       actions={
         <>
-          <Button size="sm" variant="outline" onClick={download} disabled={downloading || !asset.storage_path}>
-            {downloading ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Download className="size-3.5" aria-hidden />}
-            Original
-          </Button>
-          {canWrite && (
-            <Button size="sm" variant="outline" onClick={() => reparse.run({ asset_id: asset.id })} disabled={reparse.pending || !asset.storage_path}>
-              {reparse.pending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <RefreshCw className="size-3.5" aria-hidden />}
-              Re-parse
+          {asset.storage_path ? (
+            <Button size="sm" variant="outline" onClick={download} disabled={downloading}>
+              {downloading ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Download className="size-3.5" aria-hidden />}
+              Original
             </Button>
+          ) : (
+            <DisabledHint reason={NO_ORIGINAL}>
+              <Button size="sm" variant="outline" disabled>
+                <Download className="size-3.5" aria-hidden /> Original
+              </Button>
+            </DisabledHint>
+          )}
+          {asset.storage_path ? (
+            <Gated permission="source.import">
+              <Button size="sm" variant="outline" onClick={() => reparse.run({ asset_id: asset.id })} disabled={reparse.pending}>
+                {reparse.pending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <RefreshCw className="size-3.5" aria-hidden />}
+                Re-parse
+              </Button>
+            </Gated>
+          ) : (
+            <DisabledHint reason={NO_ORIGINAL}>
+              <Button size="sm" variant="outline" disabled>
+                <RefreshCw className="size-3.5" aria-hidden /> Re-parse
+              </Button>
+            </DisabledHint>
           )}
         </>
       }
@@ -81,7 +100,7 @@ export function AssetDrawer({ detail, canWrite, onClose }: { detail: SourceAsset
         />
       </DrawerSection>
 
-      <DrawerSection title="Provenance">
+      <DrawerSection title="Provenance" action={<InfoTip label="Provenance" content="Proof of exactly which file was read. The fingerprint is a hash of the file contents: the same bytes always give the same fingerprint, so a re-upload of identical content is recognised and ignored." />}>
         <dl className="space-y-2 text-sm">
           <div>
             <dt className="text-[11px] text-muted-foreground">Content fingerprint (SHA-256)</dt>
@@ -111,7 +130,7 @@ export function AssetDrawer({ detail, canWrite, onClose }: { detail: SourceAsset
         )}
       </DrawerSection>
 
-      <DrawerSection title={`Import jobs (${jobs.length})`}>
+      <DrawerSection title={`Import jobs (${jobs.length})`} action={<InfoTip label="Import jobs" content="Each parse run, newest first, with the parser version, how many attempts it took and any error. A failed job is retried; a dead-letter job needs a person to look at it." />}>
         {jobs.length === 0 ? (
           <EmptyState title="Not parsed yet" description="Run a parse to stage rows for review." className="py-6" />
         ) : (
@@ -154,10 +173,12 @@ export function AssetDrawer({ detail, canWrite, onClose }: { detail: SourceAsset
             <Link href={`/sources/review?asset=${asset.id}`}>Review {asset.pending_reviews} row(s)</Link>
           </Button>
         )}
-        {canWrite && asset.status !== "archived" && (
-          <Button size="sm" variant="outline" onClick={() => archive.run({ asset_id: asset.id })} disabled={archive.pending}>
-            <Archive className="size-3.5" aria-hidden /> Archive
-          </Button>
+        {asset.status !== "archived" && (
+          <Gated permission="source.import">
+            <Button size="sm" variant="outline" onClick={() => archive.run({ asset_id: asset.id })} disabled={archive.pending}>
+              <Archive className="size-3.5" aria-hidden /> Archive
+            </Button>
+          </Gated>
         )}
       </div>
     </RecordDrawer>

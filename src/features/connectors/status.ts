@@ -3,24 +3,24 @@ import type { StatusMap } from "@/lib/domain/status-maps";
 /** Local status maps for the connector console (PRD §11.1). */
 
 export const CONNECTOR_STATUS: StatusMap = {
-  not_configured: { label: "Not configured", tone: "neutral" },
-  paused: { label: "Paused", tone: "warning" },
-  healthy: { label: "Healthy", tone: "success" },
-  degraded: { label: "Degraded", tone: "warning" },
-  failed: { label: "Failed", tone: "destructive" },
+  not_configured: { label: "Not configured", tone: "neutral", hint: "No secret or endpoint yet. Nothing is being received." },
+  paused: { label: "Paused", tone: "warning", hint: "Deliberately stopped. Submissions are rejected until resumed." },
+  healthy: { label: "Healthy", tone: "success", hint: "The last submission or test was accepted inside the freshness policy." },
+  degraded: { label: "Degraded", tone: "warning", hint: "Working, but the last activity is older than the policy or some submissions failed." },
+  failed: { label: "Failed", tone: "destructive", hint: "The last submission failed. Leads may be missing until it is fixed." },
 };
 
 export const INTAKE_STATUS: StatusMap = {
-  received: { label: "Received", tone: "info" },
-  processed: { label: "Processed", tone: "success" },
-  duplicate: { label: "Deduplicated", tone: "neutral" },
-  failed: { label: "Failed", tone: "destructive" },
+  received: { label: "Received", tone: "info", hint: "Accepted and stored with its signature verified. Not yet turned into a lead." },
+  processed: { label: "Processed", tone: "success", hint: "Became a lead in the Inquiry Inbox." },
+  duplicate: { label: "Deduplicated", tone: "neutral", hint: "The same submission id arrived before. Kept for the record; no second lead was made." },
+  failed: { label: "Failed", tone: "destructive", hint: "Could not be processed. Fix the cause, then Replay it." },
 };
 
 export const ENVIRONMENT: StatusMap = {
-  demo: { label: "Demo", tone: "ai" },
-  shadow: { label: "Shadow", tone: "info" },
-  live: { label: "Live", tone: "warning" },
+  demo: { label: "Demo", tone: "ai", hint: "Synthetic submissions only." },
+  shadow: { label: "Shadow", tone: "info", hint: "Real submissions are stored and become leads, but nothing is sent back to the provider or the customer." },
+  live: { label: "Live", tone: "warning", hint: "Real customers. Every submission is audited." },
 };
 
 /**

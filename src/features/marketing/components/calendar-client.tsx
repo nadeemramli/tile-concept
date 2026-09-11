@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSession } from "@/components/shell/session-context";
+import { Gated, Hint, InfoTip } from "@/components/patterns/explain";
 import { AgendaList, MonthGrid, TimeGrid } from "@/features/marketing/components/calendar-grid";
 import { BookingDrawer } from "@/features/marketing/components/booking-drawer";
 import { BookingDialog } from "@/features/marketing/components/booking-dialog";
@@ -21,6 +22,13 @@ import { formatDate } from "@/lib/format";
 export type CalendarView = "month" | "week" | "day" | "agenda";
 
 const VIEW_LABELS: Record<CalendarView, string> = { month: "Month", week: "Week", day: "Day", agenda: "Agenda" };
+
+const TOOLBAR_HINTS = {
+  mine: "Only bookings where you are the coordinator or a participant, including standby.",
+  exceptions: "Only bookings that need attention: the customer has not approved media permission (or it expired), or the project is not yet ready to shoot.",
+  filters: "Status is the booking state. Coordinator is the person who owns the booking. Content type comes from the nomination. The count is bookings shown out of all bookings in this date range.",
+  next7: "The next seven days from today, regardless of the view or filters above.",
+} as const;
 
 export function CalendarClient({
   bookings,
@@ -40,7 +48,7 @@ export function CalendarClient({
   anchor: string;
 }) {
   const router = useRouter();
-  const { can, session } = useSession();
+  const { session } = useSession();
   const [, setBookingId] = useQueryState("booking", parseAsString);
   const [, setView] = useQueryState("view", parseAsString);
   const [, setDate] = useQueryState("date", parseAsString);
@@ -101,17 +109,21 @@ export function CalendarClient({
         <span className="text-sm font-medium">{heading}</span>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button variant={mine ? "default" : "outline"} size="sm" className="h-8" onClick={() => setMine(mine ? null : true)}>
-            My assignments
-          </Button>
-          <Button variant={exceptionsOnly ? "default" : "outline"} size="sm" className="h-8" onClick={() => setExceptionsOnly((v) => !v)}>
-            Exceptions only
-          </Button>
-          {can("marketing.write") && (
+          <Hint content={TOOLBAR_HINTS.mine}>
+            <Button variant={mine ? "default" : "outline"} size="sm" className="h-8" aria-pressed={mine} onClick={() => setMine(mine ? null : true)}>
+              My assignments
+            </Button>
+          </Hint>
+          <Hint content={TOOLBAR_HINTS.exceptions}>
+            <Button variant={exceptionsOnly ? "default" : "outline"} size="sm" className="h-8" aria-pressed={exceptionsOnly} onClick={() => setExceptionsOnly((v) => !v)}>
+              Exceptions only
+            </Button>
+          </Hint>
+          <Gated permission="marketing.write">
             <Button size="sm" className="h-8" onClick={() => setCreating(true)}>
               <CalendarPlus className="size-3.5" aria-hidden /> New booking
             </Button>
-          )}
+          </Gated>
         </div>
       </div>
 
@@ -155,8 +167,9 @@ export function CalendarClient({
             ))}
           </SelectContent>
         </Select>
-        <span className="tnum text-xs text-muted-foreground">
+        <span className="tnum inline-flex items-center gap-1 text-xs text-muted-foreground">
           {filtered.length} of {bookings.length} shown
+          <InfoTip label="Filters" content={TOOLBAR_HINTS.filters} />
         </span>
       </div>
 
@@ -169,7 +182,10 @@ export function CalendarClient({
         </div>
 
         <aside className="hidden space-y-2 xl:block">
-          <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Next 7 days</h2>
+          <h2 className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Next 7 days
+            <InfoTip label="Next 7 days" content={TOOLBAR_HINTS.next7} />
+          </h2>
           {upcoming.length === 0 ? (
             <p className="rounded-md border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">Nothing booked this week.</p>
           ) : (

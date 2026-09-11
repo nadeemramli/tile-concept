@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { StatusPill } from "@/components/patterns/status-pill";
+import { Gated, InfoTip } from "@/components/patterns/explain";
 import { Field } from "@/components/patterns/field";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
 import { useSession } from "@/components/shell/session-context";
@@ -17,7 +18,7 @@ import { BookingDialog } from "@/features/marketing/components/booking-dialog";
 import { OutputDialog } from "@/features/marketing/components/output-dialog";
 import { OutputsList } from "@/features/marketing/components/outputs-list";
 import { PermissionEvidenceLink, PermissionSummary } from "@/features/marketing/components/permission-summary";
-import { BOOKING_STATUS, CONTENT_STATUS, CONTENT_TYPES, PRIORITY, READINESS_OPTIONS, READINESS_STATE, meta } from "@/features/marketing/lib/status";
+import { BOOKING_STATUS, CONTENT_STATUS, CONTENT_TYPES, CUSTOMER_MEDIA_PERMISSION_HINT, PRIORITY, READINESS_OPTIONS, READINESS_STATE, meta } from "@/features/marketing/lib/status";
 import { setContentStatusAction, setReadinessAction } from "@/server/commands/marketing";
 import { useAction } from "@/features/catalog/use-action";
 import type { ContentOpportunityDetail, SchedulableOpportunity } from "@/server/queries/marketing";
@@ -26,6 +27,7 @@ import { formatDate, formatDateTime, titleCase } from "@/lib/format";
 import { timeRangeLabel } from "@/features/marketing/lib/time";
 
 const CONTENT_TYPE_LABELS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.label]));
+const CONTENT_TYPE_HINTS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.hint]));
 
 type Which = "permission" | "booking" | "output" | "decision" | null;
 
@@ -84,37 +86,50 @@ export function OpportunityDrawer({
         </span>
       }
       actions={
-        canWrite ? (
+        <Gated permission="marketing.write">
           <Button size="sm" onClick={() => setOpen("booking")}>
             <CalendarPlus className="size-3.5" aria-hidden /> Schedule shoot
           </Button>
-        ) : null
+        </Gated>
       }
     >
-      {canWrite && (
+      <div className="space-y-1">
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => decide("accepted")}>
-            <CheckCheck className="size-3.5" aria-hidden /> Accept
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => decide("needs_info")}>
-            <CircleHelp className="size-3.5" aria-hidden /> Needs info
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => decide("deferred")}>
-            <Pause className="size-3.5" aria-hidden /> Defer
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => decide("declined")}>
-            <XCircle className="size-3.5" aria-hidden /> Decline
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setOpen("permission")}>
-            <ShieldCheck className="size-3.5" aria-hidden /> Record permission
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setOpen("output")}>
-            <Upload className="size-3.5" aria-hidden /> Add asset
-          </Button>
+          <Gated permission="marketing.write">
+            <Button variant="outline" size="sm" onClick={() => decide("accepted")}>
+              <CheckCheck className="size-3.5" aria-hidden /> Accept
+            </Button>
+          </Gated>
+          <Gated permission="marketing.write">
+            <Button variant="outline" size="sm" onClick={() => decide("needs_info")}>
+              <CircleHelp className="size-3.5" aria-hidden /> Needs info
+            </Button>
+          </Gated>
+          <Gated permission="marketing.write">
+            <Button variant="outline" size="sm" onClick={() => decide("deferred")}>
+              <Pause className="size-3.5" aria-hidden /> Defer
+            </Button>
+          </Gated>
+          <Gated permission="marketing.write">
+            <Button variant="outline" size="sm" onClick={() => decide("declined")}>
+              <XCircle className="size-3.5" aria-hidden /> Decline
+            </Button>
+          </Gated>
+          <Gated permission="marketing.write">
+            <Button variant="outline" size="sm" onClick={() => setOpen("permission")}>
+              <ShieldCheck className="size-3.5" aria-hidden /> Record customer permission
+            </Button>
+          </Gated>
+          <Gated permission="marketing.write">
+            <Button variant="outline" size="sm" onClick={() => setOpen("output")}>
+              <Upload className="size-3.5" aria-hidden /> Add asset
+            </Button>
+          </Gated>
         </div>
-      )}
+        <p className="text-[11px] text-muted-foreground">Accept sets a Marketing owner. Needs info, Defer and Decline each need a reason, kept in the status history.</p>
+      </div>
 
-      <DrawerSection title="Media permission">
+      <DrawerSection title="Customer media permission" action={<InfoTip label="Customer media permission" content={CUSTOMER_MEDIA_PERMISSION_HINT} />}>
         <PermissionSummary permission={detail.permission} />
         <PermissionEvidenceLink path={detail.permission?.evidence_storage_path ?? null} />
       </DrawerSection>
@@ -148,7 +163,7 @@ export function OpportunityDrawer({
               ),
             },
             { label: "Target window", value: detail.target_window_start ? `${formatDate(detail.target_window_start)} – ${formatDate(detail.target_window_end)}` : "—" },
-            { label: "Content types", value: <Chips values={detail.content_types} labels={CONTENT_TYPE_LABELS} /> },
+            { label: "Content types", value: <Chips values={detail.content_types} labels={CONTENT_TYPE_LABELS} hints={CONTENT_TYPE_HINTS} /> },
             { label: "Products used", value: <Chips values={detail.products_used} /> },
             { label: "Nominated by", value: names.get(detail.nominated_by ?? "") ?? "—" },
             { label: "Customer owner", value: names.get(detail.customer_owner_id ?? "") ?? "—" },

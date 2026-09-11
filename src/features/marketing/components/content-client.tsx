@@ -11,16 +11,31 @@ import { MetricCard } from "@/components/patterns/metric-card";
 import { StatusPill } from "@/components/patterns/status-pill";
 import { ViewsBar } from "@/features/inbox/components/views-bar";
 import { useSession } from "@/components/shell/session-context";
+import { Gated } from "@/components/patterns/explain";
 import { MarketingPill, Chips } from "@/features/marketing/components/pills";
 import { PermissionExpiry } from "@/features/marketing/components/permission-summary";
 import { NominateDialog } from "@/features/marketing/components/nominate-dialog";
 import { OpportunityDrawer } from "@/features/marketing/components/opportunity-drawer";
-import { BOOKING_STATUS, CONTENT_STATUS, CONTENT_TYPES, PERMISSION_STATUS, PRIORITY, READINESS_STATE } from "@/features/marketing/lib/status";
+import { BOOKING_STATUS, CONTENT_STATUS, CONTENT_TYPES, PERMISSION_STATUS, PRIORITY, READINESS_STATE, permissionHint } from "@/features/marketing/lib/status";
 import type { ContentCounts, ContentOpportunityDetail, ContentOpportunityRow, SchedulableOpportunity } from "@/server/queries/marketing";
 import type { ProfileRef } from "@/server/queries/reference";
 import { formatDate } from "@/lib/format";
 
 const CONTENT_TYPE_LABELS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.label]));
+const CONTENT_TYPE_HINTS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.hint]));
+
+const COLUMN_HINTS = {
+  angle: "The one-line pitch Sales wrote when nominating: what makes this project worth showing.",
+  types: "The formats Sales suggested. Marketing may add or drop some when accepting.",
+  status: "Where the nomination is in the review: Sales nominates, Marketing decides, then it is scheduled and completed.",
+  readiness: "Whether the site is finished enough to film. Set by the salesperson or project owner, separately from customer permission.",
+  permission: "The customer's documented agreement to be filmed and featured. Nothing from a shoot can be marked usable until this is approved. This is not your own access.",
+  priority: "Marketing's urgency for the content calendar.",
+  window: "The dates the customer said would suit them. A booking can sit outside it if the customer agrees later.",
+  shoot: "The latest booking for this nomination and its state. Not booked means no hold exists yet.",
+  nominated_by: "The salesperson who put the project forward and stays the customer's contact.",
+  owner: "The Marketing person responsible for deciding and scheduling. Unassigned until someone accepts it.",
+} as const;
 
 const TABS = [
   { key: "inbox", label: "Needs review" },
@@ -73,27 +88,30 @@ export function ContentOpportunitiesClient({
     {
       id: "angle",
       header: "Story angle",
+      meta: { hint: COLUMN_HINTS.angle },
       accessorFn: (r) => r.story_angle ?? "",
       cell: ({ row }) => <span className="block max-w-56 truncate text-muted-foreground">{row.original.story_angle ?? "—"}</span>,
     },
-    { id: "types", header: "Content", enableSorting: false, cell: ({ row }) => <Chips values={row.original.content_types} labels={CONTENT_TYPE_LABELS} /> },
-    { id: "status", header: "Status", accessorFn: (r) => r.status, cell: ({ row }) => <MarketingPill map={CONTENT_STATUS} value={row.original.status} /> },
-    { id: "readiness", header: "Readiness", accessorFn: (r) => r.readiness_state, cell: ({ row }) => <MarketingPill map={READINESS_STATE} value={row.original.readiness_state} /> },
+    { id: "types", header: "Content", meta: { hint: COLUMN_HINTS.types }, enableSorting: false, cell: ({ row }) => <Chips values={row.original.content_types} labels={CONTENT_TYPE_LABELS} hints={CONTENT_TYPE_HINTS} /> },
+    { id: "status", header: "Status", meta: { hint: COLUMN_HINTS.status }, accessorFn: (r) => r.status, cell: ({ row }) => <MarketingPill map={CONTENT_STATUS} value={row.original.status} /> },
+    { id: "readiness", header: "Readiness", meta: { hint: COLUMN_HINTS.readiness }, accessorFn: (r) => r.readiness_state, cell: ({ row }) => <MarketingPill map={READINESS_STATE} value={row.original.readiness_state} /> },
     {
       id: "permission",
-      header: "Permission",
+      header: "Customer permission",
+      meta: { hint: COLUMN_HINTS.permission },
       accessorFn: (r) => r.permission?.status ?? "not_requested",
       cell: ({ row }) => (
         <span className="flex flex-col gap-0.5">
-          <MarketingPill map={PERMISSION_STATUS} value={row.original.permission?.status ?? "not_requested"} />
+          <MarketingPill map={PERMISSION_STATUS} value={row.original.permission?.status ?? "not_requested"} hint={permissionHint(row.original.permission?.status, row.original.permission?.expires_at)} />
           <PermissionExpiry expiresAt={row.original.permission?.expires_at} className="text-[10px]" />
         </span>
       ),
     },
-    { id: "priority", header: "Priority", accessorFn: (r) => r.priority, cell: ({ row }) => <StatusPill map={PRIORITY} value={row.original.priority} /> },
+    { id: "priority", header: "Priority", meta: { hint: COLUMN_HINTS.priority }, accessorFn: (r) => r.priority, cell: ({ row }) => <StatusPill map={PRIORITY} value={row.original.priority} /> },
     {
       id: "window",
       header: "Target window",
+      meta: { hint: COLUMN_HINTS.window },
       accessorFn: (r) => r.target_window_start ?? "",
       cell: ({ row }) => (
         <span className="tnum whitespace-nowrap text-xs text-muted-foreground">
@@ -104,6 +122,7 @@ export function ContentOpportunitiesClient({
     {
       id: "shoot",
       header: "Shoot",
+      meta: { hint: COLUMN_HINTS.shoot },
       accessorFn: (r) => r.booking_status ?? "",
       cell: ({ row }) =>
         row.original.booking_status ? (
@@ -115,8 +134,8 @@ export function ContentOpportunitiesClient({
           <span className="text-xs text-muted-foreground">Not booked</span>
         ),
     },
-    { id: "nominated_by", header: "Nominated by", accessorFn: (r) => names.get(r.nominated_by ?? "") ?? "", cell: ({ row }) => <span className="text-xs">{names.get(row.original.nominated_by ?? "") ?? "—"}</span> },
-    { id: "owner", header: "Marketing owner", accessorFn: (r) => names.get(r.marketing_owner_id ?? "") ?? "", cell: ({ row }) => <span className="text-xs">{names.get(row.original.marketing_owner_id ?? "") ?? "Unassigned"}</span> },
+    { id: "nominated_by", header: "Nominated by", meta: { hint: COLUMN_HINTS.nominated_by }, accessorFn: (r) => names.get(r.nominated_by ?? "") ?? "", cell: ({ row }) => <span className="text-xs">{names.get(row.original.nominated_by ?? "") ?? "—"}</span> },
+    { id: "owner", header: "Marketing owner", meta: { hint: COLUMN_HINTS.owner }, accessorFn: (r) => names.get(r.marketing_owner_id ?? "") ?? "", cell: ({ row }) => <span className="text-xs">{names.get(row.original.marketing_owner_id ?? "") ?? "Unassigned"}</span> },
   ];
 
   return (
@@ -157,11 +176,11 @@ export function ContentOpportunitiesClient({
         active={view}
         basePath="/marketing/content-opportunities"
         extra={
-          can("marketing.write") ? (
+          <Gated permission="marketing.write">
             <Button size="sm" className="h-7" onClick={() => setNominating(true)}>
               <Plus className="size-3.5" aria-hidden /> Nominate a project
             </Button>
-          ) : null
+          </Gated>
         }
       />
 

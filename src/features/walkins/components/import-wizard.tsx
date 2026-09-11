@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint } from "@/components/patterns/explain";
 import { Field } from "@/components/patterns/field";
 import { formatMoney } from "@/lib/format";
 import { normalizePhone } from "@/lib/identity/normalize";
@@ -64,6 +65,14 @@ const GUESS: Record<TargetKey, RegExp> = {
 
 type RowStatus = "valid" | "corrected" | "duplicate" | "rejected";
 interface PreviewRow extends ImportRow { status: RowStatus; messages: string[] }
+
+const STATUS_TONE: Record<RowStatus, "success" | "info" | "warning" | "destructive"> = { valid: "success", corrected: "info", duplicate: "warning", rejected: "destructive" };
+const STATUS_HINT: Record<RowStatus, string> = {
+  valid: "Read cleanly and will be imported as-is.",
+  corrected: "Will be imported after a small fix, such as a normalised phone number or a dropped payment split. The Notes column says what changed.",
+  duplicate: "The same ORC, phone and date already exist in the app. Skipped so nothing is recorded twice.",
+  rejected: "Missing a date, a name or a usable phone number, or the amount is not a number. Fix it in the sheet and import again.",
+};
 
 function truthy(v: unknown) {
   if (v === true) return true;
@@ -300,7 +309,9 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
           </div>
           <div className="flex items-center justify-between">
             {missingRequired.length > 0 ? <span className="flex items-center gap-1 text-xs text-warning"><AlertTriangle className="size-3.5" aria-hidden /> Map {missingRequired.map((m) => m.label).join(", ")}</span> : <span className="text-xs text-muted-foreground">Required columns mapped.</span>}
-            <Button size="sm" onClick={buildPreview} disabled={missingRequired.length > 0 || rows.length === 0}>Preview rows</Button>
+            <DisabledHint reason={rows.length === 0 ? "The sheet has no data rows below the header." : missingRequired.length > 0 ? `Map the required columns first: ${missingRequired.map((m) => m.label).join(", ")}.` : undefined}>
+              <Button size="sm" onClick={buildPreview} disabled={missingRequired.length > 0 || rows.length === 0}>Preview rows</Button>
+            </DisabledHint>
           </div>
         </Card>
       )}
@@ -308,13 +319,15 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
       {preview && (
         <Card className="space-y-3 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <TonePill tone="success" label={`${stats.valid} valid`} size="md" />
-            <TonePill tone="info" label={`${stats.corrected} corrected`} size="md" />
-            <TonePill tone="warning" label={`${stats.duplicate} duplicate (skipped)`} size="md" />
-            <TonePill tone="destructive" label={`${stats.rejected} rejected`} size="md" />
-            <Button className="ml-auto" size="sm" disabled={pending || commitRows.length === 0} onClick={commit}>
-              {pending ? "Working…" : `Commit ${Math.min(commitRows.length, 500)} row${commitRows.length === 1 ? "" : "s"}`}
-            </Button>
+            <TonePill tone="success" label={`${stats.valid} valid`} size="md" hint={STATUS_HINT.valid} />
+            <TonePill tone="info" label={`${stats.corrected} corrected`} size="md" hint={STATUS_HINT.corrected} />
+            <TonePill tone="warning" label={`${stats.duplicate} duplicate (skipped)`} size="md" hint={STATUS_HINT.duplicate} />
+            <TonePill tone="destructive" label={`${stats.rejected} rejected`} size="md" hint={STATUS_HINT.rejected} />
+            <DisabledHint className="ml-auto" reason={!pending && commitRows.length === 0 ? "Nothing to commit: every row is a duplicate or rejected." : undefined}>
+              <Button size="sm" disabled={pending || commitRows.length === 0} onClick={commit}>
+                {pending ? "Working…" : `Commit ${Math.min(commitRows.length, 500)} row${commitRows.length === 1 ? "" : "s"}`}
+              </Button>
+            </DisabledHint>
           </div>
           {commitRows.length > 500 && <p className="text-xs text-warning">Only the first 500 committable rows are imported per commit. Re-run for the rest.</p>}
           <div className="max-h-[60vh] overflow-auto rounded-lg border">
@@ -336,7 +349,7 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
                 {preview.map((p) => (
                   <TableRow key={p.row_no} className={cn(p.status === "rejected" && "opacity-60")}>
                     <TableCell className="tnum py-1 text-xs">{p.row_no}</TableCell>
-                    <TableCell className="py-1"><TonePill tone={p.status === "valid" ? "success" : p.status === "corrected" ? "info" : p.status === "duplicate" ? "warning" : "destructive"} label={p.status} /></TableCell>
+                    <TableCell className="py-1"><TonePill tone={STATUS_TONE[p.status]} label={p.status} hint={STATUS_HINT[p.status]} /></TableCell>
                     <TableCell className="tnum py-1 text-xs">{p.date ? p.date.slice(0, 10) : "—"}</TableCell>
                     <TableCell className="py-1 text-xs">{p.customer_name || "—"}<div className="text-[10px] text-muted-foreground">{[p.customer_type, p.origin_area, p.renovation_area].filter(Boolean).join(" · ")}</div></TableCell>
                     <TableCell className="py-1 font-mono text-xs">{p.phone || "—"}</TableCell>

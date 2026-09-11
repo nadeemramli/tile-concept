@@ -6,14 +6,14 @@ import { useQueryState } from "nuqs";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Info, ShieldCheck } from "lucide-react";
 import { DataTable, MonoCell } from "@/components/patterns/data-table";
-import { StatusPill, TonePill } from "@/components/patterns/status-pill";
+import { StatusPill } from "@/components/patterns/status-pill";
 import { RecordDrawer, DrawerSection } from "@/components/patterns/record-drawer";
 import { FreshnessBadge } from "@/components/patterns/freshness-badge";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Hint, InfoTip } from "@/components/patterns/explain";
 import { SimpleSelect } from "@/features/catalog/components/selects";
-import { AVAILABILITY_EXPLAINER, AVAILABILITY_STATUS, CHANNEL_LABEL, SOURCE_KIND } from "@/features/stock/status";
+import { AVAILABILITY_STATUS, CHANNEL_HINT, CHANNEL_LABEL, SOURCE_KIND } from "@/features/stock/status";
 import { AvailabilityCell, EvidenceCell, QuantityCell } from "@/features/stock/components/quantity-cell";
 import { formatDate, formatDateTime, formatNumber, titleCase } from "@/lib/format";
 import { getSnapshotHistoryAction } from "@/server/commands/stock-history";
@@ -27,6 +27,26 @@ interface Props {
 }
 
 const AVAILABILITY_OPTIONS = Object.entries(AVAILABILITY_STATUS).map(([value, meta]) => ({ value, label: meta.label }));
+
+const COLUMN_HINTS = {
+  source: "Where the figure came from. In-house mirrors SQL Account read-only; Supplier is what a supplier told a stock coordinator. The shield marks the authoritative source.",
+  availability: "The state as confirmed on the date shown. States are never collapsed into a number; hover a pill for what it means.",
+  quantity: "Only Available and Low carry a quantity. A dash means no quantity was given, which is not zero.",
+  asOf: "When the latest figure was captured, and how that compares with the freshness policy of its source.",
+  channel: "How the supplier figure reached us: a call, a message, an email, the supplier portal or a visit.",
+  evidence: "A screenshot or document attached to the update. It proves the conversation happened; it is never read as a stock figure.",
+  expected: "The date the supplier said stock would be replenished. Given by the supplier, not calculated by the app.",
+  filters: "Source narrows to in-house (SQL Account) or supplier figures. State is the availability pill. Freshness compares the latest figure with each source's own policy: fresh, aging, stale, or never updated.",
+} as const;
+
+function ChannelLabel({ channel }: { channel: string | null }) {
+  if (!channel) return <>—</>;
+  return (
+    <Hint content={CHANNEL_HINT[channel]} focusable>
+      <span>{CHANNEL_LABEL[channel] ?? titleCase(channel)}</span>
+    </Hint>
+  );
+}
 
 export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
   const [category, setCategory] = useQueryState("category");
@@ -72,6 +92,7 @@ export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
       {
         id: "source",
         header: "Source",
+        meta: { hint: COLUMN_HINTS.source },
         accessorFn: (r) => r.supplier_name ?? r.location_name ?? r.source_name,
         cell: ({ row }) => {
           const r = row.original;
@@ -80,38 +101,39 @@ export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
               <StatusPill map={SOURCE_KIND} value={r.source_kind} />
               <span className="truncate">{r.supplier_name ?? r.location_name ?? r.source_name}</span>
               {r.is_authoritative && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ShieldCheck className="size-3.5 shrink-0 text-info" aria-label="Authoritative source" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-64">SQL Account is the authority for in-house stock. This app mirrors it read-only.</TooltipContent>
-                </Tooltip>
+                <Hint content="SQL Account is the authority for in-house stock. This app mirrors it read-only and never writes back." focusable>
+                  <ShieldCheck className="size-3.5 shrink-0 text-info" aria-label="Authoritative source" />
+                </Hint>
               )}
             </span>
           );
         },
       },
-      { accessorKey: "availability", header: "Availability", cell: ({ row }) => <AvailabilityCell state={row.original.availability} /> },
+      { accessorKey: "availability", header: "Availability", meta: { hint: COLUMN_HINTS.availability }, cell: ({ row }) => <AvailabilityCell state={row.original.availability} /> },
       {
         id: "quantity",
         header: "Quantity",
+        meta: { hint: COLUMN_HINTS.quantity },
         accessorFn: (r) => r.quantity ?? -1,
         cell: ({ row }) => <QuantityCell state={row.original.availability} quantity={row.original.quantity} unit={row.original.unit_code} />,
       },
       {
         accessorKey: "as_of",
         header: "As of",
+        meta: { hint: COLUMN_HINTS.asOf },
         cell: ({ row }) => <FreshnessBadge lastSuccessAt={row.original.as_of} slaMinutes={row.original.sla_minutes} />,
       },
       {
         accessorKey: "source_channel",
         header: "Channel",
-        cell: ({ row }) => (row.original.source_channel ? (CHANNEL_LABEL[row.original.source_channel] ?? titleCase(row.original.source_channel)) : "—"),
+        meta: { hint: COLUMN_HINTS.channel },
+        cell: ({ row }) => <ChannelLabel channel={row.original.source_channel} />,
       },
-      { id: "evidence", header: "Evidence", enableSorting: false, cell: ({ row }) => <EvidenceCell path={row.original.evidence_storage_path} /> },
+      { id: "evidence", header: "Evidence", meta: { hint: COLUMN_HINTS.evidence }, enableSorting: false, cell: ({ row }) => <EvidenceCell path={row.original.evidence_storage_path} /> },
       {
         accessorKey: "expected_replenishment",
         header: "Expected",
+        meta: { hint: COLUMN_HINTS.expected },
         cell: ({ row }) => (row.original.expected_replenishment ? formatDate(row.original.expected_replenishment) : "—"),
       },
     ],
@@ -149,6 +171,7 @@ export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
           placeholder="Freshness"
         />
       </div>
+      <InfoTip label="Filters" content={COLUMN_HINTS.filters} />
       <Input value={q ?? ""} onChange={(e) => setQ(e.target.value || null)} placeholder="Search code, product, supplier…" className="h-8 w-56 text-sm" aria-label="Search availability" />
     </div>
   );
@@ -236,7 +259,9 @@ export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
                         <QuantityCell state={h.availability} quantity={h.quantity} unit={h.unit_code} />
                       </td>
                       <td className="px-2 py-1.5">{h.submitted_by_name ?? "—"}</td>
-                      <td className="px-2 py-1.5">{h.source_channel ? (CHANNEL_LABEL[h.source_channel] ?? h.source_channel) : "—"}</td>
+                      <td className="px-2 py-1.5">
+                        <ChannelLabel channel={h.source_channel} />
+                      </td>
                       <td className="px-2 py-1.5">
                         <span className="text-muted-foreground">{h.notes ?? "—"}</span>
                         {h.evidence_storage_path && <EvidenceCell path={h.evidence_storage_path} />}
@@ -265,15 +290,8 @@ export function StateLegend() {
         </p>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {Object.entries(AVAILABILITY_STATUS).map(([key, meta]) => (
-          <Tooltip key={key}>
-            <TooltipTrigger asChild>
-              <span>
-                <TonePill tone={meta.tone} label={meta.label} />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64">{AVAILABILITY_EXPLAINER[key]}</TooltipContent>
-          </Tooltip>
+        {Object.keys(AVAILABILITY_STATUS).map((key) => (
+          <StatusPill key={key} map={AVAILABILITY_STATUS} value={key} />
         ))}
       </div>
     </Card>

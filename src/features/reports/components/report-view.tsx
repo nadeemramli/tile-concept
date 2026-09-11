@@ -7,6 +7,15 @@ import { Download } from "lucide-react";
 import { DataTable } from "@/components/patterns/data-table";
 import { EmptyState } from "@/components/patterns/states";
 import { TonePill } from "@/components/patterns/status-pill";
+import { DisabledHint } from "@/components/patterns/explain";
+import { OPPORTUNITY_STATUS, type StatusMap } from "@/lib/domain/status-maps";
+import { FRESHNESS_STATUS } from "@/features/stock/status";
+import { CONTENT_STATUS_MAP } from "@/features/marketing/lib/status";
+
+/** Readable labels and hints for the tone values a report can emit (see REPORT_TONE). */
+const TONE_META: StatusMap = { ...OPPORTUNITY_STATUS, ...FRESHNESS_STATUS, ...CONTENT_STATUS_MAP };
+
+const NO_ROWS = "Nothing to export: the report has no rows for this period. Widen or clear the date range first.";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -124,17 +133,13 @@ export function ReportView({ report, rows, currency, error }: { report: ReportDe
               All time
             </Button>
           )}
-          <Button size="sm" variant="outline" className="ml-auto h-8 gap-1.5" onClick={() => setConfirming(true)} disabled={rows.length === 0}>
-            <Download className="size-3.5" aria-hidden /> Export CSV
-          </Button>
+          <ExportButton disabled={rows.length === 0} onClick={() => setConfirming(true)} />
         </div>
       )}
       {!report.ranged && (
         <div className="flex items-center gap-2">
           <p className="text-xs text-muted-foreground">This report is point-in-time; a date range does not apply.</p>
-          <Button size="sm" variant="outline" className="ml-auto h-8 gap-1.5" onClick={() => setConfirming(true)} disabled={rows.length === 0}>
-            <Download className="size-3.5" aria-hidden /> Export CSV
-          </Button>
+          <ExportButton disabled={rows.length === 0} onClick={() => setConfirming(true)} />
         </div>
       )}
 
@@ -210,6 +215,15 @@ export function ReportView({ report, rows, currency, error }: { report: ReportDe
   );
 }
 
+function ExportButton({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
+  const button = (
+    <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={onClick} disabled={disabled}>
+      <Download className="size-3.5" aria-hidden /> Export CSV
+    </Button>
+  );
+  return <span className="ml-auto">{disabled ? <DisabledHint reason={NO_ROWS}>{button}</DisabledHint> : button}</span>;
+}
+
 function Cell({ column, value, currency }: { column: ReportColumn; value: unknown; currency: string }) {
   if (value === null || value === undefined || value === "") return <span className="text-muted-foreground">—</span>;
   switch (column.format) {
@@ -227,7 +241,8 @@ function Cell({ column, value, currency }: { column: ReportColumn; value: unknow
       return <span className="tnum">{formatDateTime(String(value))}</span>;
     case "tone": {
       const v = String(value);
-      return <TonePill tone={REPORT_TONE[v] ?? "neutral"} label={v.replace(/_/g, " ")} />;
+      const meta = TONE_META[v];
+      return <TonePill tone={REPORT_TONE[v] ?? meta?.tone ?? "neutral"} label={meta?.label ?? v.replace(/_/g, " ")} hint={meta?.hint} />;
     }
     case "json": {
       const obj = value as Record<string, unknown>;

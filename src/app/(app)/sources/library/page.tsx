@@ -26,7 +26,6 @@ export default async function SourceLibraryPage({ searchParams }: PageProps<"/so
   ]);
 
   const supplierNames = [...new Set(allRows.map((r) => r.supplier_name).filter((s): s is string => Boolean(s)))].sort();
-  const canWrite = hasPermission(session, "source.import");
 
   return (
     <PageBody>
@@ -75,7 +74,7 @@ export default async function SourceLibraryPage({ searchParams }: PageProps<"/so
         />
       </div>
 
-      <LibraryClient rows={rows} detail={detail} suppliers={refs.suppliers} brands={refs.brands} supplierNames={supplierNames} canWrite={canWrite} />
+      <LibraryClient rows={rows} detail={detail} suppliers={refs.suppliers} brands={refs.brands} supplierNames={supplierNames} />
     </PageBody>
   );
 }

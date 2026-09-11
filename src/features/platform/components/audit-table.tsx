@@ -10,9 +10,18 @@ import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/rec
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SimpleSelect } from "@/features/catalog/components/selects";
+import { Hint, InfoTip } from "@/components/patterns/explain";
 import { formatDateTime } from "@/lib/format";
 import type { AuditRow } from "@/server/queries/platform";
 import { cn } from "@/lib/utils";
+
+const COLUMN_HINTS = {
+  actor: "Who did it. System means the database or a scheduled job acted on its own, for example an expiry or a connector pull.",
+  action: "The event key as the database records it: area, then what happened. Filter by any part of it.",
+  object: "The table the record lives in and the first eight characters of its id. Click to open the record where a page exists for it.",
+  reason: "The reason the person gave when the action required one. Blank when none was required.",
+  filters: "Action matches any part of the event key. Object narrows to one table. Actor is the person. Dates are inclusive. Object id takes a full record id.",
+} as const;
 
 interface Props {
   rows: AuditRow[];
@@ -32,11 +41,22 @@ export function AuditTable({ rows, tables, members }: Props) {
   const columns = useMemo<ColumnDef<AuditRow, unknown>[]>(
     () => [
       { accessorKey: "occurred_at", header: "When", cell: ({ row }) => <span className="tnum">{formatDateTime(row.original.occurred_at)}</span> },
-      { accessorKey: "actor_name", header: "Actor", cell: ({ row }) => row.original.actor_name ?? <span className="text-muted-foreground">system</span> },
-      { accessorKey: "action", header: "Action", cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.action}</span> },
+      {
+        accessorKey: "actor_name",
+        header: "Actor",
+        meta: { hint: COLUMN_HINTS.actor },
+        cell: ({ row }) =>
+          row.original.actor_name ?? (
+            <Hint content="No person was signed in for this event: the database or a scheduled job acted on its own." focusable>
+              <span className="text-muted-foreground">system</span>
+            </Hint>
+          ),
+      },
+      { accessorKey: "action", header: "Action", meta: { hint: COLUMN_HINTS.action }, cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.action}</span> },
       {
         id: "object",
         header: "Object",
+        meta: { hint: COLUMN_HINTS.object },
         accessorFn: (r) => `${r.object_table ?? ""} ${r.object_id ?? ""}`,
         cell: ({ row }) => {
           const r = row.original;
@@ -50,7 +70,7 @@ export function AuditTable({ rows, tables, members }: Props) {
           );
         },
       },
-      { accessorKey: "reason", header: "Reason", cell: ({ row }) => <span className="max-w-64 truncate text-muted-foreground" title={row.original.reason ?? ""}>{row.original.reason ?? "—"}</span> },
+      { accessorKey: "reason", header: "Reason", meta: { hint: COLUMN_HINTS.reason }, cell: ({ row }) => <span className="max-w-64 truncate text-muted-foreground" title={row.original.reason ?? ""}>{row.original.reason ?? "—"}</span> },
     ],
     [],
   );
@@ -67,6 +87,7 @@ export function AuditTable({ rows, tables, members }: Props) {
       <Input type="date" value={from} onChange={(e) => setFrom(e.target.value || null)} className="h-8 w-36 text-sm" aria-label="From" />
       <Input type="date" value={to} onChange={(e) => setTo(e.target.value || null)} className="h-8 w-36 text-sm" aria-label="To" />
       <Input value={objectId} onChange={(e) => setObjectId(e.target.value || null)} placeholder="Object id" className="h-8 w-44 font-mono text-xs" />
+      <InfoTip label="Filters" content={COLUMN_HINTS.filters} />
       {(action || table || actor || from || to || objectId) && (
         <Button
           size="sm"
@@ -122,6 +143,7 @@ function DiffView({ before, after }: { before: Record<string, unknown> | null; a
   const fmt = (v: unknown) => (v === null || v === undefined ? "∅" : typeof v === "object" ? JSON.stringify(v) : String(v));
   const changed = keys.filter((k) => fmt(before?.[k]) !== fmt(after?.[k]));
   return (
+    <div className="space-y-1">
     <div className="overflow-x-auto rounded-md border">
       <table className="w-full text-xs">
         <thead className="bg-muted/50">
@@ -144,6 +166,10 @@ function DiffView({ before, after }: { before: Record<string, unknown> | null; a
           })}
         </tbody>
       </table>
+    </div>
+      <p className="text-[11px] text-muted-foreground">
+        Highlighted rows changed in this event. <span className="font-mono">∅</span> means the field had no value (null), which is different from an empty string.
+      </p>
     </div>
   );
 }

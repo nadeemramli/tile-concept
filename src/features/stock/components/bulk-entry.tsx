@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
+import { DisabledHint } from "@/components/patterns/explain";
 import { TonePill } from "@/components/patterns/status-pill";
 import { SimpleSelect } from "@/features/catalog/components/selects";
-import { AVAILABILITY_STATUS, CHANNEL_LABEL } from "@/features/stock/status";
+import { AVAILABILITY_STATUS, CHANNEL_HINT, CHANNEL_LABEL } from "@/features/stock/status";
 import { AVAILABILITY_STATES, NUMERIC_STATES, SOURCE_CHANNELS, type AvailabilityStateInput } from "@/features/stock/schema";
 import { recordSupplierAvailabilityAction } from "@/server/commands/stock";
 import { toast } from "sonner";
@@ -158,7 +159,7 @@ export function BulkEntry({ suppliers, variants, units }: Props) {
         <Field label="Supplier" required>
           <SimpleSelect value={supplierId} onChange={setSupplierId} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} allowNone={false} />
         </Field>
-        <Field label="How did this arrive?" required>
+        <Field label="How did this arrive?" required hint={CHANNEL_HINT[channel]}>
           <SimpleSelect value={channel} onChange={(v) => setChannel(v as (typeof SOURCE_CHANNELS)[number])} options={SOURCE_CHANNELS.map((c) => ({ value: c, label: CHANNEL_LABEL[c] ?? c }))} allowNone={false} />
         </Field>
       </div>
@@ -207,9 +208,9 @@ export function BulkEntry({ suppliers, variants, units }: Props) {
                   <td className="tnum px-2 py-1.5 text-muted-foreground">{p.line}</td>
                   <td className="px-2 py-1.5 font-mono text-[12px]">{p.code || "—"}</td>
                   <td className="px-2 py-1.5">{p.variant_label ?? <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-2 py-1.5">{AVAILABILITY_STATUS[p.state] ? <TonePill tone={AVAILABILITY_STATUS[p.state].tone} label={AVAILABILITY_STATUS[p.state].label} /> : p.state || "—"}</td>
+                  <td className="px-2 py-1.5">{AVAILABILITY_STATUS[p.state] ? <TonePill tone={AVAILABILITY_STATUS[p.state].tone} label={AVAILABILITY_STATUS[p.state].label} hint={AVAILABILITY_STATUS[p.state].hint} /> : p.state || "—"}</td>
                   <td className="tnum px-2 py-1.5">{p.quantity || "—"}</td>
-                  <td className="px-2 py-1.5">{p.problem ? <span className="text-destructive">{p.problem}</span> : <TonePill tone="success" label="Ready" />}</td>
+                  <td className="px-2 py-1.5">{p.problem ? <span className="text-destructive">{p.problem}</span> : <TonePill tone="success" label="Ready" hint="Parses cleanly and will be recorded exactly as shown when you commit." />}</td>
                 </tr>
               ))}
             </tbody>
@@ -225,9 +226,21 @@ export function BulkEntry({ suppliers, variants, units }: Props) {
       )}
 
       <div>
-        <Button size="sm" onClick={commit} disabled={committing || valid.length === 0 || !supplierId}>
-          {committing ? "Recording…" : `Record ${valid.length} line${valid.length === 1 ? "" : "s"}`}
-        </Button>
+        {(() => {
+          const blocker = !supplierId
+            ? "Choose the supplier these lines came from."
+            : parsed.length === 0
+              ? "Paste or load at least one line first."
+              : valid.length === 0
+                ? "Every line needs attention. Fix or remove them; nothing is guessed."
+                : null;
+          const button = (
+            <Button size="sm" onClick={commit} disabled={committing || blocker !== null}>
+              {committing ? "Recording…" : `Record ${valid.length} line${valid.length === 1 ? "" : "s"}`}
+            </Button>
+          );
+          return blocker ? <DisabledHint reason={blocker}>{button}</DisabledHint> : button;
+        })()}
       </div>
     </Card>
   );
