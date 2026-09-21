@@ -126,6 +126,12 @@ select is(api.creative_query('detail','{}',(select id from target))->>'stage','a
 select pg_temp.cmd('publication_plan','{"channel":"instagram","account_label":"Synthetic actual","intended_use":"organic_social"}');
 select lives_ok($$select pg_temp.cmd('publication_publish',jsonb_build_object('publication_id',(select id from api.creative_publications where creative_id=(select id from target) and status='planned'),'version_id',pg_temp.latest(),'published_at','2026-09-01T10:00:00+08','live_url','https://example.test/actual','restrictions_confirmed',true))$$,'publish now can record approved actual release without scheduling');
 select is(api.creative_query('detail','{}',(select id from target))->>'stage','published','all active plans published yields published');
+select pg_temp.cmd('reopen','{"reason":"Synthetic revised published cut","external_cancellation_acknowledged":false}');
+select pg_temp.submit();
+select pg_temp.review();
+select is(api.creative_query('detail','{}',(select id from target))->>'stage','approved','newly approved version never inherits an older version publication');
+select ok(exists(select 1 from jsonb_array_elements(api.creative_query('list','{"unscheduled":true}') -> 'items') j where j->>'id'=(select id::text from target)),'new version with older publication history is discoverable as unscheduled');
+select is((select count(*) from api.creative_publications where creative_id=(select id from target) and status='published'),1::bigint,'older version publication evidence remains intact');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
 select throws_ok($$select pg_temp.cmd('publication_publish','{"publication_id":"11111111-0016-0000-0000-000000000099"}')$$,'42501','permission denied: creative.publish','writer cannot publish');
 reset role;

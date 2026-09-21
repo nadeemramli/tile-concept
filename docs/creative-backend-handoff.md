@@ -1,14 +1,16 @@
 # Creative production backend handoff
 
-Backend branch: `codex/creative-backend`, based on `78eae98`. The UI/navigation and demo creative fixtures are integrated separately in `codex/creative-production`.
+Backend branch: `codex/creative-backend`, based on `78eae98`. The UI/navigation is integrated separately in `codex/creative-production`.
 
 Migration: `supabase/migrations/20260921062925_creative_production.sql`.
+
+Additive follow-up: `supabase/migrations/20260921065600_creative_demo_and_current_version.sql`.
 
 ## Contracts and behavior
 
 `src/features/creative/types.ts` describes cards, details, calendar posts, filters and options. `schema.ts` supplies the validated create form and discriminated command inputs. Server queries are `getCreativeList`, `getCreativeDetail`, `getCreativeCalendar` and `getCreativeOptions`. Server Actions include create/mutate, lazy detail, searched source options and related creatives.
 
-One creative is one deliverable. Production stores Briefing, Preparing, In production, Review and Approved. Scheduled/Published derive from active publication plans; zero/all-cancelled plans stay Approved. Each publication retains its own version, account label, use, target/scheduled/actual dates and live URL. A date alone is not scheduling evidence. Published history survives reopening production.
+One creative is one deliverable. Production stores Briefing, Preparing, In production, Review and Approved. Scheduled/Published derive from active publication plans; zero/all-cancelled plans stay Approved. Published also requires at least one published record for the current approved version. A newly approved cut with only older published history stays Approved and is discoverable as Unscheduled. Each publication retains its own version, account label, use, target/scheduled/actual dates and live URL. A date alone is not scheduling evidence. Published history survives reopening production.
 
 Briefs, sources and links freeze during review/approval. Reopen before changing them. Submitted export records, reviews and events are append-only; the app cannot prove external URL bytes immutable. Staff must identify a specific export and confirm access. New creative links are URL-only; the backend never fetches them or alters file sharing. Unsafe schemes, credentials and recognizable expiring token URLs are refused.
 
@@ -28,8 +30,9 @@ The migration also fixes an inherited `api.shoot_conflicts` failure: PostgreSQL 
 
 Dedicated runtime: `.local/runtime`, project `tile-concept-creative-backend`, API `63321`, DB `63322`. Its config/migration links are local ignored files. No other worktree's database was reset. No hosted changes, production data, external messages or posting were used.
 
-- Clean replay of all migrations plus synthetic seeds succeeded. The final narrow shoot-conflict function replacement was applied and verified afterward without another reset, because UI integration had started sharing this isolated stack.
-- `supabase/tests/016_creative_production.sql`: **84 passing assertions**, transaction/rollback. Covers full lifecycle, change requests, exact version approval, publish-now, partial/full/all-cancelled publication, retries, stale writes, role gates, source use/expiry/revocation, footage readiness/reschedules, immutability, demo reset, server pagination and workspace isolation.
+- Clean replay of the base migration package plus synthetic seeds succeeded. The final narrow shoot-conflict function replacement and the additive demo/current-version migration were applied and verified afterward without another runtime reset, because UI integration had started sharing this isolated stack.
+- `supabase/tests/016_creative_production.sql`: **87 passing assertions**, transaction/rollback. Covers full lifecycle, change requests, exact version approval, publish-now, partial/full/all-cancelled publication, retries, stale writes, role gates, source use/expiry/revocation, footage readiness/reschedules, immutability, demo reset, server pagination and workspace isolation.
+- `supabase/tests/017_creative_demo.sql`: **21 passing assertions**, transaction/rollback. Covers demo-only restriction, idempotent fixtures, all derived stages, covered customer use, guest ownership, controlled reset consistency, complete cross-domain evidence cascades and protection of still-linked live sources.
 - Existing `002_phases.sql`: **14 passing assertions**, including marketing regression coverage.
 - Full unit suite: **180 passed**, including 11 creative input tests.
 - TypeScript passed. Lint: zero errors; existing TanStack React Compiler warning.
@@ -37,7 +40,7 @@ Dedicated runtime: `.local/runtime`, project `tile-concept-creative-backend`, AP
 - Local database advisors: no errors and no new creative warnings at warning/error level; inherited function-search-path warnings remain outside this change.
 - Synthetic 605-record board query (`page_size=8`) measured **31.615 ms execution** with local `EXPLAIN ANALYZE`. This is one database observation, not a production benchmark or browser latency claim. Search beyond record 500, matching counts and page 7 were asserted.
 
-UI/browser checks and final combined build belong to the integration branch. No creative demo cards are inserted by this backend migration; the integration branch owns deterministic demo examples and reset consistency.
+UI/browser checks and final combined build belong to the integration branch. The additive follow-up supplies eight explicitly labeled synthetic demo cards through `core.build_demo_dataset`, covering all seven stages plus blocked preparation. It seeds only the isolated demo workspace, skips until a demo guest exists, uses deterministic IDs, preserves repeated-build edits and runs through the existing weekly reset. Example links use `example.invalid` deliberately: they demonstrate typed metadata and never claim an actual external file, scheduler or published post exists. Fixture source rights and review/version relationships are coherent; no demo data is written to ordinary business workspaces. Evidence foreign keys are checked at transaction end so whole-workspace cascades finish safely while deletion of a still-referenced live source remains invalid.
 
 ## QC sequence
 
