@@ -162,3 +162,116 @@ begin
 end $$;
 revoke all on function api.opportunity_photo_command(text,uuid,uuid,jsonb) from public,anon;
 grant execute on function api.opportunity_photo_command(text,uuid,uuid,jsonb) to authenticated;
+
+-- Archive removes a pursuit from operational metrics without erasing financial records.
+
+create or replace function api.report_pipeline(p_from date default null, p_to date default null)
+returns table (stage_key text, stage_label text, reporting_group text, stage_position int, opportunities bigint, open_value numeric, avg_age_days numeric, overdue bigint)
+language sql stable security definer set search_path = '' as $$
+  select st.key, st.label, st.reporting_group, st.position,
+         count(o.id), coalesce(sum(o.estimated_value), 0),
+         round(avg(extract(epoch from (now() - o.updated_at)) / 86400)::numeric, 1),
+         count(*) filter (where o.next_action_due_at < now() and o.status = 'open')
+  from core.opportunity_stages st
+  left join sales.opportunities o on o.stage_key = st.key and o.workspace_id = st.workspace_id
+    and o.archived_at is null and core.has_permission('report.read')
+    and (p_from is null or o.created_at >= p_from) and (p_to is null or o.created_at < p_to + 1)
+  where st.workspace_id in (select core.member_workspace_ids()) and st.is_active
+  group by st.key, st.label, st.reporting_group, st.position
+  order by st.position
+$$;
+
+create or replace function api.report_quotes(p_from date default null, p_to date default null)
+returns table (bucket text, quotes bigint, revisions numeric, total_value numeric, won bigint, lost bigint, open bigint)
+language sql stable security definer set search_path = '' as $$
+  select coalesce(o.source_channel, 'unknown'),
+         count(distinct q.id),
+         round(avg(q.current_version_no)::numeric, 2),
+         coalesce(sum(qv.total_amount), 0),
+         count(distinct o.id) filter (where o.status = 'won'),
+         count(distinct o.id) filter (where o.status = 'lost'),
+         count(distinct o.id) filter (where o.status = 'open')
+  from sales.quotes q
+  join sales.opportunities o on o.id = q.opportunity_id
+  left join sales.quote_versions qv on qv.quote_id = q.id and qv.version_no = q.current_version_no
+  where q.workspace_id in (select core.member_workspace_ids()) and o.archived_at is null and core.has_permission('report.read')
+    and (p_from is null or q.created_at >= p_from) and (p_to is null or q.created_at < p_to + 1)
+  group by 1
+  order by 2 desc
+$$;
+
+create or replace function api.sales_scorecard(p_year int default null)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_ws uuid := core.current_workspace_id();
+  v_me uuid := auth.uid();
+  v_all boolean := core.has_permission('sales.read_all');
+  v_year int := coalesce(p_year, extract(year from (now() at time zone 'Asia/Kuala_Lumpur'))::int);
+  v_start timestamptz := (make_date(v_year, 1, 1)::timestamp) at time zone 'Asia/Kuala_Lumpur';
+  v_end   timestamptz := (make_date(v_year + 1, 1, 1)::timestamp) at time zone 'Asia/Kuala_Lumpur';
+  v_target numeric; v_currency char(3);
+  v_collected numeric; v_pipeline numeric; v_segments jsonb;
+begin
+  perform core.require_permission('sales.read');
+  select target_amount, currency into v_target, v_currency
+    from sales.sales_targets where workspace_id = v_ws and year = v_year;
+  select coalesce(sum(pp.amount * case when pp.direction='refund' then -1 else 1 end),0) into v_collected
+    from sales.purchase_payments pp join sales.purchases p on p.id=pp.purchase_id
+    where p.workspace_id=v_ws and pp.review_state='confirmed' and pp.currency='MYR'
+      and pp.paid_at>=v_start and pp.paid_at<v_end;
+  select coalesce(sum(o.estimated_value), 0) into v_pipeline from sales.opportunities o
+    where o.archived_at is null and o.workspace_id = v_ws and o.status = 'open' and (v_all or o.owner_id = v_me);
+  select coalesce(jsonb_agg(jsonb_build_object('segment', seg, 'value', val) order by val desc), '[]'::jsonb)
+    into v_segments from (
+      select coalesce(o.segment, 'other') as seg, sum(o.estimated_value) as val
+      from sales.opportunities o
+      where o.archived_at is null and o.workspace_id = v_ws and o.status = 'open' and o.estimated_value is not null
+        and (v_all or o.owner_id = v_me)
+      group by coalesce(o.segment, 'other')
+    ) s;
+  return jsonb_build_object(
+    'year', v_year, 'target', v_target, 'currency', coalesce(v_currency, 'MYR'),
+    'collected', v_collected, 'pipeline', v_pipeline, 'segments', v_segments,
+    'unreviewed_records', (select count(*) from sales.purchases p where p.workspace_id=v_ws and p.financial_state='legacy_unclassified'), 'generated_at', now());
+end $$;
+
+create or replace function api.command_centre_summary()
+returns jsonb
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_ws uuid := core.current_workspace_id();
+  v_me uuid := auth.uid();
+  v_all boolean := core.has_permission('sales.read_all');
+  result jsonb;
+begin
+  perform core.require_permission('sales.read');
+  select jsonb_build_object(
+    'aging_leads', (select count(*) from sales.leads l where l.workspace_id = v_ws and l.status in ('new','contact_attempted') and l.created_at < now() - interval '2 days' and (v_all or l.owner_id = v_me or l.owner_id is null)),
+    'unassigned_leads', (select count(*) from sales.leads l where l.workspace_id = v_ws and l.status in ('new','contact_attempted','contacted') and l.owner_id is null),
+    'no_response_leads', (select count(*) from sales.leads l where l.workspace_id = v_ws and l.status = 'new' and l.first_response_at is null and (v_all or l.owner_id = v_me or l.owner_id is null)),
+    'overdue_followups', (select count(*) from sales.opportunities o where o.archived_at is null and o.workspace_id = v_ws and o.status = 'open' and o.next_action_due_at < now() and (v_all or o.owner_id = v_me)),
+    'missing_next_action', (select count(*) from sales.opportunities o where o.archived_at is null and o.workspace_id = v_ws and o.status = 'open' and (o.next_action is null or o.next_action_due_at is null) and (v_all or o.owner_id = v_me)),
+    'open_opportunities', (select count(*) from sales.opportunities o where o.archived_at is null and o.workspace_id = v_ws and o.status = 'open' and (v_all or o.owner_id = v_me)),
+    'open_value', (select coalesce(sum(o.estimated_value), 0) from sales.opportunities o where o.archived_at is null and o.workspace_id = v_ws and o.status = 'open' and (v_all or o.owner_id = v_me)),
+    'won_30d', (select count(*) from sales.opportunities o where o.archived_at is null and o.workspace_id = v_ws and o.status = 'won' and o.won_at > now() - interval '30 days' and (v_all or o.owner_id = v_me)),
+    'lost_30d', (select count(*) from sales.opportunities o where o.archived_at is null and o.workspace_id = v_ws and o.status = 'lost' and o.lost_at > now() - interval '30 days' and (v_all or o.owner_id = v_me)),
+    'quotes_expiring', (select count(*) from sales.quote_versions qv join sales.quotes qt on qt.id = qv.quote_id where qv.workspace_id = v_ws and exists(select 1 from sales.opportunities oq where oq.id=qt.opportunity_id and oq.archived_at is null) and qt.status in ('issued','revised') and qv.version_no = qt.current_version_no and qv.valid_until between current_date and current_date + 7),
+    'my_open_tasks', (select count(*) from sales.tasks t where t.workspace_id = v_ws and t.status = 'open' and t.assignee_id = v_me),
+    'my_overdue_tasks', (select count(*) from sales.tasks t where t.workspace_id = v_ws and t.status = 'open' and t.assignee_id = v_me and t.due_at < now()),
+    'lead_followups_due', (select count(distinct t.lead_id) from sales.tasks t where t.workspace_id = v_ws and t.status = 'open' and t.lead_id is not null and t.due_at < ((date_trunc('day', now() at time zone 'Asia/Kuala_Lumpur') + interval '1 day') at time zone 'Asia/Kuala_Lumpur') and (v_all or t.assignee_id = v_me)),
+    'duplicate_candidates', (select count(*) from identity.identity_match_candidates m where m.workspace_id = v_ws and m.status = 'suggested'),
+    'visits_today', (select count(*) from sales.visits v where v.workspace_id = v_ws and v.occurred_at >= date_trunc('day', now() at time zone 'Asia/Kuala_Lumpur') at time zone 'Asia/Kuala_Lumpur'),
+    'purchases_7d', (select count(*) from sales.purchases p where p.workspace_id = v_ws and p.purchased_at > now() - interval '7 days' and p.status in ('recorded','corrected') and p.financial_state='confirmed'),
+    'purchase_amount_7d', (select coalesce(sum(p.amount), 0) from sales.purchases p where p.workspace_id = v_ws and p.purchased_at > now() - interval '7 days' and p.status in ('recorded','corrected') and p.financial_state='confirmed'),
+    'products_without_price', (select count(*) from merch.products pr where pr.workspace_id = v_ws and pr.status = 'active' and not exists (select 1 from merch.product_variants v join merch.variant_prices vp on vp.variant_id = v.id and vp.state = 'current' where v.product_id = pr.id)),
+    'price_conflicts', (select count(*) from merch.variant_prices vp where vp.workspace_id = v_ws and vp.state = 'conflicted'),
+    'unreviewed_products', (select count(*) from merch.products pr where pr.workspace_id = v_ws and pr.review_state = 'unreviewed' and pr.status <> 'archived'),
+    'open_data_issues', (select count(*) from ingest.data_quality_issues d where d.workspace_id = v_ws and d.status = 'open'),
+    'pending_reviews', (select count(*) from ingest.review_items r where r.workspace_id = v_ws and r.status = 'pending'),
+    'connectors_failed', (select count(*) from ingest.integration_connections ic where ic.workspace_id = v_ws and ic.status in ('failed','degraded')),
+    'content_opps_pending', (select count(*) from marketing.content_opportunities co where co.workspace_id = v_ws and co.status in ('nominated','under_review','needs_info')),
+    'shoots_next_7d', (select count(*) from marketing.shoot_bookings sb where sb.workspace_id = v_ws and sb.status in ('tentative','confirmed','customer_confirmation_pending') and sb.starts_at between now() and now() + interval '7 days'),
+    'generated_at', now()
+  ) into result;
+  return result;
+end $$;

@@ -102,7 +102,7 @@ export async function getMyWork(userId: string, limit = 10) {
   const supabase = await createServerSupabase();
   const [{ data: tasks }, { data: opps }] = await Promise.all([
     supabase.from("tasks").select("id, title, due_at, priority, status, opportunity_id, contact_id").eq("status", "open").eq("assignee_id", userId).order("due_at", { ascending: true, nullsFirst: false }).limit(limit),
-    supabase.from("opportunities").select("id, name, next_action, next_action_due_at, stage_key, estimated_value, currency").eq("status", "open").eq("owner_id", userId).order("next_action_due_at", { ascending: true, nullsFirst: false }).limit(limit),
+    supabase.from("opportunities").select("id, name, next_action, next_action_due_at, stage_key, estimated_value, currency").eq("status", "open").is("archived_at", null).eq("owner_id", userId).order("next_action_due_at", { ascending: true, nullsFirst: false }).limit(limit),
   ]);
   return { tasks: tasks ?? [], opportunities: opps ?? [] };
 }

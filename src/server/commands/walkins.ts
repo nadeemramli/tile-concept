@@ -108,7 +108,7 @@ export async function getOpenOpportunitiesAction(contactId: string): Promise<Act
   try {
     await requirePermission("sales.read");
     const supabase = await createServerSupabase();
-    const { data, error } = await supabase.from("opportunities").select("id, name, stage_key, project_id").eq("contact_id", contactId).eq("status", "open").order("created_at", { ascending: false }).limit(20);
+    const { data, error } = await supabase.from("opportunities").select("id, name, stage_key, project_id").eq("contact_id", contactId).eq("status", "open").is("archived_at", null).order("created_at", { ascending: false }).limit(20);
     if (error) return fail(error);
     return ok((data ?? []).map((o) => ({ id: String(o.id), name: String(o.name ?? ""), stage_key: String(o.stage_key ?? ""), project_id: o.project_id })));
   } catch (e) {

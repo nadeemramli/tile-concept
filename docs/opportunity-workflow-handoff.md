@@ -32,7 +32,7 @@ Use synthetic records in a local/preview workspace. Local manager login: `demo.m
 
 ## Verification
 
-- 39 pgTAP assertions cover company-only creation, ownership, stale writes, retries, required next actions, private media, authenticated Storage uploads, archive/restore, no invented purchases, and rollback without orphan projects.
+- 43 pgTAP assertions cover company-only creation, ownership, stale writes, retries, required next actions, private media, authenticated Storage uploads, archive/restore, active reporting totals, no invented purchases, and rollback without orphan projects.
 - TypeScript passes. Full unit suite: 148 passed. Lint has zero errors and the existing TanStack React Compiler warning.
 - Browser checks: company created alone, opportunity added later, persisted edit, real private PNG upload and caption, archive, restore, and mobile drawer inspection. The Storage policy's ambiguous `name` reference found during browser testing was corrected and covered by an authenticated upload test. A fresh page then had zero console errors/warnings.
 - Final combined build, clean migration replay, database advisors and cross-feature checks are coordinated in the reporting integration worktree.
@@ -40,4 +40,4 @@ Use synthetic records in a local/preview workspace. Local manager login: `demo.m
 Migration: `supabase/migrations/20260921045534_opportunity_workflow.sql`.
 Regression suite: `supabase/tests/012_opportunity_workflow.sql`.
 
-Integration note: generated database types are regenerated centrally. Existing operational consumers outside this package should exclude `archived_at IS NOT NULL`; historical purchases and financial totals must retain their linked evidence. Pipeline and company/contact/project lists do this in this package. The inherited pipeline list limit is still 2,000 records; scale/load verification is separate from this workflow repair.
+Integration note: generated database types are regenerated centrally. Active pipeline, quote reports, sales scorecards, command-centre summaries, company/contact/project lists, and walk-in opportunity pickers exclude archived opportunities. Historical purchases and financial totals retain their linked evidence; existing explicit record links remain usable. The inherited pipeline list limit is still 2,000 records; scale/load verification is separate from this workflow repair.

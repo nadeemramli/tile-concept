@@ -164,7 +164,7 @@ export async function getPurchase(id: string): Promise<PurchaseRow | null> {
 
 export async function getOpenOpportunitiesForContact(contactId: string): Promise<OpenOpportunityRef[]> {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("opportunities").select("id, name, stage_key, project_id").eq("contact_id", contactId).eq("status", "open").order("created_at", { ascending: false }).limit(20);
+  const { data } = await supabase.from("opportunities").select("id, name, stage_key, project_id").eq("contact_id", contactId).eq("status", "open").is("archived_at", null).order("created_at", { ascending: false }).limit(20);
   return (data ?? []).map((o) => ({ id: String(o.id), name: String(o.name ?? ""), stage_key: String(o.stage_key ?? ""), project_id: o.project_id }));
 }
 
