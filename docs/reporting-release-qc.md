@@ -50,3 +50,15 @@ Known limits: historical financial classification needs business review; platfor
 The featured dashboard link on the Reports index was an inline anchor containing block content. Its border/background and padding therefore rendered as fragmented strips instead of one card. It now has a block layout, mobile padding, and a nonshrinking arrow. A report-specific error boundary retains the app navigation and gives retry/back-to-reports actions if a report later fails.
 
 Browser verification covered the hosted funnel after migration, the repaired Reports card at desktop and phone sizes, and navigation into the dashboard. Hosted verification used the isolated guest/demo workspace; no customer records were changed. Existing hosted security-advisor warnings remain a separate hardening task (privileged-function grants, helper search paths and authentication configuration).
+
+## Remaining development versus rollout work
+
+| Category | Remaining work |
+| --- | --- |
+| Feature build | Creative production board, publishing calendar and creator queue, connected to content opportunities and shoots. The existing worktree contains the scoped design, not implementation. |
+| Later integration | Automatic WhatsApp send/reply synchronization; manual updates remain the agreed first version. |
+| Usability and scale | Replace the inherited 2,000-opportunity query ceiling with server pagination; reclaim abandoned feedback photo-upload slots. |
+| Review rollout | Configure the hosted Google listing/review destination and test camera, photos, WhatsApp and Google on a real phone. Separate destinations per showroom are not implemented. |
+| Independent QC | Concurrent changes/retries, realistic history volumes, hosted Storage/Realtime checks and performance profiling. |
+| Business data review | Classify historical sales and collections and reconcile actual marketing spend; these are operational inputs, not invented engineering fixtures. |
+| Release process | Add a hosted migration-readiness check before promoting app code so a deployment cannot repeat the missing-function failure. |
