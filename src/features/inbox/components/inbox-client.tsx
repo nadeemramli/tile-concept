@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -17,7 +19,9 @@ import { LEAD_STATUS, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
-import { ViewsBar } from "@/features/inbox/components/views-bar";
+import { VIEW_LABELS } from "@/features/inbox/lib/whereabouts";
+import { LEAD_VIEWS, SOURCE_CHANNELS } from "@/features/inbox/schema";
+import type { InquiryFilters } from "@/server/queries/leads";
 import { LeadDrawer } from "@/features/inbox/components/lead-drawer";
 import { NewInquiryDialog } from "@/features/inbox/components/new-inquiry-dialog";
 import { bulkAssignLeadsAction } from "@/server/commands/leads";
@@ -27,37 +31,7 @@ import type { ProfileRef } from "@/server/queries/reference";
 import type { TimelineItem } from "@/components/patterns/timeline";
 import { cn } from "@/lib/utils";
 
-const VIEW_MAP: Record<string, LeadView> = {
-  New: "new",
-  "Waiting for reply": "waiting",
-  Contacted: "contacted",
-  Unassigned: "unassigned",
-  "My leads": "mine",
-  "No response": "no-response",
-  "SLA overdue": "follow-up",
-  "Follow-ups due": "follow-ups-due",
-  "Duplicate review": "duplicates",
-  Qualified: "qualified",
-  Disqualified: "disqualified",
-  All: "all",
-};
-
-/** What each saved view selects. Keyed by the view id so renamed saved views keep their meaning. */
-const VIEW_HINTS: Record<LeadView, string> = {
-  new: "Leads that arrived and have not been responded to. The first-response clock is running.",
-  waiting: "You messaged or called and are waiting for the customer to reply. Set a reminder so each one also shows under Follow-ups due. Walk-ins are tracked on their own page.",
-  contacted: "You have spoken to the customer but have not qualified or closed the lead yet. Walk-ins are tracked on their own page.",
-  unassigned: "Active leads with no salesperson yet. Nobody is on the clock for them.",
-  mine: "Leads where you are the owner.",
-  "no-response": "New leads with no logged call, message or email.",
-  "follow-up": "The 4-hour first-response target has passed with no response logged. Message these first.",
-  "follow-ups-due": "Leads with a follow-up reminder due today or overdue.",
-  duplicates: "Leads marked duplicate or linked to another lead. Decide which record to keep.",
-  qualified: "A real need with budget and timing. Ready to convert into a project and opportunity.",
-  disqualified: "Closed with a reason. Kept for the audit trail.",
-  all: "Every lead within your scope, whatever its status.",
-  aging: "Still New or Contact attempted more than 2 days after arriving.",
-};
+const PRIMARY_VIEWS: LeadView[] = ["needs-action", "waiting", "replied", "follow-ups-due", "upcoming", "disqualified", "all"];
 
 const COLUMN_HINTS = {
   received: "When the inquiry arrived from the connector or was typed in.",
@@ -76,15 +50,31 @@ interface Props {
   counts: InboxCounts;
   members: ProfileRef[];
   locations: { id: string; name: string }[];
-  savedViews: { id: string; name: string }[];
+  filters: InquiryFilters;
+  total: number;
+  page: number;
+  pageSize: number;
+  viewCounts: Record<string, number>;
   selected: LeadRow | null;
   selectedIntake: IntakeEventRow[];
   selectedTimeline: TimelineItem[];
   selectedContact: { id: string; display_name: string; lifecycle_state: string; customer_type: string | null } | null;
 }
 
-export function InboxClient({ view, leads, counts, members, locations, savedViews, selected, selectedIntake, selectedTimeline, selectedContact }: Props) {
+export function InboxClient({ view, leads, counts, members, locations, filters, total, page, pageSize, viewCounts, selected, selectedIntake, selectedTimeline, selectedContact }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchText, setSearchText] = useState(filters.search);
+  function href(patch: Record<string, string | null>) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null || value === "") params.delete(key); else params.set(key, value);
+    }
+    return `/sales/inbox?${params.toString()}`;
+  }
+  function filter(patch: Record<string, string | null>) { router.push(href(patch)); }
+
   const { session, can } = useSession();
   const [leadParam, setLeadParam] = useQueryState("lead", { shallow: false });
   const [newParam, setNewParam] = useQueryState("new");
@@ -94,32 +84,8 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
   const [pending, start] = useTransition();
   const canRevealContact = can("contact.reveal");
 
-  const tabs = useMemo(() => {
-    const countFor: Record<LeadView, number | undefined> = {
-      new: counts.new,
-      waiting: counts.waiting,
-      contacted: counts.contacted,
-      unassigned: counts.unassigned,
-      mine: counts.mine,
-      "no-response": counts.noResponse,
-      "follow-up": counts.followUp,
-      "follow-ups-due": counts.followUpsDue,
-      duplicates: counts.duplicates,
-      qualified: undefined,
-      disqualified: undefined,
-      all: undefined,
-      aging: counts.aging,
-    };
-    const base = savedViews.length
-      ? savedViews.map((v) => ({ key: VIEW_MAP[v.name] ?? "all", label: v.name }))
-      : Object.entries(VIEW_MAP).map(([label, key]) => ({ key, label }));
-    const list = base.map((t) => ({ ...t, count: countFor[t.key], hint: VIEW_HINTS[t.key] }));
-    if (view === "aging" && !list.some((t) => t.key === "aging")) list.push({ key: "aging", label: "Aging", count: counts.aging, hint: VIEW_HINTS.aging });
-    return list;
-  }, [savedViews, counts, view]);
-
   const columns = useMemo<ColumnDef<LeadRow, unknown>[]>(
-    () => [
+    () => ([
       { accessorKey: "created_at", header: "Received", meta: { hint: COLUMN_HINTS.received }, cell: ({ row }) => <span className="tnum text-muted-foreground">{formatRelative(row.original.created_at)}</span> },
       {
         accessorKey: "source_channel",
@@ -140,6 +106,7 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
           <div className="min-w-0">
             <div className="truncate font-medium">{row.original.raw_name ?? <span className="text-muted-foreground">Unknown</span>}</div>
             {row.original.raw_company && <div className="truncate text-[11px] text-muted-foreground">{row.original.raw_company}</div>}
+            <div className="text-[11px] text-muted-foreground">{row.original.last_contact_attempt_at ? `Last staff contact ${formatRelative(row.original.last_contact_attempt_at)}` : row.original.first_response_at ? `First staff contact ${formatRelative(row.original.first_response_at)}` : "No staff contact recorded"}</div>
           </div>
         ),
       },
@@ -213,7 +180,7 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
           );
         },
       },
-    ],
+    ] satisfies ColumnDef<LeadRow, unknown>[]).map((column) => ({ ...column, enableSorting: false })),
     [canRevealContact],
   );
 
@@ -221,35 +188,45 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-7">
-        <MetricCard compact label="New" value={counts.new} href="/sales/inbox?view=new" info={{ definition: "Leads in status New.", grain: "Lead", source: "sales.leads" }} />
-        <MetricCard compact label="Unassigned" value={counts.unassigned} tone={counts.unassigned ? "warning" : "neutral"} href="/sales/inbox?view=unassigned" info={{ definition: "Active leads with no owner.", grain: "Lead", source: "sales.leads" }} />
-        <MetricCard compact label="No response" value={counts.noResponse} tone={counts.noResponse ? "warning" : "neutral"} href="/sales/inbox?view=no-response" info={{ definition: "New leads with no logged response.", grain: "Lead", source: "sales.leads" }} />
-        <MetricCard compact label="SLA overdue" value={counts.followUp} tone={counts.followUp ? "destructive" : "neutral"} href="/sales/inbox?view=follow-up" info={{ definition: "Active leads whose first-response due time has passed without a response.", grain: "Lead", source: "sales.leads" }} />
-        <MetricCard compact label="Follow-ups due" value={counts.followUpsDue} tone={counts.followUpsDue ? "warning" : "neutral"} href="/sales/inbox?view=follow-ups-due" info={{ definition: "Leads with an open follow-up task due today or overdue (tasks visible to you).", grain: "Lead", source: "sales.tasks" }} />
-        <MetricCard compact label="Aging (>2d)" value={counts.aging} tone={counts.aging ? "warning" : "neutral"} href="/sales/inbox?view=aging" info={{ definition: "Leads still New/Contact attempted more than 2 days after creation.", grain: "Lead", source: "sales.leads" }} />
-        <MetricCard compact label="Duplicate review" value={counts.duplicates} href="/sales/inbox?view=duplicates" info={{ definition: "Leads marked duplicate or linked to another lead.", grain: "Lead", source: "sales.leads" }} />
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <MetricCard compact label="Needs action" value={counts.needsAction} href={href({ view: "needs-action" })} info={{ definition: "Active inquiries with no staff response, no next action, or a follow-up due today or overdue.", grain: "Inquiry", source: "sales.leads + sales.tasks" }} />
+        <MetricCard compact label="Follow-ups due" value={counts.followUpsDue} href={href({ view: "follow-ups-due" })} info={{ definition: "Inquiries with an open reminder due today or earlier, Kuala Lumpur time.", grain: "Inquiry", source: "sales.tasks" }} />
+        <MetricCard compact label="Upcoming" value={counts.upcoming} href={href({ view: "upcoming" })} info={{ definition: "Inquiries whose next reminder is after today. Scheduled work is visible immediately.", grain: "Inquiry", source: "sales.tasks" }} />
+        <MetricCard compact label="Customer replied" value={counts.replied} href={href({ view: "replied" })} info={{ definition: "Inquiries with an explicitly logged customer reply. Staff messages are not replies.", grain: "Inquiry", source: "sales.leads.first_customer_reply_at" }} />
       </div>
-
-      <ViewsBar
-        tabs={tabs}
-        active={view}
-        basePath="/sales/inbox"
-        extra={
-          <Gated permission="sales.write">
-            <Button size="sm" className="h-7" onClick={() => setNewParam("1")}>
-              <Plus className="size-3.5" aria-hidden /> New inquiry
-            </Button>
-          </Gated>
-        }
-      />
+      <div className="flex flex-wrap items-center gap-2 border-b pb-2">
+        <nav aria-label="Inquiry views" className="flex flex-wrap gap-1">
+          {PRIMARY_VIEWS.map((key) => <Link key={key} href={href({ view: key })} aria-current={view === key ? "page" : undefined} className={cn("rounded-md px-2.5 py-1.5 text-xs", view === key ? "bg-accent font-semibold" : "text-muted-foreground hover:bg-accent")}>
+            {VIEW_LABELS[key]} <span className="tnum ml-1">{viewCounts[key] ?? 0}</span>
+          </Link>)}
+        </nav>
+        <Gated permission="sales.write"><Button size="sm" className="ml-auto" onClick={() => setNewParam("1")}><Plus className="size-3.5" /> New inquiry</Button></Gated>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); filter({ q: searchText.trim() }); }}>
+          <Input aria-label="Search all inquiries" placeholder="Search all names, phones, references…" value={searchText} maxLength={200} onChange={(event) => setSearchText(event.target.value)} className="h-8 w-64" />
+          <Button type="submit" size="sm" variant="outline">Search</Button>
+        </form>
+        <Select value={filters.owner} onValueChange={(owner) => filter({ owner })}><SelectTrigger className="h-8 w-40" aria-label="Inquiry owner"><SelectValue /></SelectTrigger><SelectContent>
+          <SelectItem value="all">Team leads</SelectItem><SelectItem value="mine">My leads</SelectItem><SelectItem value="unassigned">Unassigned</SelectItem>
+          {members.map((member) => <SelectItem key={member.user_id} value={member.user_id}>{member.full_name}</SelectItem>)}
+        </SelectContent></Select>
+        <Select value={filters.source || "all"} onValueChange={(source) => filter({ source: source === "all" ? null : source })}><SelectTrigger className="h-8 w-36" aria-label="Inquiry source"><SelectValue /></SelectTrigger><SelectContent>
+          <SelectItem value="all">All sources</SelectItem>{SOURCE_CHANNELS.map((source) => <SelectItem key={source} value={source}>{SOURCE_CHANNEL[source]?.label ?? titleCase(source)}</SelectItem>)}
+        </SelectContent></Select>
+        <Select value={view} onValueChange={(next) => filter({ view: next })}><SelectTrigger className="h-8 w-44" aria-label="All inquiry views"><SelectValue /></SelectTrigger><SelectContent>
+          {LEAD_VIEWS.map((key) => <SelectItem key={key} value={key}>{VIEW_LABELS[key]} ({viewCounts[key] ?? 0})</SelectItem>)}
+        </SelectContent></Select>
+        {(filters.search || filters.source || filters.owner !== "all") && <Button size="sm" variant="ghost" onClick={() => { setSearchText(""); filter({ q: null, source: null, owner: null }); }}>Clear filters</Button>}
+      </div>
 
       <DataTable
         columns={columns}
         data={leads}
         rowKey={(r) => r.id}
-        searchable
-        searchPlaceholder="Filter by name, company, phone…"
+        hidePagination
+        initialColumnVisibility={{ contact: false, interest: false, sla: false, contact_attempts: false, product_interest: false, whatsapp: false }}
+        pageSize={pageSize}
         columnToggle
         selectable={can("sales.assign")}
         bulkActions={(rows) => (
@@ -260,11 +237,15 @@ export function InboxClient({ view, leads, counts, members, locations, savedView
         onRowClick={(r) => setLeadParam(r.id)}
         isRowActive={(r) => r.id === leadParam}
         emptyTitle="No inquiries in this view"
-        emptyDescription="Inquiries arrive from connectors or manual capture. Create one or switch views."
-        initialSorting={[{ id: "created_at", desc: true }]}
+        emptyDescription="No matches in this view. Check the source, owner and search filters, or open All inquiries."
       />
 
+      <div className="flex items-center justify-between gap-2 text-sm" aria-label="Inquiry pagination">
+        <span className="tnum text-muted-foreground">{total.toLocaleString()} inquiries · page {page} of {Math.max(1, Math.ceil(total / pageSize))}</span>
+        <div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => filter({ page: String(page - 1) })}>Previous page</Button><Button size="sm" variant="outline" disabled={page * pageSize >= total} onClick={() => filter({ page: String(page + 1) })}>Next page</Button></div>
+      </div>
       <LeadDrawer
+        key={selected?.id ?? "none"}
         lead={selected}
         intake={selectedIntake}
         timeline={selectedTimeline}

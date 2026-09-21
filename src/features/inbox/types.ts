@@ -25,6 +25,14 @@ export interface LeadRow {
   duplicate_of_lead_id: string | null;
   next_follow_up_at: string | null;
   next_follow_up_task_id: string | null;
+  follow_up_owner_id: string | null;
+  open_follow_ups: number;
+  completed_follow_ups: number;
+  first_whatsapp_sent_at: string | null;
+  first_customer_reply_at: string | null;
+  first_whatsapp_reply_at: string | null;
+  last_contact_attempt_at: string | null;
+  no_next_action_reason: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -71,6 +79,10 @@ export interface IntakeEventRow {
 }
 
 export interface InboxCounts {
+  needsAction: number;
+  replied: number;
+  upcoming: number;
+  completed: number;
   new: number;
   waiting: number;
   contacted: number;

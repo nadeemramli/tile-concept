@@ -9,8 +9,12 @@ import type { LeadView } from "@/features/inbox/schema";
  */
 
 export const VIEW_LABELS: Record<LeadView, string> = {
+  "needs-action": "Needs action",
+  replied: "Customer replied",
+  upcoming: "Upcoming",
+  "follow-ups-completed": "Completed follow-ups",
   new: "New",
-  waiting: "Waiting for reply",
+  waiting: "Awaiting reply",
   contacted: "Contacted",
   unassigned: "Unassigned",
   mine: "My leads",
@@ -19,8 +23,8 @@ export const VIEW_LABELS: Record<LeadView, string> = {
   "follow-ups-due": "Follow-ups due",
   duplicates: "Duplicate review",
   qualified: "Qualified",
-  disqualified: "Disqualified",
-  all: "All",
+  disqualified: "Lost",
+  all: "All inquiries",
   aging: "Aging",
 };
 
@@ -33,6 +37,7 @@ export interface LeadLocation {
   next_follow_up_at: string | null;
   duplicate_of_lead_id: string | null;
   created_at: string;
+  first_customer_reply_at?: string | null;
 }
 
 export interface Whereabouts {
@@ -77,10 +82,13 @@ export function whereIsLead(lead: LeadLocation, userId: string, now: Date = new 
       home = "all";
   }
   const also: LeadView[] = [];
-  if (lead.owner_id === userId && (ACTIVE.has(lead.status) || lead.status === "qualified")) also.push("mine");
-  if (lead.owner_id === null && ACTIVE.has(lead.status)) also.push("unassigned");
+  if (lead.first_customer_reply_at && !["disqualified", "duplicate"].includes(lead.status)) home = "replied";
+  if (lead.owner_id === userId && (ACTIVE.has(lead.status) || ["qualified", "converted"].includes(lead.status))) also.push("mine");
+  if (lead.owner_id === null && (ACTIVE.has(lead.status) || ["qualified", "converted"].includes(lead.status))) also.push("unassigned");
   if (ACTIVE.has(lead.status) && !lead.first_response_at && lead.first_response_due_at && new Date(lead.first_response_due_at) < now) also.push("follow-up");
-  if (lead.next_follow_up_at && new Date(lead.next_follow_up_at) <= endOfTodayKl(now)) also.push("follow-ups-due");
+  if (!["disqualified", "duplicate"].includes(lead.status) && lead.next_follow_up_at) {
+    also.push(new Date(lead.next_follow_up_at) <= endOfTodayKl(now) ? "follow-ups-due" : "upcoming");
+  }
   if ((lead.status === "new" || lead.status === "contact_attempted") && new Date(lead.created_at) < new Date(now.getTime() - 2 * 86_400_000)) also.push("aging");
   if (lead.duplicate_of_lead_id && home !== "duplicates") also.push("duplicates");
   return { home, also };

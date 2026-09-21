@@ -26,7 +26,7 @@ describe("whereIsLead", () => {
   it("after Done WhatsApp on an unowned lead it is Waiting for reply and mine", () => {
     const after = lead({ status: "contact_attempted", owner_id: me, first_response_at: "2026-09-11T01:59:00Z" });
     expect(whereIsLead(after, me, now)).toEqual({ home: "waiting", also: ["mine"] });
-    expect(whereSentence(whereIsLead(after, me, now))).toBe("Now in Waiting for reply and My leads.");
+    expect(whereSentence(whereIsLead(after, me, now))).toBe("Now in Awaiting reply and My leads.");
   });
 
   it("a logged conversation goes to Contacted", () => {

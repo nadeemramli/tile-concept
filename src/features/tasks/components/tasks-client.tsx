@@ -205,9 +205,9 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
             <DialogTitle>Complete task</DialogTitle>
             <DialogDescription>The outcome is appended to the linked contact / opportunity timeline.</DialogDescription>
           </DialogHeader>
-          <Field label="Outcome (optional)"><Textarea rows={3} value={outcome} onChange={(e) => setOutcome(e.target.value)} autoFocus /></Field>
+          <Field label={task?.lead_id ? "Outcome (required for inquiry follow-ups)" : "Outcome (optional)"}><Textarea rows={3} value={outcome} onChange={(e) => setOutcome(e.target.value)} autoFocus /></Field>
           <DialogFooter>
-            <Button disabled={pending || !task} onClick={() => task && run(() => completeTaskAction({ task_id: task.id, outcome }), () => { setCompleting(false); setOutcome(""); })}>{pending ? "Saving…" : "Mark done"}</Button>
+            <Button disabled={pending || !task || (!!task.lead_id && outcome.trim().length < 3)} onClick={() => task && run(() => completeTaskAction({ task_id: task.id, outcome }), () => { setCompleting(false); setOutcome(""); })}>{pending ? "Saving…" : "Mark done"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

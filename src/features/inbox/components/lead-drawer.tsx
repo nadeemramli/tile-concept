@@ -4,42 +4,37 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Check, ExternalLink, MapPin, MessageCircle, MoreHorizontal, Search, UserPlus, X } from "lucide-react";
+import { ArrowRight, Check, ExternalLink, MapPin, MessageCircle, MoreHorizontal, Search, UserPlus } from "lucide-react";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { Timeline, type TimelineItem } from "@/components/patterns/timeline";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
-import { DisabledHint, Gated, Hint } from "@/components/patterns/explain";
+import { DisabledHint, Hint } from "@/components/patterns/explain";
 import { LEAD_STATUS } from "@/lib/domain/status-maps";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field } from "@/components/patterns/field";
 import { CandidateList } from "@/features/inbox/components/candidate-list";
 import { FormAnswers } from "@/features/inbox/components/form-answers";
 import { mergeFormAnswers } from "@/features/inbox/lib/payload";
-import { FOLLOW_UP_OPTIONS, followUpDueAt, followUpTaskTitle } from "@/features/inbox/lib/follow-up";
+import { InquiryWorkflow } from "./inquiry-workflow";
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
 import { VIEW_LABELS, whereIsLead } from "@/features/inbox/lib/whereabouts";
 import type { LeadView } from "@/features/inbox/schema";
-import { cn } from "@/lib/utils";
 import type { IdentityCandidate, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { ProfileRef } from "@/server/queries/reference";
 import {
   assignLeadAction,
   convertLeadAction,
   createContactForLeadAction,
-  disqualifyLeadAction,
   findLeadMatchesAction,
   linkLeadIdentityAction,
-  logLeadResponseAction,
   qualifyLeadAction,
-  scheduleLeadFollowUpAction,
 } from "@/server/commands/leads";
 
 interface Props {
@@ -55,7 +50,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Panel = null | "respond" | "disqualify" | "matches" | "convert" | "assign";
+type Panel = null | "matches" | "convert" | "assign";
 
 const TIMELINE_PREVIEW = 5;
 
@@ -67,8 +62,6 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
   const [pending, start] = useTransition();
   const [panel, setPanel] = useState<Panel>(null);
   const [candidates, setCandidates] = useState<IdentityCandidate[] | null>(initialSuggestions ?? null);
-  // Set after a quick log so the follow-up card draws the eye; keyed by lead so it resets on switch.
-  const [nudgeFollowUpFor, setNudgeFollowUpFor] = useState<string | null>(null);
   const [showAllActivity, setShowAllActivity] = useState(false);
 
   if (!lead) return null;
@@ -126,7 +119,6 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         else toast.error(r.error);
       });
   };
-  const followUpOverdue = isOverdue(lead.next_follow_up_at);
   const visibleActivity = showAllActivity ? timeline : timeline.slice(0, TIMELINE_PREVIEW);
 
   return (
@@ -135,6 +127,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         open={!!lead}
         onOpenChange={(o) => !o && onClose()}
         width="xl"
+        className="data-[side=right]:w-full"
         title={
           <span className="flex flex-wrap items-center gap-2">
             {lead.raw_name ?? lead.raw_company ?? "Inquiry"} <StatusPill map={LEAD_STATUS} value={lead.status} size="md" />
@@ -145,7 +138,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         {/* Where the lead lives now, so a response never makes it vanish. */}
         {view && inCurrentView === false && view !== "all" && view !== where.home && (
           <p className="rounded-md border border-info/30 bg-info/10 px-3 py-2 text-sm">
-            This lead is no longer in the <span className="font-medium">{VIEW_LABELS[view]}</span> view. It now sits under{" "}
+            This inquiry is outside the current results. Its stage is available under{" "}
             <Link href={viewHref(where.home)} className="font-medium underline underline-offset-2">
               {VIEW_LABELS[where.home]}
             </Link>
@@ -177,7 +170,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         {/* Primary actions: what a rep does most, in the order they do it. */}
         <div className="flex flex-wrap items-center gap-2">
           {whatsappUrl && (
-            <Hint content="Opens WhatsApp with a pre-filled message. Sending it is not recorded here; tap Done WhatsApp afterwards.">
+            <Hint content="Opens WhatsApp with a pre-filled message. Sending it is not recorded here; record WhatsApp sent in Next action and progress afterwards.">
               <Button asChild size="sm" className="h-8">
                 <a href={whatsappUrl} target="_blank" rel="noreferrer">
                   <MessageCircle className="size-3.5" aria-hidden /> WhatsApp
@@ -185,46 +178,12 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
               </Button>
             </Hint>
           )}
-          {whatsappUrl && !terminal && !isOwner && (
-            <DisabledHint reason={OWNER_ONLY}>
-              <Button size="sm" variant="outline" className="h-8" disabled>
-                <Check className="size-3.5" aria-hidden /> Done WhatsApp
-              </Button>
-            </DisabledHint>
-          )}
-          {whatsappUrl && !terminal && isOwner && (
-            <Gated permission="sales.write">
-              <Hint content="One tap: records that you messaged this customer, under your name. Counts as an attempt, not a reply, so the status becomes Contact attempted and the lead moves from New to Waiting for reply. If nobody owned it yet, it becomes yours.">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8"
-                  disabled={pending}
-                  onClick={() =>
-                    run(
-                      () => logLeadResponseAction({ lead_id: lead.id, kind: "message", channel: "whatsapp", reached: false, body: "WhatsApp message sent" }),
-                      () => setNudgeFollowUpFor(lead.id),
-                    )
-                  }
-                >
-                  <Check className="size-3.5" aria-hidden /> Done WhatsApp
-                </Button>
-              </Hint>
-            </Gated>
-          )}
           {!terminal && !isOwner && (
             <DisabledHint reason={OWNER_ONLY}>
               <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-8" disabled>
                 Log a call or email
               </Button>
             </DisabledHint>
-          )}
-          {!terminal && isOwner && (
-            <Gated permission="sales.write">
-              <Button size="sm" variant={whatsappUrl ? "outline" : "default"} className="h-8" onClick={() => setPanel("respond")}>
-                Log a call or email
-              </Button>
-            </Gated>
           )}
           {lead.converted_opportunity_id && (
             <Button asChild size="sm" variant="outline" className="h-8">
@@ -258,14 +217,6 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
                     {!lead.contact_id && <span className="ml-1 text-[11px] text-muted-foreground">— link a customer record first</span>}
                   </DropdownMenuItem>
                 )}
-                {canWrite && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onSelect={() => setPanel("disqualify")}>
-                      <X className="size-3.5" aria-hidden /> Disqualify
-                    </DropdownMenuItem>
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -276,7 +227,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
             This customer has been waiting {formatRelative(lead.first_response_due_at).replace(" ago", "")} past the 4-hour reply target. Message them now.
           </p>
         )}
-        {lead.disqualified_reason && <p className="text-sm text-destructive">Disqualified: {lead.disqualified_reason}</p>}
+        {lead.disqualified_reason && <p className="text-sm text-destructive">Lost: {lead.disqualified_reason}</p>}
 
         <div className="@container">
           <div className="grid gap-5 @3xl:grid-cols-[3fr_2fr]">
@@ -368,57 +319,8 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
             </div>
 
             {/* Right: what happens next and what has happened */}
-            <div className="space-y-5">
-              <DrawerSection title="Follow-up">
-                <div className={cn("rounded-md border px-3 py-2.5 text-sm transition-shadow", nudgeFollowUpFor === lead.id && !lead.next_follow_up_at && "ring-2 ring-brand")}>
-                  {lead.next_follow_up_at ? (
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={cn(followUpOverdue && "font-medium text-destructive")}>
-                        {followUpOverdue ? "Overdue — was due" : "Due"} {formatRelative(lead.next_follow_up_at)}
-                      </span>
-                      <Link href={lead.next_follow_up_task_id ? `/sales/tasks?task=${lead.next_follow_up_task_id}` : "/sales/tasks"} className="shrink-0 text-xs text-info hover:underline">
-                        Open task
-                      </Link>
-                    </div>
-                  ) : terminal ? (
-                    <span className="text-muted-foreground">No follow-up needed.</span>
-                  ) : canWrite ? (
-                    <div className="space-y-1.5">
-                      <p className="text-muted-foreground">
-                        {nudgeFollowUpFor === lead.id
-                          ? `Logged. This lead now sits under ${VIEW_LABELS[where.home]}. Set a reminder so it also shows in Follow-ups due:`
-                          : "No reminder set. Remind me:"}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {FOLLOW_UP_OPTIONS.map((o) => (
-                          <Button
-                            key={o.key}
-                            size="sm"
-                            variant={o.emphasized ? "default" : "outline"}
-                            className="h-7"
-                            disabled={pending}
-                            onClick={() =>
-                              run(
-                                () => scheduleLeadFollowUpAction({ lead_id: lead.id, due_at: followUpDueAt(o.days), title: followUpTaskTitle(lead) }),
-                                () => setNudgeFollowUpFor(null),
-                              )
-                            }
-                          >
-                            {o.label}
-                          </Button>
-                        ))}
-                        {nudgeFollowUpFor === lead.id && (
-                          <Button size="sm" variant="ghost" className="h-7" onClick={() => setNudgeFollowUpFor(null)}>
-                            Not needed
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">No reminder set.</span>
-                  )}
-                </div>
-              </DrawerSection>
+            <div className="order-first space-y-5 @3xl:order-last">
+              <InquiryWorkflow key={lead.id} lead={lead} canWrite={canWrite} />
 
               <DrawerSection
                 title="Activity"
@@ -437,9 +339,6 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         </div>
       </RecordDrawer>
 
-      {/* Log response */}
-      <LogResponseDialog open={panel === "respond"} onOpenChange={(o) => !o && setPanel(null)} leadId={lead.id} onDone={() => { setPanel(null); setNudgeFollowUpFor(lead.id); refresh(); }} />
-
       {/* Assign */}
       <Dialog open={panel === "assign"} onOpenChange={(o) => !o && setPanel(null)}>
         <DialogContent className="sm:max-w-md">
@@ -448,17 +347,6 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
             <DialogDescription>Sets the owner and starts the first-response clock if not already running.</DialogDescription>
           </DialogHeader>
           <AssignForm members={members} current={lead.owner_id} pending={pending} onAssign={(owner, reason) => run(() => assignLeadAction({ lead_id: lead.id, owner_id: owner, reason }), () => setPanel(null))} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Disqualify */}
-      <Dialog open={panel === "disqualify"} onOpenChange={(o) => !o && setPanel(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Disqualify lead</DialogTitle>
-            <DialogDescription>A reason is required and becomes part of the audit trail.</DialogDescription>
-          </DialogHeader>
-          <ReasonForm label="Reason" submitLabel="Disqualify" destructive pending={pending} onSubmit={(reason) => run(() => disqualifyLeadAction({ lead_id: lead.id, reason }), () => setPanel(null))} />
         </DialogContent>
       </Dialog>
 
@@ -574,78 +462,6 @@ export function ReasonForm({ label, submitLabel, destructive, pending, onSubmit,
         </DisabledHint>
       </DialogFooter>
     </div>
-  );
-}
-
-function LogResponseDialog({ open, onOpenChange, leadId, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; leadId: string; onDone: () => void }) {
-  const [kind, setKind] = useState<"call" | "message" | "email" | "meeting">("call");
-  const [channel, setChannel] = useState<"phone" | "whatsapp" | "email" | "dm" | "meeting">("phone");
-  const [reached, setReached] = useState(true);
-  const [body, setBody] = useState("");
-  const [pending, start] = useTransition();
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Log a call or email</DialogTitle>
-          <DialogDescription>Records the attempt under your name and updates the lead status.</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Kind">
-            <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="call">Call</SelectItem>
-                <SelectItem value="message">Message</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="meeting">Meeting</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Channel">
-            <Select value={channel} onValueChange={(v) => setChannel(v as typeof channel)}>
-              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="phone">Phone</SelectItem>
-                <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="dm">DM</SelectItem>
-                <SelectItem value="meeting">In person</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-        <div className="flex items-center justify-between rounded-md border px-3 py-2">
-          <div>
-            <div className="text-sm">Customer reached</div>
-            <div className="text-[11px] text-muted-foreground">Off = attempt only (status: Contact attempted)</div>
-          </div>
-          <Switch checked={reached} onCheckedChange={setReached} aria-label="Customer reached" />
-        </div>
-        <Field label="Notes">
-          <Textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder="What was discussed, next step…" />
-        </Field>
-        <DialogFooter>
-          <Button
-            disabled={pending}
-            onClick={() =>
-              start(async () => {
-                const r = await logLeadResponseAction({ lead_id: leadId, kind, channel, reached, body });
-                if (!r.ok) {
-                  toast.error(r.error);
-                  return;
-                }
-                toast.success(r.message);
-                setBody("");
-                onDone();
-              })
-            }
-          >
-            {pending ? "Saving…" : "Log"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

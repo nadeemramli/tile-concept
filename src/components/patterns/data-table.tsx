@@ -61,8 +61,11 @@ interface DataTableProps<T> {
   bulkActions?: (rows: T[]) => React.ReactNode;
   toolbar?: React.ReactNode;
   initialSorting?: SortingState;
+  initialColumnVisibility?: VisibilityState;
   isRowActive?: (row: T) => boolean;
   footer?: React.ReactNode;
+  /** The caller supplies server pagination and its own totals/navigation. */
+  hidePagination?: boolean;
 }
 
 const SKELETON_CELL_WIDTHS = ["w-3/4", "w-1/2", "w-full"];
@@ -90,12 +93,14 @@ export function DataTable<T>({
   bulkActions,
   toolbar,
   initialSorting = [],
+  initialColumnVisibility = {},
   isRowActive,
   footer,
+  hidePagination = false,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialColumnVisibility);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const allColumns = useMemo<ColumnDef<T, unknown>[]>(() => {
@@ -309,7 +314,7 @@ export function DataTable<T>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between px-1">
+      {!hidePagination && <div className="flex items-center justify-between px-1">
         <span className="tnum text-xs text-muted-foreground">
           {filteredCount.toLocaleString()} rows
           {pageCount > 1 && ` · page ${pageIndex + 1} of ${pageCount}`}
@@ -327,7 +332,7 @@ export function DataTable<T>({
             </div>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

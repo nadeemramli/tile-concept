@@ -2,24 +2,13 @@ import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getMemberMap } from "@/server/queries/reference";
-import { endOfTodayKualaLumpur } from "@/lib/format";
-import type { AppSession } from "@/server/session";
 import type { InboxCounts, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { LeadView } from "@/features/inbox/schema";
 import type { TimelineItem } from "@/components/patterns/timeline";
 
-const LEAD_COLUMNS =
-  "id, status, source_channel, source_detail, contact_id, account_id, raw_name, raw_phone, raw_phone_normalized, raw_email, raw_company, interest, product_interest, location_id, owner_id, assigned_at, first_response_due_at, first_response_at, contact_attempts, qualified_at, disqualified_reason, converted_opportunity_id, duplicate_of_lead_id, notes, created_at, updated_at";
-
 type RawLead = Record<string, unknown>;
-type Supa = Awaited<ReturnType<typeof createServerSupabase>>;
 
-interface LeadFollowUp {
-  id: string;
-  due_at: string;
-}
-
-function mapLead(r: RawLead, ownerName: string | null, followUp: LeadFollowUp | null = null): LeadRow {
+function mapLead(r: RawLead, ownerName: string | null): LeadRow {
   return {
     id: String(r.id),
     status: String(r.status ?? "new"),
@@ -45,150 +34,75 @@ function mapLead(r: RawLead, ownerName: string | null, followUp: LeadFollowUp | 
     disqualified_reason: (r.disqualified_reason as string | null) ?? null,
     converted_opportunity_id: (r.converted_opportunity_id as string | null) ?? null,
     duplicate_of_lead_id: (r.duplicate_of_lead_id as string | null) ?? null,
-    next_follow_up_at: followUp?.due_at ?? null,
-    next_follow_up_task_id: followUp?.id ?? null,
+    next_follow_up_at: (r.next_follow_up_at as string | null) ?? null,
+    next_follow_up_task_id: (r.next_follow_up_task_id as string | null) ?? null,
+    follow_up_owner_id: (r.follow_up_owner_id as string | null) ?? null,
+    open_follow_ups: Number(r.open_follow_ups ?? 0),
+    completed_follow_ups: Number(r.completed_follow_ups ?? 0),
+    first_whatsapp_sent_at: (r.first_whatsapp_sent_at as string | null) ?? null,
+    first_customer_reply_at: (r.first_customer_reply_at as string | null) ?? null,
+    first_whatsapp_reply_at: (r.first_whatsapp_reply_at as string | null) ?? null,
+    last_contact_attempt_at: (r.last_contact_attempt_at as string | null) ?? null,
+    no_next_action_reason: (r.no_next_action_reason as string | null) ?? null,
     notes: (r.notes as string | null) ?? null,
     created_at: String(r.created_at),
     updated_at: String(r.updated_at ?? r.created_at),
   };
 }
 
-const ACTIVE = ["new", "contact_attempted", "contacted", "qualified"];
-
-/**
- * Earliest open follow-up task per lead, in one bounded query. PostgREST has no
- * group-by, so the min() per lead happens here: tasks arrive ordered by due_at
- * and the first row per lead wins. RLS on sales.tasks scopes rows to the viewer
- * (own, created, or unassigned tasks unless sales.read_all), so a rep sees
- * their own follow-ups while managers see them all — intended.
- */
-async function getOpenLeadFollowUps(supabase: Supa): Promise<Map<string, LeadFollowUp>> {
-  const { data } = await supabase
-    .from("tasks")
-    .select("id, lead_id, due_at")
-    .eq("status", "open")
-    .not("lead_id", "is", null)
-    .not("due_at", "is", null)
-    .order("due_at", { ascending: true })
-    .limit(1000);
-  const map = new Map<string, LeadFollowUp>();
-  for (const t of data ?? []) {
-    if (!t.lead_id || map.has(String(t.lead_id))) continue;
-    map.set(String(t.lead_id), { id: String(t.id), due_at: String(t.due_at) });
-  }
-  return map;
+export interface InquiryFilters {
+  view: LeadView;
+  search: string;
+  owner: string;
+  source: string;
+  page: number;
 }
 
-export async function listLeads(view: LeadView, session: AppSession): Promise<LeadRow[]> {
+export async function getInquiryPage(filters: InquiryFilters) {
   const supabase = await createServerSupabase();
-  const [followUps, members] = await Promise.all([getOpenLeadFollowUps(supabase), getMemberMap()]);
-  let q = supabase.from("leads").select(LEAD_COLUMNS).order("created_at", { ascending: false }).limit(500);
-  const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
-  const now = new Date().toISOString();
-  switch (view) {
-    case "new":
-      q = q.eq("status", "new");
-      break;
-    // Walk-in visits mirror into the inbox as contacted leads; they are tracked
-    // on the walk-in page and would drown these two views.
-    case "waiting":
-      q = q.eq("status", "contact_attempted").neq("source_channel", "walk_in");
-      break;
-    case "contacted":
-      q = q.eq("status", "contacted").neq("source_channel", "walk_in");
-      break;
-    case "unassigned":
-      q = q.is("owner_id", null).in("status", ["new", "contact_attempted", "contacted"]);
-      break;
-    case "mine":
-      q = q.eq("owner_id", session.userId).in("status", ACTIVE);
-      break;
-    case "no-response":
-      q = q.eq("status", "new").is("first_response_at", null);
-      break;
-    case "follow-up":
-      q = q.in("status", ["new", "contact_attempted", "contacted"]).lt("first_response_due_at", now).is("first_response_at", null);
-      break;
-    case "follow-ups-due": {
-      // Only leads whose earliest open task is due today (KL) or earlier — a
-      // bounded id list, never the full 500-row scan.
-      const dueEnd = Date.parse(endOfTodayKualaLumpur());
-      const dueLeadIds = [...followUps.entries()].filter(([, f]) => Date.parse(f.due_at) <= dueEnd).map(([leadId]) => leadId);
-      if (dueLeadIds.length === 0) return [];
-      q = q.in("id", dueLeadIds.slice(0, 500));
-      break;
-    }
-    case "duplicates":
-      q = q.or("status.eq.duplicate,duplicate_of_lead_id.not.is.null");
-      break;
-    case "qualified":
-      q = q.in("status", ["qualified", "converted"]);
-      break;
-    case "disqualified":
-      q = q.eq("status", "disqualified");
-      break;
-    case "aging":
-      q = q.in("status", ["new", "contact_attempted"]).lt("created_at", twoDaysAgo);
-      break;
-    case "all":
-    default:
-      break;
-  }
-  const { data } = await q;
-  return (data ?? []).map((r) => mapLead(r as RawLead, r.owner_id ? (members.get(r.owner_id)?.full_name ?? null) : null, followUps.get(String(r.id)) ?? null));
+  const [{ data, error }, members] = await Promise.all([
+    supabase.rpc("inquiry_page", {
+      p_view: filters.view, p_search: filters.search, p_owner: filters.owner,
+      p_source: filters.source, p_page: filters.page, p_size: 25,
+    }),
+    getMemberMap(),
+  ]);
+  if (error) throw new Error("Unable to load inquiries. Please retry.");
+  const result = data as { rows: RawLead[]; total: number; page: number; page_size: number; counts: Record<string, number> } | null;
+  if (!result || !Array.isArray(result.rows)) throw new Error("Invalid inquiry response. Please retry.");
+  const c = result.counts;
+  const counts: InboxCounts = {
+    needsAction: c["needs-action"] ?? 0, replied: c.replied ?? 0,
+    upcoming: c.upcoming ?? 0, completed: c["follow-ups-completed"] ?? 0,
+    new: c.new ?? 0, waiting: c.waiting ?? 0, contacted: c.contacted ?? 0,
+    unassigned: c.unassigned ?? 0, mine: c.mine ?? 0, noResponse: c["no-response"] ?? 0,
+    followUp: c["follow-up"] ?? 0, duplicates: c.duplicates ?? 0, aging: c.aging ?? 0,
+    followUpsDue: c["follow-ups-due"] ?? 0,
+  };
+  return {
+    leads: result.rows.map((r) => mapLead(r, r.owner_id ? members.get(String(r.owner_id))?.full_name ?? null : null)),
+    counts, viewCounts: c, total: result.total, page: result.page, pageSize: result.page_size,
+  };
 }
 
 export async function getLead(id: string): Promise<LeadRow | null> {
   const supabase = await createServerSupabase();
-  const [{ data }, members, { data: openTasks }] = await Promise.all([
-    supabase.from("leads").select(LEAD_COLUMNS).eq("id", id).maybeSingle(),
-    getMemberMap(),
-    supabase.from("tasks").select("id, due_at").eq("lead_id", id).eq("status", "open").not("due_at", "is", null).order("due_at", { ascending: true }).limit(1),
+  const [{ data, error }, members] = await Promise.all([
+    supabase.from("inbox_leads").select("*").eq("id", id).maybeSingle(), getMemberMap(),
   ]);
+  if (error) throw new Error("Unable to load this inquiry. Please retry.");
   if (!data) return null;
-  const t = openTasks?.[0];
-  return mapLead(data as RawLead, data.owner_id ? (members.get(data.owner_id)?.full_name ?? null) : null, t ? { id: String(t.id), due_at: String(t.due_at) } : null);
-}
-
-export async function getInboxCounts(session: AppSession): Promise<InboxCounts> {
-  const supabase = await createServerSupabase();
-  const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
-  const now = new Date().toISOString();
-  const head = () => supabase.from("leads").select("id", { count: "exact", head: true });
-  const [n, u, m, nr, fu, d, a, ft, w, c] = await Promise.all([
-    head().eq("status", "new"),
-    head().is("owner_id", null).in("status", ["new", "contact_attempted", "contacted"]),
-    head().eq("owner_id", session.userId).in("status", ACTIVE),
-    head().eq("status", "new").is("first_response_at", null),
-    head().in("status", ["new", "contact_attempted", "contacted"]).lt("first_response_due_at", now).is("first_response_at", null),
-    head().or("status.eq.duplicate,duplicate_of_lead_id.not.is.null"),
-    head().in("status", ["new", "contact_attempted"]).lt("created_at", twoDaysAgo),
-    // Distinct-lead count so the card matches the "Follow-ups due" view rows.
-    supabase.from("tasks").select("lead_id").eq("status", "open").not("lead_id", "is", null).lte("due_at", endOfTodayKualaLumpur()).limit(1000),
-    head().eq("status", "contact_attempted").neq("source_channel", "walk_in"),
-    head().eq("status", "contacted").neq("source_channel", "walk_in"),
-  ]);
-  return {
-    new: n.count ?? 0,
-    waiting: w.count ?? 0,
-    contacted: c.count ?? 0,
-    unassigned: u.count ?? 0,
-    mine: m.count ?? 0,
-    noResponse: nr.count ?? 0,
-    followUp: fu.count ?? 0,
-    duplicates: d.count ?? 0,
-    aging: a.count ?? 0,
-    followUpsDue: new Set((ft.data ?? []).map((t) => String(t.lead_id))).size,
-  };
+  return mapLead(data as RawLead, data.owner_id ? members.get(data.owner_id)?.full_name ?? null : null);
 }
 
 export async function getLeadIntakeEvents(leadId: string): Promise<IntakeEventRow[]> {
   const supabase = await createServerSupabase();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("intake_events")
     .select("id, source_channel, provider, external_id, received_at, payload, raw_text, status")
     .eq("lead_id", leadId)
     .order("received_at", { ascending: false });
+  if (error) throw new Error("Unable to load inquiry source history.");
   return (data ?? []).map((e) => ({
     id: String(e.id),
     source_channel: String(e.source_channel ?? "other"),
@@ -203,7 +117,8 @@ export async function getLeadIntakeEvents(leadId: string): Promise<IntakeEventRo
 
 export async function getLeadTimeline(leadId: string): Promise<TimelineItem[]> {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.rpc("entity_timeline", { p_entity_type: "lead", p_entity_id: leadId, p_limit: 100 });
+  const { data, error } = await supabase.rpc("entity_timeline", { p_entity_type: "lead", p_entity_id: leadId, p_limit: 100 });
+  if (error) throw new Error("Unable to load inquiry activity history.");
   return (data ?? []).map((a) => ({
     id: String(a.id),
     kind: String(a.kind ?? "note"),

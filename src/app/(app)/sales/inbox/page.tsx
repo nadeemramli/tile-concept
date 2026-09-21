@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { requireSession } from "@/server/session";
 import { PermissionDenied } from "@/components/patterns/states";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
-import { getInboxCounts, getLead, getLeadIntakeEvents, getLeadTimeline, getLinkedContactSummary, listLeads } from "@/server/queries/leads";
-import { getLocations, getMembers, getSavedViews } from "@/server/queries/reference";
-import { LEAD_VIEWS, type LeadView } from "@/features/inbox/schema";
+import { getInquiryPage, getLead, getLeadIntakeEvents, getLeadTimeline, getLinkedContactSummary } from "@/server/queries/leads";
+import { getLocations, getMembers } from "@/server/queries/reference";
+import { LEAD_VIEWS, SOURCE_CHANNELS, type LeadView } from "@/features/inbox/schema";
 import { InboxClient } from "@/features/inbox/components/inbox-client";
+import { uuid } from "@/lib/zod";
 
 export const metadata: Metadata = { title: "Inquiry Inbox" };
 
@@ -13,16 +14,21 @@ export default async function InboxPage({ searchParams }: PageProps<"/sales/inbo
   const session = await requireSession();
   if (!session.permissions.includes("sales.read")) return <PermissionDenied permission="sales.read" roleLabel={session.roleLabel} />;
   const sp = await searchParams;
-  const viewParam = typeof sp.view === "string" ? sp.view : "new";
-  const view: LeadView = (LEAD_VIEWS as readonly string[]).includes(viewParam) ? (viewParam as LeadView) : "new";
-  const selectedId = typeof sp.lead === "string" ? sp.lead : null;
+  const viewParam = typeof sp.view === "string" ? sp.view : "needs-action";
+  const view: LeadView = (LEAD_VIEWS as readonly string[]).includes(viewParam) ? (viewParam as LeadView) : "needs-action";
+  const owner = typeof sp.owner === "string" && (["all", "mine", "unassigned"].includes(sp.owner) || uuid().safeParse(sp.owner).success) ? sp.owner : "all";
+  const source = typeof sp.source === "string" && (SOURCE_CHANNELS as readonly string[]).includes(sp.source) ? sp.source : "";
+  const filters = {
+    view, search: typeof sp.q === "string" ? sp.q.slice(0, 200) : "",
+    owner, source,
+    page: Math.min(1000000, Math.max(1, Math.floor(Number(sp.page) || 1))),
+  };
+  const selectedId = uuid().safeParse(sp.lead).data ?? null;
 
-  const [leads, counts, members, locations, savedViews, selected] = await Promise.all([
-    listLeads(view, session),
-    getInboxCounts(session),
+  const [inbox, members, locations, selected] = await Promise.all([
+    getInquiryPage(filters),
     getMembers(),
     getLocations(),
-    getSavedViews("inbox"),
     selectedId ? getLead(selectedId) : Promise.resolve(null),
   ]);
   const [intake, timeline, contact] = selected
@@ -31,14 +37,15 @@ export default async function InboxPage({ searchParams }: PageProps<"/sales/inbo
 
   return (
     <PageBody>
-      <PageHeader title="Inquiry Inbox" description="Every inquiry from TikTok, Meta, website, DMs, WhatsApp, calls, referrals and walk-ins — resolved to one identity, responded to on time." />
+      <PageHeader title="Inquiry Inbox" description="Know who needs attention, what happened last, and when to follow up. Every inquiry stays in your history." />
+      {sp.lead && !selected && <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">This inquiry link is invalid or the record is unavailable to your account. You can still search your authorized inquiries below.</p>}
       <InboxClient
+        key={`${filters.search}|${filters.owner}|${filters.source}`}
         view={view}
-        leads={leads}
-        counts={counts}
+        {...inbox}
+        filters={filters}
         members={members}
         locations={locations}
-        savedViews={savedViews}
         selected={selected}
         selectedIntake={intake}
         selectedTimeline={timeline}

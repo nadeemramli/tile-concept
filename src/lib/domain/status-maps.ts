@@ -22,8 +22,8 @@ export const LEAD_STATUS: StatusMap = {
   contact_attempted: { label: "Contact attempted", tone: "warning", hint: "Someone tried to reach the customer but has not spoken to them yet." },
   contacted: { label: "Contacted", tone: "info", hint: "A conversation happened. The first-response clock has stopped." },
   qualified: { label: "Qualified", tone: "success", hint: "A real need with a budget and timing. Ready to convert into a project and opportunity." },
-  disqualified: { label: "Disqualified", tone: "neutral", hint: "Not a fit, with a recorded reason. Kept for the audit trail; nothing else happens." },
-  converted: { label: "Converted", tone: "success", hint: "A project and opportunity were created from this lead. Work continues in Pipeline." },
+  disqualified: { label: "Lost", tone: "neutral", hint: "Closed without a sale, with a recorded reason. History remains searchable; reopen when the customer returns." },
+  converted: { label: "Opportunity created", tone: "info", hint: "A project and opportunity were created. This does not mean a purchase was recorded." },
   duplicate: { label: "Duplicate", tone: "neutral", hint: "The same person already had a lead or contact. This one is linked, not deleted." },
 };
 

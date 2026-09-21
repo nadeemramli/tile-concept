@@ -3,7 +3,7 @@ import { uuid } from "@/lib/zod";
 
 export const SOURCE_CHANNELS = ["tiktok", "meta", "website", "whatsapp", "dm", "call", "email", "referral", "walk_in", "other"] as const;
 export const PRODUCT_INTERESTS = ["wall_panel", "tile", "cut_tile", "mosaic", "finishing", "accessory"] as const;
-export const LEAD_VIEWS = ["new", "waiting", "contacted", "unassigned", "mine", "no-response", "follow-up", "follow-ups-due", "duplicates", "qualified", "disqualified", "all", "aging"] as const;
+export const LEAD_VIEWS = ["needs-action", "new", "waiting", "replied", "contacted", "unassigned", "mine", "no-response", "follow-up", "follow-ups-due", "upcoming", "follow-ups-completed", "duplicates", "qualified", "disqualified", "all", "aging"] as const;
 export type LeadView = (typeof LEAD_VIEWS)[number];
 
 export const newInquirySchema = z.object({
@@ -44,8 +44,14 @@ export const convertLeadSchema = z.object({
   next_action_due_at: z.string().min(1),
 });
 
-export const leadFollowUpSchema = z.object({
+export const inquiryActionSchema = z.object({
   lead_id: uuid(),
-  due_at: z.string().min(1),
-  title: z.string().trim().min(2).max(200),
+  request_id: uuid(),
+  action: z.enum(["whatsapp_sent", "contact_attempt", "customer_replied", "no_response", "schedule", "reschedule", "complete", "no_next_action", "lost", "reopen"]),
+  task_id: uuid().optional(),
+  due_at: z.iso.datetime({ offset: true }).optional(),
+  occurred_at: z.iso.datetime({ offset: true }).optional(),
+  channel: z.enum(["whatsapp", "phone", "email", "dm", "meeting"]).default("whatsapp"),
+  body: z.string().trim().max(4000).optional(),
 });
+export type InquiryAction = z.infer<typeof inquiryActionSchema>["action"];

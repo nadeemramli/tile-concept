@@ -11,6 +11,7 @@ const blank = (v: string | undefined | null) => (v && v.length > 0 ? v : null);
 
 function revalidate() {
   revalidatePath("/sales/tasks");
+  revalidatePath("/sales/inbox");
   revalidatePath("/");
 }
 
@@ -49,25 +50,10 @@ export async function createTaskAction(input: NewTaskInput): Promise<ActionResul
 
 export async function completeTaskAction(input: { task_id: string; outcome?: string }): Promise<ActionResult> {
   try {
-    const session = await requirePermission("sales.write");
+    await requirePermission("sales.write");
     const supabase = await createServerSupabase();
-    const { data: t } = await supabase.from("tasks").select("id, title, contact_id, account_id, opportunity_id, lead_id, project_id").eq("id", input.task_id).maybeSingle();
-    if (!t) return fail("Task not found");
-    const { error } = await supabase.from("tasks").update({ status: "done", completed_at: new Date().toISOString(), outcome: blank(input.outcome) }).eq("id", input.task_id);
+    const { error } = await supabase.rpc("complete_sales_task", { p_task_id: input.task_id, p_outcome: blank(input.outcome) ?? undefined });
     if (error) return fail(error);
-    await supabase.from("activities").insert({
-      workspace_id: session.workspaceId,
-      kind: "task_outcome",
-      subject: `Task done: ${t.title}`,
-      body: blank(input.outcome),
-      actor_id: session.userId,
-      contact_id: t.contact_id,
-      account_id: t.account_id,
-      opportunity_id: t.opportunity_id,
-      lead_id: t.lead_id,
-      project_id: t.project_id,
-      metadata: { task_id: input.task_id },
-    });
     revalidate();
     return ok(undefined, "Task completed.");
   } catch (e) {

@@ -50,6 +50,8 @@ supabase/.branches
 # playwright
 /test-results
 /playwright-report
+/.playwright-cli/
+/output/playwright/
 
 # corpus import (raw supplier content, resume state, reconciliation reports)
 /.local/

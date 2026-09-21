@@ -303,6 +303,13 @@ export type Database = {
             foreignKeyName: "activities_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
@@ -3378,6 +3385,111 @@ export type Database = {
           },
         ]
       }
+      inbox_leads: {
+        Row: {
+          account_id: string | null
+          assigned_at: string | null
+          completed_follow_ups: number | null
+          contact_attempts: number | null
+          contact_id: string | null
+          converted_opportunity_id: string | null
+          created_at: string | null
+          created_by: string | null
+          disqualified_reason: string | null
+          duplicate_of_lead_id: string | null
+          first_customer_reply_at: string | null
+          first_response_at: string | null
+          first_response_due_at: string | null
+          first_whatsapp_reply_at: string | null
+          first_whatsapp_sent_at: string | null
+          follow_up_owner_id: string | null
+          id: string | null
+          interest: string | null
+          last_contact_attempt_at: string | null
+          last_customer_reply_at: string | null
+          last_no_response_at: string | null
+          location_id: string | null
+          needs_action: boolean | null
+          next_follow_up_at: string | null
+          next_follow_up_task_id: string | null
+          no_next_action_reason: string | null
+          notes: string | null
+          open_follow_ups: number | null
+          owner_id: string | null
+          product_interest: string[] | null
+          qualified_at: string | null
+          raw_company: string | null
+          raw_email: string | null
+          raw_email_normalized: string | null
+          raw_name: string | null
+          raw_phone: string | null
+          raw_phone_normalized: string | null
+          source_channel: string | null
+          source_detail: string | null
+          status: string | null
+          updated_at: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_opportunity_fk"
+            columns: ["converted_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "business_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingestion_jobs: {
         Row: {
           attempts: number | null
@@ -3563,6 +3675,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "intake_events_lead_fk"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "intake_events_lead_fk"
             columns: ["lead_id"]
@@ -4091,6 +4210,13 @@ export type Database = {
             foreignKeyName: "lead_intake_links_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_intake_links_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
@@ -4210,6 +4336,13 @@ export type Database = {
             columns: ["converted_opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
             referencedColumns: ["id"]
           },
           {
@@ -4896,6 +5029,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
             referencedColumns: ["id"]
           },
           {
@@ -9118,6 +9258,13 @@ export type Database = {
             foreignKeyName: "tasks_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
@@ -9716,6 +9863,13 @@ export type Database = {
             foreignKeyName: "visits_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
@@ -9928,6 +10082,10 @@ export type Database = {
         Returns: undefined
       }
       command_centre_summary: { Args: never; Returns: Json }
+      complete_sales_task: {
+        Args: { p_outcome?: string; p_task_id: string }
+        Returns: undefined
+      }
       confirm_feedback_by_token: {
         Args: { p_customer_text: string; p_token_hash: string }
         Returns: boolean
@@ -10103,6 +10261,27 @@ export type Database = {
           score: number
           subtitle: string
           title: string
+        }[]
+      }
+      inquiry_page: {
+        Args: {
+          p_owner?: string
+          p_page?: number
+          p_search?: string
+          p_size?: number
+          p_source?: string
+          p_view?: string
+        }
+        Returns: Json
+      }
+      lead_followup_summary: {
+        Args: { p_lead_id: string }
+        Returns: {
+          completed_follow_ups: number
+          follow_up_owner_id: string
+          next_follow_up_at: string
+          next_follow_up_task_id: string
+          open_follow_ups: number
         }[]
       }
       link_lead_contact: {
@@ -10572,6 +10751,19 @@ export type Database = {
           p_title?: string
         }
         Returns: string
+      }
+      work_inquiry: {
+        Args: {
+          p_action: string
+          p_body?: string
+          p_channel?: string
+          p_due_at?: string
+          p_lead_id: string
+          p_occurred_at?: string
+          p_request_id: string
+          p_task_id?: string
+        }
+        Returns: Json
       }
     }
     Enums: {
