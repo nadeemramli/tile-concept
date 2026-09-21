@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -21,15 +21,14 @@ import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
 import { VIEW_LABELS } from "@/features/inbox/lib/whereabouts";
 import { LEAD_VIEWS, SOURCE_CHANNELS } from "@/features/inbox/schema";
-import type { InquiryFilters } from "@/server/queries/leads";
+import type { InquiryDetail, InquiryFilters } from "@/server/queries/leads";
 import { LeadDrawer } from "@/features/inbox/components/lead-drawer";
 import { NewInquiryDialog } from "@/features/inbox/components/new-inquiry-dialog";
 import { InboxLive } from "@/features/inbox/components/inbox-live";
-import { bulkAssignLeadsAction } from "@/server/commands/leads";
-import type { IdentityCandidate, InboxCounts, IntakeEventRow, LeadRow } from "@/features/inbox/types";
+import { bulkAssignLeadsAction, loadInquiryDetailAction } from "@/server/commands/leads";
+import type { IdentityCandidate, InboxCounts, LeadRow } from "@/features/inbox/types";
 import type { LeadView } from "@/features/inbox/schema";
 import type { ProfileRef } from "@/server/queries/reference";
-import type { TimelineItem } from "@/components/patterns/timeline";
 import { cn } from "@/lib/utils";
 
 const PRIMARY_VIEWS: LeadView[] = ["needs-action", "waiting", "replied", "showroom", "won", "follow-ups-due", "upcoming", "disqualified", "all"];
@@ -57,13 +56,11 @@ interface Props {
   page: number;
   pageSize: number;
   viewCounts: Record<string, number>;
-  selected: LeadRow | null;
-  selectedIntake: IntakeEventRow[];
-  selectedTimeline: TimelineItem[];
-  selectedContact: { id: string; display_name: string; lifecycle_state: string; customer_type: string | null } | null;
+  /** Drawer detail rendered by the server when the URL already names a lead (deep links, refreshes). */
+  selected: InquiryDetail | null;
 }
 
-export function InboxClient({ refreshedAt, view, leads, counts, members, locations, filters, total, page, pageSize, viewCounts, selected, selectedIntake, selectedTimeline, selectedContact }: Props) {
+export function InboxClient({ refreshedAt, view, leads, counts, members, locations, filters, total, page, pageSize, viewCounts, selected }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchText, setSearchText] = useState(filters.search);
@@ -78,7 +75,35 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
   function filter(patch: Record<string, string | null>) { router.push(href(patch)); }
 
   const { session, can } = useSession();
-  const [leadParam, setLeadParam] = useQueryState("lead", { shallow: false });
+  // The open lead lives in the URL so links and refreshes restore it, but the
+  // update is shallow: opening a drawer must not re-render the whole inbox.
+  // The row already on screen opens instantly; intake history and activity
+  // are read by a server action and filled in behind it.
+  const [leadParam, setLeadParam] = useQueryState("lead");
+  const [clientDetail, setClientDetail] = useState<{ id: string; detail: InquiryDetail | null } | null>(null);
+  const [, startDetail] = useTransition();
+  const detailCache = useRef(new Map<string, InquiryDetail>());
+  // A server re-render (after an action, a live update or Refresh now) means
+  // anything fetched before it may be stale.
+  useEffect(() => { detailCache.current.clear(); }, [refreshedAt]);
+  function openLead(id: string) {
+    void setLeadParam(id);
+    const cached = detailCache.current.get(id);
+    if (cached) { setClientDetail({ id, detail: cached }); return; }
+    startDetail(async () => {
+      const r = await loadInquiryDetailAction(id);
+      if (!r.ok) { toast.error(r.error); return; }
+      if (r.data) detailCache.current.set(id, r.data);
+      setClientDetail({ id, detail: r.data });
+    });
+  }
+  // Server data wins whenever it describes the open lead: it is refreshed
+  // after every action. Otherwise use what the action returned, and until
+  // then the list row, which already carries everything the header needs.
+  const openDetail = selected && selected.lead.id === leadParam ? selected
+    : clientDetail && clientDetail.id === leadParam ? clientDetail.detail : null;
+  const openLeadRow = openDetail?.lead ?? (leadParam ? leads.find((l) => l.id === leadParam) ?? null : null);
+  const detailLoading = !!leadParam && !openDetail;
   const [newParam, setNewParam] = useQueryState("new");
   const [suggestions, setSuggestions] = useState<Record<string, IdentityCandidate[]>>({});
   const [bulkOwner, setBulkOwner] = useState("");
@@ -237,7 +262,7 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
             Assign…
           </Button>
         )}
-        onRowClick={(r) => setLeadParam(r.id)}
+        onRowClick={(r) => openLead(r.id)}
         isRowActive={(r) => r.id === leadParam}
         emptyTitle="No inquiries in this view"
         emptyDescription="No matches in this view. Check the source, owner and search filters, or open All inquiries."
@@ -248,15 +273,16 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
         <div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => filter({ page: String(page - 1) })}>Previous page</Button><Button size="sm" variant="outline" disabled={page * pageSize >= total} onClick={() => filter({ page: String(page + 1) })}>Next page</Button></div>
       </div>
       <LeadDrawer
-        key={selected?.id ?? "none"}
-        lead={openNew ? null : selected}
-        intake={selectedIntake}
-        timeline={selectedTimeline}
-        contact={selectedContact}
+        key={openLeadRow?.id ?? "none"}
+        lead={openNew ? null : openLeadRow}
+        intake={openDetail?.intake ?? []}
+        timeline={openDetail?.timeline ?? []}
+        contact={openDetail?.contact ?? null}
+        loading={detailLoading}
         members={members}
-        initialSuggestions={selected ? suggestions[selected.id] : undefined}
+        initialSuggestions={openLeadRow ? suggestions[openLeadRow.id] : undefined}
         view={view}
-        inCurrentView={selected ? leads.some((l) => l.id === selected.id) : true}
+        inCurrentView={openLeadRow ? leads.some((l) => l.id === openLeadRow.id) : true}
         onClose={() => setLeadParam(null)}
       />
 
@@ -271,7 +297,8 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
           setSuggestions((prev) => ({ ...prev, [id]: s }));
           // Keep the saved record selected even when it does not match the
           // current filter. Closing the result dialog reveals its next steps.
-          void setLeadParam(id);
+          openLead(id);
+          router.refresh();
         }}
       />
 

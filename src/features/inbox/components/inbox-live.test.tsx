@@ -37,18 +37,34 @@ describe("inbox invalidation updates", () => {
   it("joins only a private workspace topic and coalesces event bursts", async () => {
     await mount();
     expect(mock.channel).toHaveBeenCalledWith("inquiries:workspace-a", { config: { private: true } });
-    act(() => { mock.status?.("SUBSCRIBED"); mock.broadcast?.(); mock.broadcast?.(); });
+    act(() => { mock.status?.("SUBSCRIBED"); vi.advanceTimersByTime(800); });
     expect(screen.getByRole("status")).toHaveTextContent("Live updates connected");
-    act(() => { vi.advanceTimersByTime(800); });
+    // The page was just rendered: subscribing does not re-render it.
+    expect(mock.refresh).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(15_000); mock.broadcast?.(); mock.broadcast?.(); vi.advanceTimersByTime(800); });
     expect(mock.refresh).toHaveBeenCalledTimes(1);
   });
-  it("catches up on reconnect and uses a 30-second fallback without WebSockets", async () => {
+  it("rate-limits broadcast-driven refreshes to one per fifteen seconds", async () => {
     await mount();
-    act(() => { mock.status?.("CHANNEL_ERROR"); vi.advanceTimersByTime(30_800); });
-    expect(screen.getByRole("status")).toHaveTextContent("checking every 30 seconds");
+    act(() => { mock.status?.("SUBSCRIBED"); vi.advanceTimersByTime(15_000); mock.broadcast?.(); vi.advanceTimersByTime(800); });
     expect(mock.refresh).toHaveBeenCalledTimes(1);
-    act(() => { mock.status?.("SUBSCRIBED"); vi.advanceTimersByTime(800); });
+    act(() => { vi.advanceTimersByTime(5_000); mock.broadcast?.(); window.dispatchEvent(new Event("focus")); vi.advanceTimersByTime(800); });
+    expect(mock.refresh).toHaveBeenCalledTimes(1);
+    act(() => { vi.advanceTimersByTime(10_000); mock.broadcast?.(); vi.advanceTimersByTime(800); });
     expect(mock.refresh).toHaveBeenCalledTimes(2);
+  });
+  it("catches up on reconnect and polls once a minute without WebSockets", async () => {
+    await mount();
+    act(() => { mock.status?.("CHANNEL_ERROR"); vi.advanceTimersByTime(60_800); });
+    expect(screen.getByRole("status")).toHaveTextContent("checking every minute");
+    expect(mock.refresh).toHaveBeenCalledTimes(1);
+    act(() => { vi.advanceTimersByTime(20_000); mock.status?.("SUBSCRIBED"); vi.advanceTimersByTime(800); });
+    expect(mock.refresh).toHaveBeenCalledTimes(2);
+    // Connected tabs only tick every five minutes for time-based queues.
+    act(() => { vi.advanceTimersByTime(4 * 60_000); });
+    expect(mock.refresh).toHaveBeenCalledTimes(2);
+    act(() => { vi.advanceTimersByTime(2 * 60_000); });
+    expect(mock.refresh).toHaveBeenCalledTimes(3);
   });
   it("pauses hidden/offline refreshes and catches up on visibility or network recovery", async () => {
     await mount();

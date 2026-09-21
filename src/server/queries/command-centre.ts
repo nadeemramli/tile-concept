@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { AppSession } from "@/server/session";
 
@@ -32,12 +33,16 @@ export interface CommandCentreSummary {
   generated_at: string;
 }
 
-export async function getCommandCentreSummary(): Promise<CommandCentreSummary | null> {
+/**
+ * One 25-counter aggregate over the live tables. Cached per request so the
+ * shell's attention bell and the Command Centre page share a single RPC.
+ */
+export const getCommandCentreSummary = cache(async (): Promise<CommandCentreSummary | null> => {
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.rpc("command_centre_summary");
   if (error || !data) return null;
   return data as unknown as CommandCentreSummary;
-}
+});
 
 export interface SalesScorecard {
   year: number;

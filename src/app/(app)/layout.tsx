@@ -8,7 +8,9 @@ import { getAttentionItems } from "@/server/queries/command-centre";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
   if (!session) redirect("/login?reason=no-membership");
-  const notifications = await getAttentionItems(session).catch(() => []);
+  // Not awaited: the shell renders immediately and the bell streams in once
+  // the command-centre counters are ready (see TopBar).
+  const notifications = getAttentionItems(session).catch(() => []);
 
   return (
     <SessionProvider session={session}>
