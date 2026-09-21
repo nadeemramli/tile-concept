@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Download, FileVideo, Image as ImageIcon, NotepadText, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,11 +50,16 @@ export function OutputsList({
   outputs,
   permissionStatus,
   permissionExpiresAt,
+  contentOpportunityId,
+  shootId,
 }: {
   outputs: OutputRow[];
   permissionStatus: string | null;
   permissionExpiresAt: string | null;
+  contentOpportunityId?: string | null;
+  shootId?: string | null;
 }) {
+  const router = useRouter();
   const [reviewing, setReviewing] = useState<{ output: OutputRow; decision: "usable" | "restricted" | "rejected" } | null>(null);
   const quickReview = useAction(reviewOutputAction);
   const blocked = permissionBlocks(permissionStatus, permissionExpiresAt);
@@ -79,6 +85,7 @@ export function OutputsList({
               </span>
               <MarketingPill map={OUTPUT_STATE} value={o.state} />
               <DownloadButton path={o.storage_path} />
+              {contentOpportunityId && <DisabledHint reason={!["usable", "restricted"].includes(o.state) ? "Review this asset before using it in a creative." : null}><Gated permission="marketing.write"><Button disabled={!["usable", "restricted"].includes(o.state)} variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => router.push(`/marketing/creative?new=1&source=${contentOpportunityId}&output=${o.id}${shootId ? `&shoot=${shootId}` : ""}`)}>Use in creative</Button></Gated></DisabledHint>}
               {o.state !== "usable" &&
                 (blocked ? (
                   <DisabledHint reason={blockedReason}>

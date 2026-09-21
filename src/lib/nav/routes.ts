@@ -56,7 +56,7 @@ export interface RouteDef {
    * sidebar brand, or the top bar) and is deliberately not repeated in the
    * sidebar, which keeps the list short enough never to scroll.
    */
-  placement?: "brand" | "top-bar";
+  placement?: "brand" | "top-bar" | "user-menu";
   description?: string;
   nextModule?: { phase: string; summary: string; workflow: string[]; unlocks: string[] };
 }
@@ -82,6 +82,7 @@ export const ROUTES: RouteDef[] = [
   { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Customer", status: "live", permission: "sales.read" },
   { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
   // Marketing
+  { key: "creative", label: "Creative", path: "/marketing/creative", icon: KanbanSquare, group: "Marketing", status: "live", permission: "marketing.read", description: "Production board, release calendar and your creative work." },
   { key: "marketing-spend", label: "Marketing Spend", path: "/marketing/spend", icon: Tags, group: "Marketing", status: "live", permission: "marketing.spend.read" },
   { key: "content-opps", label: "Content Opportunities", path: "/marketing/content-opportunities", icon: Megaphone, group: "Marketing", status: "live", permission: "marketing.read" },
   { key: "shoot-calendar", label: "Shoot Calendar", path: "/marketing/shoot-calendar", icon: CalendarDays, group: "Marketing", status: "live", permission: "marketing.read" },
@@ -89,9 +90,9 @@ export const ROUTES: RouteDef[] = [
   { key: "catalog", label: "Catalog", path: "/merchandise/catalog", icon: Package, group: "Merchandise", status: "live", permission: "catalog.read" },
   { key: "pricing", label: "Pricing", path: "/merchandise/pricing", icon: Tags, group: "Merchandise", status: "live", permission: "price.read" },
   { key: "stock", label: "Stock", path: "/merchandise/stock", icon: Boxes, group: "Merchandise", status: "live", permission: "stock.read" },
-  // Sources
-  { key: "source-library", label: "Source Library", path: "/sources/library", icon: Library, group: "Sources", status: "live", permission: "source.import" },
-  { key: "review", label: "Imports & OCR Review", path: "/sources/review", icon: ClipboardCheck, group: "Sources", status: "live", permission: "review.approve" },
+  // Sources — occasional administration, reached from the profile menu.
+  { key: "source-library", label: "Source Library", path: "/sources/library", icon: Library, group: "Sources", status: "live", permission: "source.import", placement: "user-menu" },
+  { key: "review", label: "Imports & OCR Review", path: "/sources/review", icon: ClipboardCheck, group: "Sources", status: "live", permission: "review.approve", placement: "user-menu" },
   // Insights
   { key: "reports", label: "Reports", path: "/insights/reports", icon: BarChart3, group: "Insights", status: "live", permission: "report.read" },
   // Platform — administration, reached from the user menu

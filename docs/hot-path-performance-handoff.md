@@ -32,24 +32,25 @@ Verified against the hosted database after the apply:
 | New indexes present (of 7) | 7 |
 | `core` helpers with `search_path` pinned (of 3) | 3 |
 
-### Migration ledger mismatch — read this before `db push`
+### Migration ledger mismatch — reconciled during Creative integration
 
-The migration was applied through the Supabase MCP tool, which stamps its own
-timestamp. It is recorded in `supabase_migrations.schema_migrations` as version
-**`20260921064931`**, not the repository's `20260921120000`. The repo file will
-therefore look unapplied to `supabase db push`.
+The Supabase MCP apply originally recorded this migration as
+`20260921064931`, rather than the repository's `20260921120000`.
+On 21 September, Creative integration verified the stored SQL against the
+repository file (trimmed-text MD5 `9d354133054ff9549a544e88e06338ae`), then
+conditionally updated only that history row to `20260921120000`. The update
+checked the old version, name, matching SQL hash and absence of the new version.
+It returned the expected single row. No migration SQL or business data was
+reapplied.
 
-Re-running it is safe: every statement is idempotent (`create or replace
-function`, `create or replace view`, `create index if not exists`,
-`revoke`/`grant`, `alter function ... set search_path`), and the `anon` revoke
-loop simply finds nothing to do. So either let the next push re-run it, or
-reconcile the ledger first:
-
-```sql
-update supabase_migrations.schema_migrations
-   set version = '20260921120000'
- where version = '20260921064931' and name = 'hot_path_performance';
-```
+The exact separately hosted sales-role grant was also captured as repository
+migration `20260921073229_sales_rep_review_and_reports.sql`. A subsequent
+linked dry run succeeded and listed only the two pending Creative migrations.
+Its interaction with existing ownership checks is documented in
+`creative-production-handoff.md`. The current release preserves the shared
+editing already enabled in production, with tests reconciled to that behaviour
+while retaining workspace and role boundaries. The alternate owner-limited
+candidate remains unapplied.
 
 `src/lib/supabase/database.types.ts` was **not** regenerated, and does not need
 to be: `api.inbox_leads` keeps its columns and `api.entity_timeline` keeps its

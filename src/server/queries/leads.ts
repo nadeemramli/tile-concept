@@ -8,6 +8,14 @@ import type { TimelineItem } from "@/components/patterns/timeline";
 
 type RawLead = Record<string, unknown>;
 
+function inquiryQueryFailed(operation: "inquiry_page" | "inbox_leads" | "intake_events" | "entity_timeline", error: { code?: unknown }, message: string): never {
+  // Postgres messages/details can contain customer values. Keep diagnostics to
+  // the fixed operation and SQLSTATE/PostgREST code; retain the safe UI message.
+  const code = typeof error.code === "string" && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code) ? error.code : "unknown";
+  console.error("inquiry_query_failed", { operation, code });
+  throw new Error(message);
+}
+
 function mapLead(r: RawLead, ownerName: string | null): LeadRow {
   return {
     id: String(r.id),
@@ -72,7 +80,7 @@ export async function getInquiryPage(filters: InquiryFilters) {
     }),
     getMemberMap(),
   ]);
-  if (error) throw new Error("Unable to load inquiries. Please retry.");
+  if (error) inquiryQueryFailed("inquiry_page", error, "Unable to load inquiries. Please retry.");
   const result = data as { rows: RawLead[]; total: number; page: number; page_size: number; counts: Record<string, number> } | null;
   if (!result || !Array.isArray(result.rows)) throw new Error("Invalid inquiry response. Please retry.");
   const c = result.counts;
@@ -95,7 +103,7 @@ export async function getLead(id: string): Promise<LeadRow | null> {
   const [{ data, error }, members] = await Promise.all([
     supabase.from("inbox_leads").select("*").eq("id", id).maybeSingle(), getMemberMap(),
   ]);
-  if (error) throw new Error("Unable to load this inquiry. Please retry.");
+  if (error) inquiryQueryFailed("inbox_leads", error, "Unable to load this inquiry. Please retry.");
   if (!data) return null;
   return mapLead(data as RawLead, data.owner_id ? members.get(data.owner_id)?.full_name ?? null : null);
 }
@@ -111,7 +119,7 @@ export async function getLeadIntakeEvents(leadId: string): Promise<IntakeEventRo
     .eq("lead_id", leadId)
     .order("received_at", { ascending: false })
     .limit(INTAKE_HISTORY_LIMIT);
-  if (error) throw new Error("Unable to load inquiry source history.");
+  if (error) inquiryQueryFailed("intake_events", error, "Unable to load inquiry source history.");
   return (data ?? []).map((e) => ({
     id: String(e.id),
     source_channel: String(e.source_channel ?? "other"),
@@ -127,7 +135,7 @@ export async function getLeadIntakeEvents(leadId: string): Promise<IntakeEventRo
 export async function getLeadTimeline(leadId: string): Promise<TimelineItem[]> {
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.rpc("entity_timeline", { p_entity_type: "lead", p_entity_id: leadId, p_limit: 100 });
-  if (error) throw new Error("Unable to load inquiry activity history.");
+  if (error) inquiryQueryFailed("entity_timeline", error, "Unable to load inquiry activity history.");
   return (data ?? []).map((a) => ({
     id: String(a.id),
     kind: String(a.kind ?? "note"),

@@ -39,6 +39,7 @@ import { AVAILABILITY_STATUS, CASE_STATUS, CHANNEL_HINT, CHANNEL_LABEL, FRESHNES
 import { ASSET_KIND, ASSET_STATUS, CONFIDENCE_HINT, ITEM_TYPE, JOB_STATUS, REVIEW_ITEM_STATUS } from "@/features/sources/status-maps";
 import { INTAKE_STATUS } from "@/features/connectors/status";
 import { titleCase } from "@/lib/format";
+import { CREATIVE_STAGE_META, CREATIVE_CONDITION_META, PUBLICATION_META } from "@/features/creative/presentation";
 
 /**
  * Help & glossary is generated from the same maps the tooltips read, so the
@@ -91,6 +92,9 @@ export const GLOSSARY: GlossaryGroup[] = [
   {
     domain: "Marketing",
     entries: [
+      { id: "creative-stage", title: "Creative production stage", intro: "One creative is one deliverable. A numbered submitted version is reviewed before external release; each channel/account has its own publication plan.", map: CREATIVE_STAGE_META },
+      { id: "creative-condition", title: "Creative work status", intro: "A blocker, hold or cancellation retains the production stage and history.", map: CREATIVE_CONDITION_META },
+      { id: "creative-publication", title: "Creative channel release", intro: "Planning a date does not publish content. Staff record external schedules and the actual live URL after publication.", map: PUBLICATION_META },
       {
         id: "customer-media-permission",
         title: "Customer media permission",

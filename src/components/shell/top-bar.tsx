@@ -88,6 +88,7 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
   const pathname = usePathname();
   const { session, can, permissions } = useSession();
   const platform = platformRoutes(permissions);
+  const sources = chromeRoutes(permissions, "user-menu");
   // Routes the sidebar deliberately leaves out; Tasks is a lookup people dip
   // into beside Create, not a section they navigate to and stay in.
   const chrome = chromeRoutes(permissions, "top-bar");
@@ -217,6 +218,21 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
                 {session.roleLabel} · {session.workspaceName}
               </div>
             </DropdownMenuLabel>
+            {sources.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Sources</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  {sources.map((r) => (
+                    <DropdownMenuItem key={r.key} asChild>
+                      <Link href={r.path} aria-current={isRouteActive(r, pathname) ? "page" : undefined}>
+                        <r.icon className="size-4" aria-hidden /> {r.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </>
+            )}
             {platform.length > 0 && (
               <>
                 <DropdownMenuSeparator />

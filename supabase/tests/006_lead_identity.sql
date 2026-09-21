@@ -1,5 +1,4 @@
--- pgTAP: an enquiry's identity is shared across lookups, and lead writes stay
--- owner-scoped even through the SECURITY DEFINER RPCs (20260910000001).
+-- pgTAP: shared inquiry identities and the deployed sales_rep shared-edit grant.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(12);
@@ -30,13 +29,13 @@ select ok((select reasons @> '[{"code":"prior_enquiry"}]' from api.find_identity
 select is((select entity_type from api.global_search('0179990002') limit 1),
   'lead', 'global search finds an enquiry by phone');
 
--- Owner scope holds through the RPCs, not only the update policy.
-select throws_like(
+-- sales.read_all is also the existing cross-owner override in these RPCs.
+select lives_ok(
   $$select api.log_lead_response('bbbbbbbb-0000-0000-0000-000000000001', 'call', 'phone')$$,
-  '%not the owner%', 'a rep cannot log a response on another rep''s lead');
-select throws_like(
+  'a rep can log a response on another rep''s lead in their workspace');
+select lives_ok(
   $$select api.convert_lead('bbbbbbbb-0000-0000-0000-000000000001', (select id from identity.contacts where merged_into_contact_id is null and archived_at is null order by created_at limit 1))$$,
-  '%not the owner%', 'a rep cannot convert another rep''s lead');
+  'a rep can convert another rep''s lead in their workspace');
 
 -- Linking an unassigned enquiry carries its phone onto the contact.
 select lives_ok(
