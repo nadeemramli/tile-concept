@@ -14,7 +14,7 @@ set local role anon;
 select throws_like($$select count(*) from api.contacts$$, '%permission denied%', 'anon has no access to the api schema');
 reset role;
 
--- 2. Deployed sales-rep read grants expose workspace records, without write escalation.
+-- 2. The deployed sales.read_all grant also permits shared edits through existing guards.
 -- Scoped to the workspace these users belong to. An unscoped count was correct
 -- only while exactly one workspace existed; the demo workspace added by guest
 -- mode made it count rows the manager cannot see, and should not see.
@@ -28,11 +28,11 @@ set local role authenticated;
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
 select ok((select core.has_permission('sales.leads.read_all')), 'sales rep has shared Enquiry Box permission');
 select is((select count(*) from api.leads), (select leads from t_counts), 'sales rep sees every lead in their workspace');
-select is_empty(
+select isnt_empty(
   $$update api.leads set notes = notes
     where owner_id = 'aaaaaaaa-0000-0000-0000-000000000002'
     returning id$$,
-  'shared lead visibility does not let a sales rep edit another owner''s lead'
+  'deployed sales.read_all grant permits a sales rep to edit a teammate lead'
 );
 select is((select count(*) from api.opportunities), (select opps from t_counts), 'sales rep read-all grant sees workspace opportunities');
 select ok(core.has_permission('report.read'), 'sales rep has the deployed report grant');

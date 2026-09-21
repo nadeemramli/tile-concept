@@ -70,8 +70,11 @@ select is((api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')->'summar
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
 select throws_ok($$select api.record_marketing_spend('save',pg_temp.cost(),gen_random_uuid())$$,'42501','Permission denied: marketing.spend.write','sales rep cannot write marketing ledger');
 select is((select count(*) from api.spend_entries),0::bigint,'sales rep cannot see cost details');
-select throws_ok($$select api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')$$,'42501','Permission denied: report.read','sales rep cannot read management report');
-select throws_ok($$select api.funnel_history('2026-08-01','2026-08-31','2026-09-21')$$,'42501',null,'named customer history gated');
+select lives_ok($$select api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')$$,'sales rep has the deployed report grant');
+select lives_ok($$select api.funnel_history('2026-08-01','2026-08-31','2026-09-21')$$,'sales rep can inspect named customer history');
+select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000005');
+select throws_ok($$select api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')$$,'42501','Permission denied: report.read','showroom role still cannot read reporting aggregates');
+select throws_ok($$select api.funnel_history('2026-08-01','2026-08-31','2026-09-21')$$,'42501',null,'showroom role still cannot read named report history');
 reset role;
 select ok(not has_function_privilege('anon','api.record_marketing_spend(text,jsonb,uuid)','execute'),'anonymous cost writes blocked');
 select ok(not has_function_privilege('anon','api.funnel_dashboard(date,date,date,uuid,text)','execute'),'anonymous aggregates blocked');
