@@ -2,7 +2,7 @@
 -- Runs against a freshly seeded local database (`supabase test db`).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(18);
 
 -- helper to act as a demo user
 create or replace function pg_temp.act_as(uid text) returns void language sql as $$
@@ -14,7 +14,7 @@ set local role anon;
 select throws_like($$select count(*) from api.contacts$$, '%permission denied%', 'anon has no access to the api schema');
 reset role;
 
--- 2. sales rep sees only own/unowned opportunities, manager sees all
+-- 2. Deployed sales-rep read grants expose workspace records, without write escalation.
 -- Scoped to the workspace these users belong to. An unscoped count was correct
 -- only while exactly one workspace existed; the demo workspace added by guest
 -- mode made it count rows the manager cannot see, and should not see.
@@ -34,7 +34,10 @@ select is_empty(
     returning id$$,
   'shared lead visibility does not let a sales rep edit another owner''s lead'
 );
-select ok((select count(*) from api.opportunities) < (select opps from t_counts), 'sales rep is owner-scoped on opportunities');
+select is((select count(*) from api.opportunities), (select opps from t_counts), 'sales rep read-all grant sees workspace opportunities');
+select ok(core.has_permission('report.read'), 'sales rep has the deployed report grant');
+select ok(core.has_permission('review.approve'), 'sales rep has the deployed import review grant');
+select ok(not core.has_permission('settings.manage'), 'sales rep still cannot manage settings');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000002');
 select is((select count(*) from api.opportunities), (select opps from t_counts), 'sales manager (sales.read_all) sees all opportunities');
 
