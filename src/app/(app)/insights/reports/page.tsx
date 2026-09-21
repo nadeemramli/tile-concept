@@ -23,8 +23,8 @@ export default async function ReportsIndexPage() {
         description="Marketing and showroom performance, with clear metric definitions and customer journey drilldowns."
       />
 
-      <Link href="/insights/reports/funnel" className="rounded-xl border border-primary/30 bg-primary/5 p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <span className="flex items-center justify-between font-semibold">Marketing & showroom dashboard <ArrowRight className="size-4" aria-hidden /></span>
+      <Link href="/insights/reports/funnel" className="block rounded-xl border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5">
+        <span className="flex items-center justify-between gap-3 font-semibold"><span className="min-w-0">Marketing & showroom dashboard</span><ArrowRight className="size-4 shrink-0" aria-hidden /></span>
         <p className="mt-2 text-sm text-muted-foreground">Marketing spend, MER, inquiry-to-sale and showroom conversion, team activity and purchase history.</p>
       </Link>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
