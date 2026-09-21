@@ -40,6 +40,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/sales/inbo
       <PageHeader title="Inquiry Inbox" description="Know who needs attention, what happened last, and when to follow up. Every inquiry stays in your history." />
       {sp.lead && !selected && <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">This inquiry link is invalid or the record is unavailable to your account. You can still search your authorized inquiries below.</p>}
       <InboxClient
+        refreshedAt={new Date().toISOString()}
         key={`${filters.search}|${filters.owner}|${filters.source}`}
         view={view}
         {...inbox}

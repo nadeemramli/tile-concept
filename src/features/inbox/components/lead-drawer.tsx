@@ -21,6 +21,7 @@ import { CandidateList } from "@/features/inbox/components/candidate-list";
 import { FormAnswers } from "@/features/inbox/components/form-answers";
 import { mergeFormAnswers } from "@/features/inbox/lib/payload";
 import { InquiryWorkflow } from "./inquiry-workflow";
+import { InquiryRemarks } from "./inquiry-remarks";
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
@@ -305,6 +306,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
                 )}
               </DrawerSection>
 
+              <InquiryRemarks lead={lead} canWrite={canWrite} />
               <DrawerSection title="What they asked for">
                 {lead.interest && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{lead.interest}</p>}
                 {lead.product_interest.length > 0 && (

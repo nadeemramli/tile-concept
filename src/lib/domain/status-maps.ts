@@ -134,8 +134,11 @@ export const ISSUE_TYPE: StatusMap = {
 };
 
 export const SOURCE_CHANNEL: StatusMap = {
-  tiktok: { label: "TikTok", tone: "ai", hint: "Came in through a TikTok lead form." },
-  meta: { label: "Meta", tone: "info", hint: "Came in through a Facebook or Instagram lead form." },
+  tiktok: { label: "TikTok", tone: "ai", hint: "TikTok is the recorded origin. This alone does not establish paid advertising attribution." },
+  facebook: { label: "Facebook", tone: "info", hint: "Facebook is the specifically recorded origin. Read the source detail and evidence for paid or organic context." },
+  instagram: { label: "Instagram", tone: "ai", hint: "Instagram is the specifically recorded origin. Read the source detail and evidence for paid or organic context." },
+  meta: { label: "Meta (unspecified)", tone: "info", hint: "Facebook or Instagram origin, without enough evidence to identify which. Historical Meta entries remain here until reviewed." },
+  google_ads: { label: "Google Ads", tone: "info", hint: "Google Ads is explicitly recorded as the origin. Use only with campaign evidence or a stated customer source; website inquiries alone do not establish this." },
   website: { label: "Website", tone: "info", hint: "Submitted the enquiry form on the website." },
   whatsapp: { label: "WhatsApp", tone: "success", hint: "Messaged the business on WhatsApp." },
   dm: { label: "DM", tone: "neutral", hint: "Direct message on a social platform." },

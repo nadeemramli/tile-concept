@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { uuid } from "@/lib/zod";
 
-export const SOURCE_CHANNELS = ["tiktok", "meta", "website", "whatsapp", "dm", "call", "email", "referral", "walk_in", "other"] as const;
+export const SOURCE_CHANNELS = ["tiktok", "facebook", "instagram", "meta", "google_ads", "website", "whatsapp", "dm", "call", "email", "referral", "walk_in", "other"] as const;
 export const PRODUCT_INTERESTS = ["wall_panel", "tile", "cut_tile", "mosaic", "finishing", "accessory"] as const;
 export const LEAD_VIEWS = ["needs-action", "new", "waiting", "replied", "contacted", "unassigned", "mine", "no-response", "follow-up", "follow-ups-due", "upcoming", "follow-ups-completed", "duplicates", "qualified", "disqualified", "all", "aging", "showroom", "won"] as const;
 export type LeadView = (typeof LEAD_VIEWS)[number];
@@ -55,3 +55,10 @@ export const inquiryActionSchema = z.object({
   body: z.string().trim().max(4000).optional(),
 });
 export type InquiryAction = z.infer<typeof inquiryActionSchema>["action"];
+
+export const inquiryAnnotationSchema = z.object({
+  lead_id: uuid(), request_id: uuid(), action: z.enum(["remark", "source"]),
+  body: z.string().trim().min(3).max(4000),
+  source: z.enum(SOURCE_CHANNELS).optional(), detail: z.string().trim().max(200).optional(),
+  expected_source: z.string().optional(), expected_detail: z.string().nullable().optional(),
+}).refine((v) => v.action !== "source" || !!v.source, { message: "Choose a source.", path: ["source"] });

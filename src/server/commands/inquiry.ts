@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { inquiryActionSchema } from "@/features/inbox/schema";
+import { inquiryActionSchema, inquiryAnnotationSchema } from "@/features/inbox/schema";
 import { requirePermission } from "@/server/session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { fail, ok } from "@/server/action-result";
@@ -30,4 +30,22 @@ export async function workInquiryAction(input: z.input<typeof inquiryActionSchem
   } catch (error) {
     return fail(error);
   }
+}
+
+export async function annotateInquiryAction(input: z.input<typeof inquiryAnnotationSchema>) {
+  const parsed = inquiryAnnotationSchema.safeParse(input);
+  if (!parsed.success) return fail("Add a remark or source evidence between 3 and 4000 characters.");
+  const v = parsed.data;
+  try {
+    await requirePermission("sales.write");
+    const supabase = await createServerSupabase();
+    const { error } = await supabase.rpc("annotate_inquiry", {
+      p_lead_id: v.lead_id, p_request_id: v.request_id, p_action: v.action, p_body: v.body,
+      p_source: v.source, p_detail: v.detail, p_expected_source: v.expected_source,
+      p_expected_detail: v.expected_detail ?? undefined,
+    });
+    if (error) return fail(error);
+    for (const path of ["/sales/inbox", "/sales/contacts", "/insights/reports"]) revalidatePath(path);
+    return ok(undefined, v.action === "source" ? "Source corrected; original intake and correction history retained." : "Remark added to the inquiry history.");
+  } catch (error) { return fail(error); }
 }

@@ -24,6 +24,7 @@ import { LEAD_VIEWS, SOURCE_CHANNELS } from "@/features/inbox/schema";
 import type { InquiryFilters } from "@/server/queries/leads";
 import { LeadDrawer } from "@/features/inbox/components/lead-drawer";
 import { NewInquiryDialog } from "@/features/inbox/components/new-inquiry-dialog";
+import { InboxLive } from "@/features/inbox/components/inbox-live";
 import { bulkAssignLeadsAction } from "@/server/commands/leads";
 import type { IdentityCandidate, InboxCounts, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { LeadView } from "@/features/inbox/schema";
@@ -45,6 +46,7 @@ const COLUMN_HINTS = {
 } as const;
 
 interface Props {
+  refreshedAt: string;
   view: LeadView;
   leads: LeadRow[];
   counts: InboxCounts;
@@ -61,7 +63,7 @@ interface Props {
   selectedContact: { id: string; display_name: string; lifecycle_state: string; customer_type: string | null } | null;
 }
 
-export function InboxClient({ view, leads, counts, members, locations, filters, total, page, pageSize, viewCounts, selected, selectedIntake, selectedTimeline, selectedContact }: Props) {
+export function InboxClient({ refreshedAt, view, leads, counts, members, locations, filters, total, page, pageSize, viewCounts, selected, selectedIntake, selectedTimeline, selectedContact }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchText, setSearchText] = useState(filters.search);
@@ -133,7 +135,7 @@ export function InboxClient({ view, leads, counts, members, locations, filters, 
         cell: ({ row }) => {
           const l = row.original;
           if (l.first_response_at) return <span className="tnum text-success">responded {formatRelative(l.first_response_at)}</span>;
-          if (["disqualified", "converted", "duplicate"].includes(l.status)) return <span className="text-muted-foreground">—</span>;
+          if (l.confirmed_sales > 0 || ["disqualified", "converted", "duplicate"].includes(l.status)) return <span className="text-muted-foreground">—</span>;
           const over = isOverdue(l.first_response_due_at);
           if (!l.first_response_due_at)
             return (
@@ -188,6 +190,7 @@ export function InboxClient({ view, leads, counts, members, locations, filters, 
 
   return (
     <div className="space-y-4">
+      <InboxLive workspaceId={session.workspaceId} refreshedAt={refreshedAt} />
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <MetricCard compact label="Needs action" value={counts.needsAction} href={href({ view: "needs-action" })} info={{ definition: "Active inquiries with no staff response, no next action, or a follow-up due today or overdue.", grain: "Inquiry", source: "sales.leads + sales.tasks" }} />
         <MetricCard compact label="Follow-ups due" value={counts.followUpsDue} href={href({ view: "follow-ups-due" })} info={{ definition: "Inquiries with an open reminder due today or earlier, Kuala Lumpur time.", grain: "Inquiry", source: "sales.tasks" }} />
