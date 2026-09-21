@@ -1,9 +1,9 @@
 export interface FeedbackPurchaseContext {
-  purchase_id: string;
+  purchase_id: string | null;
   purchase_ref: string | null;
   purchased_at: string;
-  amount: number;
-  currency: string;
+  amount: number | null;
+  currency: string | null;
   contact_id: string;
   customer_name: string;
   phone: string | null;
@@ -13,11 +13,27 @@ export interface FeedbackPurchaseContext {
   salesperson_id: string | null;
   salesperson_name: string | null;
   existing_request_id: string | null;
+  request?: FeedbackRequestDetail | null;
+}
+
+export interface FeedbackRequestDetail {
+  id: string;
+  status: string;
+  whatsapp_sent_at: string | null;
+  customer_confirmed_at: string | null;
+  google_handoff_opened_at: string | null;
+  review_outcome: string;
+  review_outcome_note: string | null;
+  review_outcome_at: string | null;
+  expires_at: string;
+  photo_permission: boolean;
+  photo_count: number;
+  events: { event_type: string; occurred_at: string; metadata: { note?: string | null } }[];
 }
 
 export interface FeedbackRequestRow {
   id: string;
-  purchase_id: string;
+  purchase_id: string | null;
   visit_id: string | null;
   contact_id: string;
   customer_name: string;
@@ -33,6 +49,8 @@ export interface FeedbackRequestRow {
   google_handoff_opened_at: string | null;
   has_photo: boolean;
   created_at: string;
+  whatsapp_sent_at: string | null;
+  review_outcome: string;
 }
 
 export interface CustomerFeedbackAnswer {
@@ -54,6 +72,7 @@ export interface CustomerFeedbackView {
   has_photo: boolean;
   review_url: string | null;
   benefit_status: string;
+  photo_ids: string[];
 }
 
 export interface FeedbackCreationResult {
@@ -62,5 +81,5 @@ export interface FeedbackCreationResult {
   whatsapp_url: string;
   generation_mode: "llm" | "deterministic";
   photo_warning?: string;
+  message: string;
 }
-

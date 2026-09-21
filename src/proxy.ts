@@ -11,6 +11,14 @@ const PUBLIC_PATHS = ["/login", "/auth", "/api/health", "/api/intake", "/api/web
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+  // Customer bearer links validate their hash/expiry in server-only feedback RPCs.
+  // They must work on a customer's phone without a staff account.
+  if (/^\/review\/[A-Za-z0-9_-]{43}(?:\/(?:photo|google))?$/.test(request.nextUrl.pathname)) {
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

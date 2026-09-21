@@ -9,14 +9,17 @@ import { requireSession } from "@/server/session";
 
 export const metadata: Metadata = { title: "Customer feedback" };
 
-export default async function FeedbackPage() {
+export default async function FeedbackPage({ searchParams }: PageProps<"/sales/feedback">) {
   const session = await requireSession();
   if (!session.permissions.includes("sales.read")) return <PermissionDenied permission="sales.read" roleLabel={session.roleLabel} />;
-  const requests = await listFeedbackRequests();
+  const sp = await searchParams;
+  const page = Math.max(1, Math.min(1000000, Math.floor(Number(sp.page) || 1)));
+  const requests = await listFeedbackRequests(page);
   return (
     <PageBody>
-      <PageHeader title="Customer feedback" description="Private feedback confirmation and voluntary Google handoffs. A handoff click is never counted as a posted review."><Button asChild variant="outline"><Link href="/sales/walk-ins?tab=purchases">Choose a purchase</Link></Button></PageHeader>
-      <FeedbackTrackingTable requests={requests} />
+      <PageHeader title="Customer feedback" description="Private feedback, WhatsApp handoffs and reported or verified Google reviews. A handoff click is never counted as a posted review."><Button asChild variant="outline"><Link href="/sales/walk-ins">Choose a walk-in</Link></Button></PageHeader>
+      <FeedbackTrackingTable requests={requests.rows} />
+      <div className="flex items-center justify-between text-sm"><span>{requests.total} requests · page {page}</span><div className="flex gap-2">{page > 1 ? <Button asChild variant="outline"><Link href={`/sales/feedback?page=${page - 1}`}>Previous</Link></Button> : null}{page * 25 < requests.total ? <Button asChild variant="outline"><Link href={`/sales/feedback?page=${page + 1}`}>Next</Link></Button> : null}</div></div>
     </PageBody>
   );
 }

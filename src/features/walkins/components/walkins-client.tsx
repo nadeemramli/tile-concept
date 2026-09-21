@@ -24,6 +24,7 @@ import { useSession } from "@/components/shell/session-context";
 import { correctPurchaseAction } from "@/server/commands/walkins";
 import type { PurchaseRow, VisitRow } from "@/features/walkins/types";
 import { VisitInquiryLink } from "./visit-inquiry-link";
+import type { FeedbackRequestRow } from "@/features/feedback/types";
 
 /** Column meanings follow the showroom Daily Tracker sheet the team already knows. */
 const HINTS = {
@@ -50,6 +51,8 @@ const HINTS = {
 } as const;
 
 interface Props {
+  feedback: FeedbackRequestRow[];
+  customerReview: { id: string | null; review_outcome: string | null; review_outcome_at: string | null } | null;
   selectedVisit: VisitRow | null;
   linkHistory: { id: string; occurred_at: string; reason: string }[];
   visitPage: number;
@@ -61,7 +64,7 @@ interface Props {
   counts: { visitsToday: number; visits7d: number; purchases7d: number; repeat7d: number };
 }
 
-export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, linkHistory, visitPage, visitTotal, needsLinking }: Props) {
+export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, linkHistory, visitPage, visitTotal, needsLinking, feedback, customerReview }: Props) {
   const router = useRouter();
   const { can, session } = useSession();
   const [, setTab] = useQueryState("tab", { shallow: false });
@@ -72,6 +75,7 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
 
   const visit = selectedVisit?.id === visitId ? selectedVisit : visits.find((v) => v.id === visitId) ?? null;
   const purchase = purchases.find((p) => p.id === purchaseId) ?? null;
+  const visitFeedback = visit ? feedback.filter(f => f.visit_id === visit.id) : [];
 
   // The Daily Tracker shows the day's collection (ORC + amount) on the same
   // visit row; the app models that as a linked purchase, so map it here.
@@ -93,6 +97,7 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
     () => [
       { accessorKey: "occurred_at", header: "Date", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.occurred_at)}>{formatRelative(row.original.occurred_at)}</span> },
       { accessorKey: "staff_name", header: "SMP", meta: { hint: HINTS.smp }, cell: ({ row }) => row.original.staff_name ?? "—" },
+      { id: "google_review", header: "Google review", meta: { hint: "Customer-reported and staff-verified reviews are separate. A link click never counts as a posted review." }, cell: ({ row }) => { const f = feedback.find(f => f.visit_id === row.original.id); return <span className="text-xs">{f ? f.review_outcome === "unknown" ? f.whatsapp_sent_at ? "Request sent" : "Prepared" : titleCase(f.review_outcome) : "Not requested"}</span>; } },
       { accessorKey: "inquiry_link_state", header: "Inquiry link", meta: { hint: "Linked visits retain the inquiry’s acquisition source. Needs linking visits await staff review. Legacy links have not been inferred or reassigned." }, cell: ({ row }) => <TonePill tone={row.original.inquiry_link_state === "needs_linking" ? "warning" : "neutral"} label={titleCase(row.original.inquiry_link_state)} hint={row.original.inquiry_link_state === "needs_linking" ? "Open this visit to resolve its original inquiry." : "Open this visit to inspect or correct the inquiry link."} /> },
       {
         accessorKey: "contact_name",
@@ -143,11 +148,10 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
           ),
       },
     ],
-    [purchaseByVisit],
+    [purchaseByVisit, feedback],
   );
 
-  const purchaseColumns = useMemo<ColumnDef<PurchaseRow, unknown>[]>(
-    () => [
+  const purchaseColumns: ColumnDef<PurchaseRow, unknown>[] = [
       { accessorKey: "purchased_at", header: "Posting date", meta: { hint: HINTS.postingDate }, cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.purchased_at)}>{formatRelative(row.original.purchased_at)}</span> },
       { accessorKey: "external_ref", header: "Document no.", meta: { hint: HINTS.documentNo }, cell: ({ row }) => <MonoCell value={row.original.external_ref} /> },
       {
@@ -180,9 +184,7 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
       { accessorKey: "salesperson_name", header: "Salesperson", cell: ({ row }) => row.original.salesperson_name ?? "—" },
       { accessorKey: "is_repeat", header: "Repeat", meta: { hint: HINTS.repeat }, cell: ({ row }) => (row.original.is_repeat ? <TonePill tone="ai" label="Repeat" hint={HINTS.repeatPill} /> : <TonePill tone="neutral" label="First" hint={HINTS.firstPill} />) },
       { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={PURCHASE_STATUS} value={row.original.status} /> },
-    ],
-    [],
-  );
+    ];
 
   return (
     <div className="space-y-4">
@@ -270,6 +272,11 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
                 ]}
               />
               {visit.notes && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{visit.notes}</p>}
+            </DrawerSection>
+            <DrawerSection title="Customer feedback & Google review">
+              {customerReview?.id && !visitFeedback.some(f => f.id === customerReview.id) ? <p className="rounded border p-3 text-sm">An earlier Google review is recorded for this customer: {titleCase(customerReview.review_outcome ?? "unknown")}. <Link className="text-info underline" href={`/sales/feedback/new?request=${customerReview.id}`}>Open earlier request</Link></p> : null}
+              {visitFeedback.length ? visitFeedback.map(f => <div key={f.id} className="space-y-2 rounded border p-3 text-sm"><p>Google review: {titleCase(f.review_outcome)} · {f.whatsapp_sent_at ? "WhatsApp marked sent" : "Not marked sent"}</p><Button asChild variant="outline" size="sm"><Link href={`/sales/feedback/new?request=${f.id}`}>Open feedback request</Link></Button></div>) : <p className="text-sm text-muted-foreground">No review request recorded for this visit.</p>}
+              {!visitFeedback.length && visit.contact_id ? <Gated permission="sales.write"><Button asChild size="sm"><Link href={`/sales/feedback/new?visit=${visit.id}`}>Prepare feedback & Google review</Link></Button></Gated> : null}
             </DrawerSection>
             <DrawerSection title="Linked purchases">
               {purchases.filter((p) => p.visit_id === visit.id).length === 0 ? (

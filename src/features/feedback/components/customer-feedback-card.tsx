@@ -44,7 +44,7 @@ export function CustomerFeedbackCard({ token, feedback }: { token: string; feedb
       <Alert>
         <ShieldCheck className="size-4" aria-hidden />
         <AlertTitle>You control what happens next</AlertTitle>
-        <AlertDescription>Your private feedback is separate from Google. Leaving a Google review is optional and does not affect your purchase or any private-feedback benefit.</AlertDescription>
+        <AlertDescription>Your private feedback is separate from Google. Leaving a Google review is optional and does not affect your purchase{feedback.benefit_status === "granted_for_private_feedback" ? " or any private-feedback benefit" : ""}.</AlertDescription>
       </Alert>
 
       <div className="space-y-3">
@@ -66,15 +66,15 @@ export function CustomerFeedbackCard({ token, feedback }: { token: string; feedb
         <div className="text-right text-xs text-muted-foreground">{draft.length}/2000</div>
       </div>
 
-      {feedback.has_photo ? (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold">Your optional photo</h2>
+      {feedback.photo_ids.map((id, index) => (
+        <div key={id} className="space-y-3">
+          <h2 className="text-sm font-semibold">Your optional photo {index + 1}</h2>
           <div className="overflow-hidden rounded-lg border bg-muted/20">
-            <Image src={`/review/${encodeURIComponent(token)}/photo`} alt="Photo captured with the customer's permission" width={1200} height={800} sizes="(max-width: 672px) 100vw, 620px" unoptimized className="max-h-80 w-full object-contain" />
+            <Image src={`/review/${encodeURIComponent(token)}/photo?id=${id}`} alt={`Photo ${index + 1} captured with customer media permission`} width={1200} height={800} sizes="(max-width: 672px) 100vw, 620px" unoptimized className="max-h-80 w-full object-contain" />
           </div>
-          <Button asChild size="sm" variant="outline"><a href={`/review/${encodeURIComponent(token)}/photo?download=1`}><Download className="size-4" aria-hidden /> Save photo for manual upload</a></Button>
+          <Button asChild size="sm" variant="outline"><a href={`/review/${encodeURIComponent(token)}/photo?id=${id}&download=1`}><Download className="size-4" aria-hidden /> Save photo for manual upload</a></Button>
         </div>
-      ) : null}
+      ))}
 
       <div className="space-y-3 border-t pt-5">
         <Button className="w-full" size="lg" onClick={confirm} disabled={pending || draft.trim().length < 5}>{confirmed ? <><Check className="size-4" aria-hidden /> Private feedback confirmed</> : pending ? "Confirming…" : "Confirm private feedback"}</Button>
@@ -94,4 +94,3 @@ export function CustomerFeedbackCard({ token, feedback }: { token: string; feedb
     </Card>
   );
 }
-

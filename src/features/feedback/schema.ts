@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalUuid, uuid } from "@/lib/zod";
 
 export const FEEDBACK_QUESTIONS = [
   { key: "visit_goal", text: "What did you come in looking for today?" },
@@ -10,22 +11,19 @@ export const FEEDBACK_QUESTIONS = [
 
 export const feedbackCaptureSchema = z
   .object({
-    purchase_id: z.uuid(),
+    purchase_id: optionalUuid(),
+    visit_id: optionalUuid(),
     answers: z.array(z.string().trim().max(1000)).length(FEEDBACK_QUESTIONS.length),
     whatsapp_consent: z.boolean(),
     photo_permission: z.boolean(),
-    benefit_granted: z.boolean(),
-    benefit_reference: z.string().trim().max(200),
   })
   .superRefine((value, context) => {
+    if (Boolean(value.purchase_id) === Boolean(value.visit_id)) context.addIssue({ code: "custom", path: ["visit_id"], message: "Choose one visit or purchase." });
     if (value.answers.filter(Boolean).length < 2) {
       context.addIssue({ code: "custom", path: ["answers"], message: "Record at least two useful customer answers." });
     }
     if (!value.whatsapp_consent) {
       context.addIssue({ code: "custom", path: ["whatsapp_consent"], message: "Confirm the customer agreed to receive the private WhatsApp link." });
-    }
-    if (value.benefit_granted && value.benefit_reference.length < 3) {
-      context.addIssue({ code: "custom", path: ["benefit_reference"], message: "Record the approved private-feedback benefit reference." });
     }
   });
 
@@ -35,5 +33,8 @@ export const customerDraftSchema = z.object({
 });
 
 export const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-export const MAX_FEEDBACK_PHOTO_BYTES = 10 * 1024 * 1024;
-
+export const MAX_FEEDBACK_PHOTO_BYTES = 5 * 1024 * 1024;
+export const feedbackPhotoSchema = z.object({ request_id: uuid(), media_id: uuid(), mime_type: z.enum(["image/jpeg", "image/png", "image/webp"]), size_bytes: z.number().int().positive().max(MAX_FEEDBACK_PHOTO_BYTES) });
+export const feedbackManageSchema = z.object({ request_id: uuid(), action: z.enum(["whatsapp_sent", "review_customer_reported", "review_staff_verified", "review_declined", "review_reset", "revoke"]), note: z.string().trim().max(2000) }).superRefine((value, context) => {
+  if (value.action !== "whatsapp_sent" && value.note.length < 5) context.addIssue({ code: "custom", path: ["note"], message: "Add the reason or evidence, at least 5 characters." });
+});

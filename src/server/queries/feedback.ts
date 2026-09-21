@@ -30,14 +30,38 @@ export async function getFeedbackPurchaseContext(purchaseId: string): Promise<Fe
   };
 }
 
-export async function listFeedbackRequests(limit = 300): Promise<FeedbackRequestRow[]> {
+export async function getFeedbackWorkbench(source: { p_visit_id?: string; p_purchase_id?: string; p_request_id?: string }): Promise<FeedbackPurchaseContext | null> {
+  await requirePermission("sales.write");
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.rpc("feedback_workbench", source);
+  if (error?.code === "P0002") return null;
+  if (error) throw error;
+  return data as unknown as FeedbackPurchaseContext | null;
+}
+
+export async function getCustomerReviewSummary(contactId: string) {
   await requirePermission("sales.read");
   const supabase = await createServerSupabase();
-  const { data, error } = await supabase.from("feedback_requests").select("*").order("created_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("feedback_requests").select("id, review_outcome, review_outcome_at, review_outcome_note")
+    .eq("contact_id", contactId).in("review_outcome", ["customer_reported", "staff_verified"])
+    .order("review_outcome_at", { ascending: false }).limit(1).maybeSingle();
   if (error) throw error;
-  return (data ?? []).filter((row) => row.id && row.purchase_id && row.contact_id).map((row) => ({
+  return data;
+}
+
+export async function listFeedbackRequests(page = 1, visitIds?: string[]) {
+  await requirePermission("sales.read");
+  const supabase = await createServerSupabase();
+  let query = supabase.from("feedback_requests").select("*", { count: "exact" }).order("created_at", { ascending: false }).order("id");
+  if (visitIds) {
+    if (!visitIds.length) return { rows: [] as FeedbackRequestRow[], total: 0 };
+    query = query.in("visit_id", visitIds);
+  } else query = query.range((page - 1) * 25, page * 25 - 1);
+  const { data, error, count } = await query;
+  if (error) throw error;
+  const rows: FeedbackRequestRow[] = (data ?? []).filter((row) => row.id && row.contact_id).map((row) => ({
     id: row.id!,
-    purchase_id: row.purchase_id!,
+    purchase_id: row.purchase_id,
     visit_id: row.visit_id,
     contact_id: row.contact_id!,
     customer_name: row.customer_name ?? "Customer",
@@ -53,7 +77,10 @@ export async function listFeedbackRequests(limit = 300): Promise<FeedbackRequest
     google_handoff_opened_at: row.google_handoff_opened_at,
     has_photo: Boolean(row.has_photo),
     created_at: row.created_at!,
+    whatsapp_sent_at: row.whatsapp_sent_at,
+    review_outcome: row.review_outcome ?? "unknown",
   }));
+  return { rows, total: count ?? 0 };
 }
 
 export async function getCustomerFeedback(tokenHash: string): Promise<CustomerFeedbackView | null> {
@@ -72,20 +99,23 @@ export async function getCustomerFeedback(tokenHash: string): Promise<CustomerFe
     answers,
     draft_text: data.draft_text,
     has_photo: data.has_photo,
-    review_url: data.review_url,
+    review_url: data.review_url ?? (data.benefit_status === "not_offered" ? process.env.TC_GOOGLE_REVIEW_URL?.trim() || null : null),
     benefit_status: data.benefit_status,
+    photo_ids: [],
   };
 }
 
 export async function loadCustomerFeedbackByToken(token: string): Promise<CustomerFeedbackView | null> {
   const tokenHash = hashFeedbackToken(token);
   const admin = createAdminSupabase();
-  const [{ data, error }, event] = await Promise.all([
+  const [{ data, error }, event, photos] = await Promise.all([
     admin.rpc("get_feedback_by_token", { p_token_hash: tokenHash }).maybeSingle(),
     admin.rpc("log_feedback_customer_event", { p_token_hash: tokenHash, p_event_type: "customer_link_opened" }),
+    admin.rpc("feedback_photos_by_token", { p_token_hash: tokenHash }),
   ]);
   if (error) throw error;
   if (event.error) throw event.error;
+  if (photos.error) throw photos.error;
   if (!data) return null;
   return {
     request_id: data.request_id,
@@ -97,15 +127,16 @@ export async function loadCustomerFeedbackByToken(token: string): Promise<Custom
     answers: Array.isArray(data.answers) ? (data.answers as unknown as CustomerFeedbackAnswer[]) : [],
     draft_text: data.draft_text,
     has_photo: data.has_photo,
-    review_url: data.review_url,
+    review_url: data.review_url ?? (data.benefit_status === "not_offered" ? process.env.TC_GOOGLE_REVIEW_URL?.trim() || null : null),
     benefit_status: data.benefit_status,
+    photo_ids: (photos.data ?? []).map((p) => p.media_id),
   };
 }
 
-export async function loadFeedbackMediaByToken(token: string) {
+export async function loadFeedbackMediaByToken(token: string, mediaId: string | null) {
   const tokenHash = hashFeedbackToken(token);
   const admin = createAdminSupabase();
-  const { data, error } = await admin.rpc("get_feedback_media_by_token", { p_token_hash: tokenHash }).maybeSingle();
+  const { data, error } = await admin.rpc("feedback_photos_by_token", { p_token_hash: tokenHash });
   if (error) throw error;
-  return { admin, media: data, tokenHash };
+  return { admin, media: mediaId ? data?.find((p) => p.media_id === mediaId) : data?.[0], tokenHash };
 }

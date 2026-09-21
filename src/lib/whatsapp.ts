@@ -28,5 +28,5 @@ export function buildWhatsAppUrl(phone: string | null | undefined, message: stri
 
 export function buildFeedbackWhatsAppMessage({ firstName, secureLink }: FeedbackHandoff): string {
   const greeting = firstName?.trim() ? `Hi ${firstName.trim().split(/\s+/)[0]}` : "Hi";
-  return `${greeting}, thank you for visiting Tile Concept. We wrote down the feedback you shared. Please use this private link to check or edit it: ${secureLink}. If you want, you can then open Google to leave an honest review. A Google review is optional and does not affect your purchase or any private-feedback benefit.`;
+  return `${greeting}, thank you for visiting Tile Concept. Your private feedback draft and optional photos are here:\n${secureLink}\n\nPlease check or edit your words. If you want, use the Google button to leave an honest review from your own account. A Google review is optional and does not affect your purchase.`;
 }
