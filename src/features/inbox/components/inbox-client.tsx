@@ -249,7 +249,7 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
       </div>
       <LeadDrawer
         key={selected?.id ?? "none"}
-        lead={selected}
+        lead={openNew ? null : selected}
         intake={selectedIntake}
         timeline={selectedTimeline}
         contact={selectedContact}
@@ -269,7 +269,9 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
         defaultOwnerId={session.userId}
         onCreated={(id, s) => {
           setSuggestions((prev) => ({ ...prev, [id]: s }));
-          router.refresh();
+          // Keep the saved record selected even when it does not match the
+          // current filter. Closing the result dialog reveals its next steps.
+          void setLeadParam(id);
         }}
       />
 

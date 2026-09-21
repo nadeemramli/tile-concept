@@ -34,3 +34,22 @@ Use a test deployment with synthetic customers and two browser sessions: assigne
 - The root integration run must verify a fresh migration reset and optimized build together with the opportunity/review/reporting branches. Production-scale performance and hosted Realtime configuration still need the independent QC pass. Activity currently loads the latest 100 events; older history remains in the database.
 
 No WhatsApp messages were sent during verification. Local browser fixtures are synthetic and are removed by the final isolated database reset.
+
+## Manual inquiry capture reliability follow-up
+
+The audit also found that manual capture chose the first exact customer match and saved intake, inquiry and links in separate requests. `20260921051515_atomic_manual_inquiry.sql` and the matching form replace this with one `api.create_manual_inquiry` transaction and an actor/payload-scoped request ledger.
+
+Unique normalized identifiers may link one active, confirmed customer only when its identifiers are unshared. Multiple contacts with the same phone, phone/email conflicts, shared contact points and provisional customers save the inquiry **unlinked for review**. Names alone never link. A failed final intake link rolls back the entire command. Owner assignment and location are validated in the database against the workspace; reps can select themselves or leave an inquiry unassigned, while a manager can assign a teammate.
+
+The form reuses its request ID after an unconfirmed result, prevents overlapping submits, and keeps the saved inquiry selected. The result dialog closes before the selected drawer opens, so two overlapping dialogs cannot block Done. Advisory identity-search failure does not turn a successful capture into a failed save. Explicitly selecting “Unspecified” location remains unspecified. Intake changes now also notify open inboxes.
+
+The immutable remark guard permits trusted identity-link/merge commands to attach history to a contact/company while preserving authored content, source corrections and original inquiry. Adding a remark before linking a customer therefore does not block identity confirmation.
+
+Additional QC:
+
+1. Create two synthetic contacts sharing a phone, then capture an inquiry with that phone. Verify that it is saved once, warns that review is needed, and has no customer linked. Repeat with a phone belonging to one contact and an email belonging to another, and with a provisional customer.
+2. Capture an inquiry with one unique confirmed phone. Verify one linked inquiry, one intake record and one intake link. A double-click/retry with the same request must return the same inquiry.
+3. Record a remark on an unlinked inquiry, then confirm its customer from the drawer. The remark must remain unchanged and appear in customer history.
+4. After an uncertain network save, retry without changing the fields. After a full browser reload, search for the inquiry before starting another capture; the in-form retry token is not durable browser storage.
+
+Validation adds 31 passing pgTAP assertions (including an injected link-write failure) and a component test that retries after a rejected network promise with the same request ID. The browser saved a shared-phone inquiry unlinked, displayed the review explanation, and opened that inquiry after Done. Final combined unit count is 153; TypeScript passes and lint retains only the pre-existing TanStack warning.

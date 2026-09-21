@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requirePermission } from "@/server/session";
 import { fail, ok, type ActionResult } from "@/server/action-result";
-import { normalizePhone, normalizeEmail } from "@/lib/identity/normalize";
+import { uuid } from "@/lib/zod";
 import { convertLeadSchema, logResponseSchema, newInquirySchema, type NewInquiryInput } from "@/features/inbox/schema";
 import { whereIsLead, whereSentence } from "@/features/inbox/lib/whereabouts";
 import type { IdentityCandidate } from "@/features/inbox/types";
@@ -16,69 +16,28 @@ function blank(v: string | undefined | null) {
   return v && v.length > 0 ? v : null;
 }
 
-export async function createInquiryAction(input: NewInquiryInput): Promise<ActionResult<{ lead_id: string; suggestions: IdentityCandidate[] }>> {
+export async function createInquiryAction(input: NewInquiryInput, requestId: string): Promise<ActionResult<{ lead_id: string; identity_state: string; suggestions: IdentityCandidate[] }>> {
   const parsed = newInquirySchema.safeParse(input);
   if (!parsed.success) return fail("Check the highlighted fields.", parsed.error.flatten().fieldErrors as Record<string, string[]>);
+  if (!uuid().safeParse(requestId).success) return fail("A valid save request is required. Reopen the inquiry form.");
   const v = parsed.data;
   try {
-    const session = await requirePermission("sales.write");
+    await requirePermission("sales.write");
     const supabase = await createServerSupabase();
-    const phoneNorm = normalizePhone(v.raw_phone);
-    const idem = crypto.randomUUID();
-
-    // Same rule as api.accept_intake: an exact phone or email match links the
-    // enquiry to the existing customer at once. Names alone never link.
-    const suggestions = await findCandidates({ phone: v.raw_phone, email: v.raw_email, name: v.raw_name, company: v.raw_company });
-    const exact = suggestions.find((c) => c.entity_type === "contact" && c.reasons.some((r) => r.code === "exact_phone" || r.code === "exact_email"));
-    const { data: intake, error: intakeErr } = await supabase
-      .from("intake_events")
-      .insert({
-        workspace_id: session.workspaceId,
-        source_channel: v.source_channel,
-        provider: "manual",
-        idempotency_key: idem,
-        occurred_at: new Date().toISOString(),
-        payload: { name: blank(v.raw_name), phone: blank(v.raw_phone), email: blank(v.raw_email), company: blank(v.raw_company), interest: blank(v.interest), source_detail: blank(v.source_detail) },
-        raw_text: blank(v.raw_text),
-        status: "processed",
-        created_by: session.userId,
-      })
-      .select("id")
-      .single();
-    if (intakeErr || !intake) return fail(intakeErr ?? "Could not record intake event");
-
-    const { data: lead, error: leadErr } = await supabase
-      .from("leads")
-      .insert({
-        workspace_id: session.workspaceId,
-        status: "new",
-        source_channel: v.source_channel,
-        source_detail: blank(v.source_detail),
-        contact_id: exact?.entity_id ?? null,
-        raw_name: blank(v.raw_name),
-        raw_phone: blank(v.raw_phone),
-        raw_phone_normalized: phoneNorm,
-        raw_email: normalizeEmail(v.raw_email),
-        raw_company: blank(v.raw_company),
-        interest: blank(v.interest),
-        product_interest: v.product_interest,
-        location_id: blank(v.location_id) ?? session.defaultLocationId,
-        owner_id: blank(v.owner_id),
-        assigned_at: blank(v.owner_id) ? new Date().toISOString() : null,
-        first_response_due_at: new Date(Date.now() + 4 * 3_600_000).toISOString(),
-        notes: blank(v.notes),
-        created_by: session.userId,
-      })
-      .select("id")
-      .single();
-    if (leadErr || !lead) return fail(leadErr ?? "Could not create lead");
-
-    await supabase.from("intake_events").update({ lead_id: lead.id }).eq("id", intake.id!);
-    await supabase.from("lead_intake_links").insert({ lead_id: lead.id!, intake_event_id: intake.id! });
+    const { data, error } = await supabase.rpc("create_manual_inquiry", { p_input: v, p_request_id: requestId });
+    if (error) return fail(error);
+    const result = data as { lead_id: string; identity_state: string };
+    // Suggestions are advisory. A failed search must not turn a committed save
+    // into a failure that invites another inquiry to be created.
+    let suggestions: IdentityCandidate[] = [];
+    try { suggestions = await findCandidates({ phone: v.raw_phone, email: v.raw_email, name: v.raw_name, company: v.raw_company }); } catch { /* Recover from the saved inquiry drawer. */ }
 
     revalidatePath(INBOX);
     revalidatePath("/");
-    return ok({ lead_id: String(lead.id), suggestions }, exact ? `Inquiry recorded and linked to ${exact.display_name}.` : "Inquiry recorded.");
+    return ok({ lead_id: result.lead_id, identity_state: result.identity_state, suggestions },
+      result.identity_state === "matched" ? "Inquiry recorded and linked to the uniquely matched customer."
+      : result.identity_state === "needs_review" ? "Inquiry recorded. Shared, conflicting or provisional customer details need review; no contact was linked."
+      : "Inquiry recorded. Find or create its customer record from the inquiry drawer.");
   } catch (e) {
     return fail(e);
   }
