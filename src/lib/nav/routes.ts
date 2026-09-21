@@ -75,6 +75,7 @@ export const ROUTES: RouteDef[] = [
   { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
   { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Customer", status: "live", permission: "sales.read" },
   // Marketing
+  { key: "marketing-spend", label: "Marketing Spend", path: "/marketing/spend", icon: Tags, group: "Marketing", status: "live", permission: "marketing.spend.read" },
   { key: "content-opps", label: "Content Opportunities", path: "/marketing/content-opportunities", icon: Megaphone, group: "Marketing", status: "live", permission: "marketing.read" },
   { key: "shoot-calendar", label: "Shoot Calendar", path: "/marketing/shoot-calendar", icon: CalendarDays, group: "Marketing", status: "live", permission: "marketing.read" },
   // Merchandise
