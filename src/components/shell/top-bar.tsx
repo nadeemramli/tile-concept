@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, ChevronDown, LogOut, Menu, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Hint } from "@/components/patterns/explain";
 import { Kbd } from "@/components/ui/kbd";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -23,7 +25,7 @@ import { ModePill } from "@/components/shell/mode-pill";
 import { ThemeToggleItem } from "@/components/shell/theme-toggle";
 import { SidebarBrand, SidebarNav } from "@/components/shell/sidebar";
 import { useSession } from "@/components/shell/session-context";
-import { platformRoutes, routeForPath } from "@/lib/nav/routes";
+import { chromeRoutes, isRouteActive, platformRoutes, routeForPath } from "@/lib/nav/routes";
 import { initials } from "@/lib/format";
 import { signOutAction } from "@/server/commands/auth";
 import { Inbox, Store, Contact, FolderKanban, ListTodo, Package, Building2 } from "lucide-react";
@@ -86,6 +88,9 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
   const pathname = usePathname();
   const { session, can, permissions } = useSession();
   const platform = platformRoutes(permissions);
+  // Routes the sidebar deliberately leaves out; Tasks is a lookup people dip
+  // into beside Create, not a section they navigate to and stay in.
+  const chrome = chromeRoutes(permissions, "top-bar");
   const current = routeForPath(pathname);
 
   return (
@@ -97,7 +102,7 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
         </Button>
         <SheetContent side="left" className="w-64 bg-sidebar p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarBrand />
+          <SidebarBrand onNavigate={() => setNavOpen(false)} />
           <SidebarNav onNavigate={() => setNavOpen(false)} />
         </SheetContent>
       </Sheet>
@@ -171,6 +176,24 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        {chrome.map((r) => {
+          const active = isRouteActive(r, pathname);
+          return (
+            <Hint key={r.key} content={r.label}>
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className={cn("size-8", active && "bg-accent text-accent-foreground")}
+              >
+                <Link href={r.path} aria-current={active ? "page" : undefined} aria-label={r.label}>
+                  <r.icon className="size-4" aria-hidden />
+                </Link>
+              </Button>
+            </Hint>
+          );
+        })}
 
         <Suspense fallback={<NotificationBell items={[]} loading />}>
           <ResolvedNotificationBell source={notifications} />
