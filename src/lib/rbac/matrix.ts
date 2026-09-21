@@ -110,7 +110,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
   admin: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "settings.manage", "export.customer"],
   management: ["marketing.spend.read", "sales.read", "sales.read_all", "sales.leads.read_all", "contact.reveal", "catalog.read", "price.read", "stock.read", "marketing.read", "report.read", "audit.read"],
   sales_manager: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "report.read", "audit.read", "export.customer"],
-  sales_rep: ["sales.read", "sales.leads.read_all", "sales.write", "contact.reveal", "purchase.write", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "audit.read"],
+  sales_rep: ["sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "contact.reveal", "purchase.write", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "review.approve", "report.read", "audit.read"],
   showroom: ["sales.read", "sales.leads.read_all", "sales.write", "feedback.send", "purchase.write", "catalog.read", "price.read", "stock.read", "audit.read"],
   marketing_coordinator: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "marketing.read", "marketing.write", "marketing.confirm", "catalog.read", "audit.read"],
   catalog_pricing: ["catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "source.import", "review.approve", "audit.read"],
@@ -131,7 +131,7 @@ export function rolesWith(permission: PermissionKey): RoleKey[] {
  */
 export const PERMISSION_EXPLAINERS: Record<PermissionKey, string> = {
   "sales.read": "Viewing leads, accounts, projects and opportunities needs a sales, showroom, marketing or management role.",
-  "sales.read_all": "Seeing every salesperson's records needs a sales manager, management or administrator role; representatives see their own.",
+  "sales.read_all": "Seeing every salesperson's records is open to sales representatives, sales managers, management and administrators.",
   "sales.leads.read_all": "Sales representatives, sales managers, management and administrators share visibility of every Enquiry Box lead.",
   "sales.write": "Creating or editing sales records needs a sales representative, sales manager or showroom role.",
   "sales.assign": "Only sales managers and administrators can assign leads.",
@@ -153,8 +153,8 @@ export const PERMISSION_EXPLAINERS: Record<PermissionKey, string> = {
   "marketing.spend.write": "Recording marketing costs needs a marketing coordinator, sales manager or administrator role.",
   "marketing.spend.review": "Correcting marketing costs and confirming complete coverage needs a marketing coordinator, sales manager or administrator role, with a reason.",
   "source.import": "Importing source documents is restricted to catalog/pricing operators.",
-  "review.approve": "Approving parsed import items is restricted to catalog/pricing operators.",
-  "report.read": "Reports need a management, analyst, or manager role.",
+  "review.approve": "Approving parsed import items is open to sales representatives, catalog/pricing operators and administrators.",
+  "report.read": "Reports are open to sales representatives, sales managers, management, analysts and administrators.",
   "audit.read": "The audit trail is visible to every operational role within its own scope.",
   "audit.read_all": "Seeing the whole workspace's audit trail is restricted to administrators.",
   "settings.manage": "Settings and user management are restricted to administrators.",
