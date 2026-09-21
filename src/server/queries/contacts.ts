@@ -46,7 +46,7 @@ export async function listContacts(opts: { includeMerged?: boolean } = {}): Prom
   const [{ data: points }, { data: rels }, { data: opps }, { data: acts }] = await Promise.all([
     supabase.from("contact_points").select("contact_id, kind, normalized_value, is_primary, created_at").in("contact_id", ids),
     supabase.from("account_contact_relationships").select("contact_id, account_id, is_primary, accounts(name)").in("contact_id", ids),
-    supabase.from("opportunities").select("contact_id").eq("status", "open").in("contact_id", ids),
+    supabase.from("opportunities").select("contact_id").eq("status", "open").is("archived_at", null).in("contact_id", ids),
     supabase.from("activities").select("contact_id, occurred_at").in("contact_id", ids).order("occurred_at", { ascending: false }).limit(5000),
   ]);
 
@@ -205,7 +205,7 @@ export async function getPurchasesFor(filter: { contact_id?: string; account_id?
 
 export async function getOpportunitiesFor(filter: { contact_id?: string; account_id?: string; project_id?: string }): Promise<OpportunitySummary[]> {
   const supabase = await createServerSupabase();
-  let q = supabase.from("opportunities").select("id, name, stage_key, status, estimated_value, currency, next_action, next_action_due_at, owner_id, expected_close_date").order("created_at", { ascending: false }).limit(200);
+  let q = supabase.from("opportunities").select("id, name, stage_key, status, estimated_value, currency, next_action, next_action_due_at, owner_id, expected_close_date").is("archived_at", null).order("created_at", { ascending: false }).limit(200);
   if (filter.contact_id) q = q.eq("contact_id", filter.contact_id);
   if (filter.account_id) q = q.eq("account_id", filter.account_id);
   if (filter.project_id) q = q.eq("project_id", filter.project_id);

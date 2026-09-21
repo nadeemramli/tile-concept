@@ -8,7 +8,7 @@ import { PipelineView } from "@/features/pipeline/components/pipeline-view";
 
 export const metadata: Metadata = { title: "Pipeline" };
 
-const VIEWS: View[] = ["open", "overdue", "missing-next-action", "won", "lost", "quotes", "all"];
+const VIEWS: View[] = ["open", "overdue", "missing-next-action", "won", "lost", "quotes", "all", "archived"];
 
 export default async function PipelinePage({ searchParams }: PageProps<"/sales/pipeline">) {
   const session = await requireSession();

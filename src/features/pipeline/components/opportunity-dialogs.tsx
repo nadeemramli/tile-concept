@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,6 +17,7 @@ import { titleCase } from "@/lib/format";
 type P = { open: boolean; onOpenChange: (o: boolean) => void };
 
 export function EditOpportunityDialog({ open, onOpenChange, opp, members, canAssign }: P & { opp: OpportunityDetail; members: MemberOption[]; canAssign: boolean }) {
+  const request = useRef<string | null>(null);
   return (
     <FormDialog
       open={open}
@@ -24,13 +27,14 @@ export function EditOpportunityDialog({ open, onOpenChange, opp, members, canAss
       action={async (fd) => {
         const o = clean(formToObject(fd));
         o.product_interest = fd.getAll("product_interest[]");
-        return updateOpportunityAction({ id: opp.id, ...o });
+        request.current ??= crypto.randomUUID();
+        return updateOpportunityAction({ id: opp.id, version: opp.version, request_id: request.current, ...o });
       }}
     >
       <Field label="Name" htmlFor="name" required>
         <Input id="name" name="name" required defaultValue={opp.name} />
       </Field>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Est. value" htmlFor="estimated_value">
           <Input id="estimated_value" name="estimated_value" type="number" step="0.01" min="0" className="tnum" defaultValue={opp.estimated_value ?? ""} />
         </Field>
@@ -41,18 +45,18 @@ export function EditOpportunityDialog({ open, onOpenChange, opp, members, canAss
           <EnumSelect name="probability_band" options={["low", "medium", "high"]} defaultValue={opp.probability_band} />
         </Field>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Expected close" htmlFor="expected_close_date">
           <Input id="expected_close_date" name="expected_close_date" type="date" defaultValue={opp.expected_close_date ?? ""} />
         </Field>
         <Field label="Next action" htmlFor="next_action">
           <Input id="next_action" name="next_action" defaultValue={opp.next_action ?? ""} />
         </Field>
-        <Field label="Due" htmlFor="next_action_due_at">
+        <Field label="Due (Malaysia time)" htmlFor="next_action_due_at">
           <Input id="next_action_due_at" name="next_action_due_at" type="datetime-local" defaultValue={opp.next_action_due_at ? toLocalInput(opp.next_action_due_at) : ""} />
         </Field>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Segment">
           <EnumSelect name="segment" options={OPPORTUNITY_SEGMENTS} defaultValue={opp.segment} labels={{ institutional: "Institutional / Gov", residential: "Residential", fnb: "F&B / Retail", hospitality: "Hospitality", commercial: "Commercial", other: "Other" }} />
         </Field>
@@ -84,9 +88,10 @@ export function EditOpportunityDialog({ open, onOpenChange, opp, members, canAss
   );
 }
 
-export function ReassignDialog({ open, onOpenChange, oppId, members, current }: P & { oppId: string; members: MemberOption[]; current: string | null }) {
+export function ReassignDialog({ open, onOpenChange, oppId, version, members, current }: P & { oppId: string; version: number; members: MemberOption[]; current: string | null }) {
+  const request = useRef<string | null>(null);
   return (
-    <FormDialog open={open} onOpenChange={onOpenChange} title="Reassign owner" submitLabel="Reassign" action={async (fd) => reassignOpportunityAction({ opportunity_id: oppId, ...clean(formToObject(fd)) })}>
+    <FormDialog open={open} onOpenChange={onOpenChange} title="Reassign owner" submitLabel="Reassign" action={async (fd) => { request.current ??= crypto.randomUUID(); return reassignOpportunityAction({ opportunity_id: oppId, version, request_id: request.current, ...clean(formToObject(fd)) }); }}>
       <Field label="New owner" required>
         <MemberSelect name="owner_id" members={members} defaultValue={current} />
       </Field>
@@ -116,7 +121,7 @@ export function QuoteVersionDialog({ open, onOpenChange, opp, suggestedNumber }:
           <Input id="total_amount" name="total_amount" type="number" step="0.01" min="0" className="tnum" defaultValue={opp.estimated_value ?? ""} />
         </Field>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Issued" htmlFor="issued_at">
           <Input id="issued_at" name="issued_at" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
         </Field>
@@ -141,7 +146,5 @@ export function QuoteVersionDialog({ open, onOpenChange, opp, suggestedNumber }:
 }
 
 function toLocalInput(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return new Date(new Date(iso).getTime() + 8 * 3600000).toISOString().slice(0,16);
 }

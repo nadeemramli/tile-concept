@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ActionResult } from "@/server/action-result";
+import { cn } from "@/lib/utils";
 
 interface FormDialogProps<T> {
   open: boolean;
@@ -26,7 +27,7 @@ export function FormDialog<T>({ open, onOpenChange, title, description, submitLa
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={className ?? "sm:max-w-lg"}>
+      <DialogContent className={cn("max-h-[90dvh] overflow-y-auto", className ?? "sm:max-w-lg")}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -36,7 +37,9 @@ export function FormDialog<T>({ open, onOpenChange, title, description, submitLa
               if (res.ok) {
                 toast.success(res.message ?? "Saved");
                 setFieldErrors({});
-                onOpenChange(false);
+                // URL-backed dialogs may still be updating their query parameter.
+                // Finish that update before the success handler navigates to a new record.
+                await onOpenChange(false);
                 onSuccess?.(res.data);
               } else {
                 setFieldErrors(res.fieldErrors ?? {});

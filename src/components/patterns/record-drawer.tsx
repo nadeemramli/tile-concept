@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
@@ -12,17 +13,19 @@ interface RecordDrawerProps {
   width?: "md" | "lg" | "xl";
   actions?: React.ReactNode;
   className?: string;
+  autoFocusTitle?: boolean;
 }
 
 /** Right-side drawer for contextual inspect/edit flows (PRD §12.2). */
-export function RecordDrawer({ open, onOpenChange, title, description, children, width = "lg", actions, className }: RecordDrawerProps) {
+export function RecordDrawer({ open, onOpenChange, title, description, children, width = "lg", actions, className, autoFocusTitle = false }: RecordDrawerProps) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className={cn("flex w-full flex-col gap-0 overflow-y-auto p-0", width === "md" && "data-[side=right]:sm:max-w-xl", width === "lg" && "data-[side=right]:sm:max-w-2xl", width === "xl" && "data-[side=right]:sm:max-w-4xl", className)}>
+      <SheetContent onOpenAutoFocus={(event) => { if (autoFocusTitle) { event.preventDefault(); titleRef.current?.focus(); } }} className={cn("flex w-full flex-col gap-0 overflow-y-auto p-0", width === "md" && "data-[side=right]:sm:max-w-xl", width === "lg" && "data-[side=right]:sm:max-w-2xl", width === "xl" && "data-[side=right]:sm:max-w-4xl", className)}>
         <SheetHeader className="border-b px-5 py-4">
           <div className="flex items-start justify-between gap-3 pr-8">
             <div className="min-w-0">
-              <SheetTitle className="text-base">{title}</SheetTitle>
+              <SheetTitle ref={titleRef} tabIndex={autoFocusTitle ? -1 : undefined} className="text-base outline-none">{title}</SheetTitle>
               {description && <SheetDescription className="mt-0.5">{description}</SheetDescription>}
             </div>
             {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

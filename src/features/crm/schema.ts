@@ -70,6 +70,7 @@ export const addTaskSchema = z.object({
 });
 
 export const createProjectOpportunitySchema = z.object({
+  request_id: uuid(),
   project_name: z.string().trim().min(2, "Project name is required"),
   project_type: z.enum(PROJECT_TYPES).default("other"),
   area: optionalStr,
@@ -80,7 +81,7 @@ export const createProjectOpportunitySchema = z.object({
   expected_completion: optionalStr,
   create_opportunity: z.coerce.boolean().default(true),
   opportunity_name: optionalStr,
-  estimated_value: z.coerce.number().nonnegative().optional().or(z.nan().transform(() => undefined)),
+  estimated_value: z.preprocess((v) => v === "" ? undefined : v, z.coerce.number().finite().nonnegative().optional()),
   next_action: optionalStr,
   next_action_due_at: optionalStr,
   product_interest: z.array(z.enum(PRODUCT_INTERESTS)).default([]),

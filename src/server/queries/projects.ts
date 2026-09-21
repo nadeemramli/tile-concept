@@ -25,7 +25,7 @@ export async function listProjects(): Promise<ProjectListRow[]> {
   const { data } = await supabase.from("projects").select("id, name, project_type, status, area, account_id, primary_contact_id, owner_id, expected_completion, created_at, accounts(name), contacts(display_name)").order("created_at", { ascending: false }).limit(1000);
   const rows = data ?? [];
   const ids = rows.map((p) => p.id!);
-  const { data: opps } = ids.length ? await supabase.from("opportunities").select("project_id").in("project_id", ids) : { data: [] };
+  const { data: opps } = ids.length ? await supabase.from("opportunities").select("project_id").is("archived_at", null).in("project_id", ids) : { data: [] };
   const om = new Map<string, number>();
   for (const o of opps ?? []) if (o.project_id) om.set(o.project_id, (om.get(o.project_id) ?? 0) + 1);
   return rows.map((p) => ({

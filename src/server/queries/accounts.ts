@@ -30,7 +30,7 @@ export async function listAccounts(opts: { includeMerged?: boolean } = {}): Prom
   const [{ data: rels }, { data: projects }, { data: opps }] = await Promise.all([
     supabase.from("account_contact_relationships").select("account_id").in("account_id", ids),
     supabase.from("projects").select("account_id").in("account_id", ids),
-    supabase.from("opportunities").select("account_id").eq("status", "open").in("account_id", ids),
+    supabase.from("opportunities").select("account_id").eq("status", "open").is("archived_at", null).in("account_id", ids),
   ]);
   const count = (arr: { account_id: string | null }[] | null) => {
     const m = new Map<string, number>();

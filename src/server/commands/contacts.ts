@@ -27,6 +27,7 @@ export async function createContactAction(input: unknown): Promise<ActionResult<
   const { data: dup } = await supabase.rpc("suggest_contact_duplicates", { p_contact_id: id });
   revalidatePath("/sales/accounts");
   revalidatePath("/sales/identity-review");
+  if (v.account_id) revalidatePath(`/sales/accounts/${v.account_id}`);
   return ok({ id, duplicates: dup ?? 0 }, dup ? `Contact created. ${dup} possible duplicate${dup > 1 ? "s" : ""} sent to Identity Review.` : "Contact created.");
 }
 

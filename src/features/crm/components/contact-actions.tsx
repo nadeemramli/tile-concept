@@ -8,7 +8,8 @@ import { Gated } from "@/components/patterns/explain";
 import { useSession } from "@/components/shell/session-context";
 import type { ContactDetail } from "@/server/queries/contacts";
 import type { MemberOption } from "@/features/crm/components/selects";
-import { ActivityDialog, AddContactPointDialog, ConsentDialog, EditContactDialog, LinkAccountDialog, ProjectOpportunityDialog, RevealButton, TaskDialog } from "@/features/crm/components/dialogs";
+import { CreateOpportunityDialog } from "@/features/pipeline/components/create-opportunity-dialog";
+import { ActivityDialog, AddContactPointDialog, ConsentDialog, EditContactDialog, LinkAccountDialog, RevealButton, TaskDialog } from "@/features/crm/components/dialogs";
 
 type Which = "edit" | "activity" | "task" | "project" | "link" | "point" | "consent" | null;
 
@@ -45,7 +46,7 @@ export function ContactActions({ contact, members }: { contact: ContactDetail; m
       </Gated>
       <Gated permission="sales.write">
         <Button variant="outline" size="sm" onClick={() => setOpen("project")}>
-          <FolderPlus className="size-3.5" aria-hidden /> Project / opportunity
+          <FolderPlus className="size-3.5" aria-hidden /> New opportunity
         </Button>
       </Gated>
       {canWrite ? (
@@ -86,7 +87,7 @@ export function ContactActions({ contact, members }: { contact: ContactDetail; m
           <EditContactDialog open={open === "edit"} onOpenChange={() => setOpen(null)} contact={contact} />
           <ActivityDialog open={open === "activity"} onOpenChange={() => setOpen(null)} links={{ contact_id: contact.id, account_id: primaryAccount?.account_id }} />
           <TaskDialog open={open === "task"} onOpenChange={() => setOpen(null)} members={members} links={{ contact_id: contact.id, account_id: primaryAccount?.account_id }} defaultAssignee={session.userId} />
-          <ProjectOpportunityDialog open={open === "project"} onOpenChange={() => setOpen(null)} members={members} defaults={{ contact_id: contact.id, contact_name: contact.display_name, account_id: primaryAccount?.account_id, account_name: primaryAccount?.account_name }} />
+          <CreateOpportunityDialog open={open === "project"} onOpenChange={() => setOpen(null)} members={members} defaults={{ contact_id: contact.id, contact_name: contact.display_name, account_id: primaryAccount?.account_id, account_name: primaryAccount?.account_name }} />
           <LinkAccountDialog open={open === "link"} onOpenChange={() => setOpen(null)} contactId={contact.id} />
           <AddContactPointDialog open={open === "point"} onOpenChange={() => setOpen(null)} contactId={contact.id} />
           <ConsentDialog open={open === "consent"} onOpenChange={() => setOpen(null)} contactId={contact.id} />

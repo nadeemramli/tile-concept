@@ -21,6 +21,8 @@ import type { OpportunityRow, PipelineView as View, OpportunityDetail } from "@/
 import type { StageRef } from "@/server/queries/reference";
 import type { MemberOption } from "@/features/crm/components/selects";
 import { StageChangeDialog } from "@/features/pipeline/components/stage-dialog";
+import { CreateOpportunityDialog } from "./create-opportunity-dialog";
+import { Gated } from "@/components/patterns/explain";
 import { OpportunityDrawer } from "@/features/pipeline/components/opportunity-drawer";
 
 const VIEWS: { key: View; label: string; hint: string }[] = [
@@ -30,6 +32,7 @@ const VIEWS: { key: View; label: string; hint: string }[] = [
   { key: "quotes", label: "Quote stages", hint: "Open opportunities sitting in a quotation stage: quote in preparation, sent, or under negotiation." },
   { key: "won", label: "Won (30d)", hint: "Closed as won in the last 30 days." },
   { key: "lost", label: "Lost (30d)", hint: "Closed as lost in the last 30 days, each with a recorded reason." },
+  { key: "archived", label: "Archived", hint: "Removed from active work; open a record to restore it with a reason." },
   { key: "all", label: "All", hint: "Everything within your scope, open and closed." },
 ];
 
@@ -50,6 +53,7 @@ const NO_NEXT_ACTION_HINT = "Every open opportunity needs a next action and a du
 const STAGE_PILL_HINT = "Stage in the pipeline. Colour is the reporting group: open, won, lost or deferred. Hover the status pill for what the group means.";
 
 export function PipelineView({ rows, stages, members, view, detail, suggestedQuoteNumber }: { rows: OpportunityRow[]; stages: StageRef[]; members: MemberOption[]; view: View; detail: OpportunityDetail | null; suggestedQuoteNumber: string }) {
+  const [creating, setCreating] = useState(false);
   const { can, session } = useSession();
   const [, setView] = useQueryState("view", parseAsString.withDefault("open").withOptions({ shallow: false }));
   const [layout, setLayout] = useQueryState("layout", parseAsString.withDefault("board"));
@@ -57,7 +61,7 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
   const [moving, setMoving] = useState<{ id: string; stage: string; hasNext: boolean; target?: string } | null>(null);
   const names = useMemo(() => new Map(members.map((m) => [m.user_id, m.full_name])), [members]);
   const stageByKey = useMemo(() => new Map(stages.map((s) => [s.key, s])), [stages]);
-  const canMove = (o: OpportunityRow) => can("sales.write") && (can("sales.read_all") || !o.owner_id || o.owner_id === session.userId);
+  const canMove = (o: OpportunityRow) => !o.archived_at && can("sales.write") && (can("sales.read_all") || !o.owner_id || o.owner_id === session.userId);
 
   const cols = useMemo<ColumnDef<OpportunityRow, unknown>[]>(
     () => [
@@ -99,6 +103,7 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
+        <Gated permission="sales.write"><Button size="sm" onClick={() => setCreating(true)}>New opportunity</Button></Gated>
         <Tabs value={view} onValueChange={(v) => setView(v)}>
           <TabsList className="flex-wrap">
             {VIEWS.map((v) => (
@@ -124,7 +129,7 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
         </div>
       </div>
 
-      {layout === "list" ? (
+      {layout === "list" || view === "archived" ? (
         <DataTable columns={cols} data={rows} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setOpp(r.id)} isRowActive={(r) => r.id === detail?.id} emptyTitle="No opportunities in this view" emptyDescription="Convert an inquiry or create a project/opportunity from a contact." />
       ) : (
         <div className="overflow-x-auto pb-2">
@@ -222,7 +227,8 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
       )}
 
       {moving && <StageChangeDialog key={`${moving.id}-${moving.target}`} open onOpenChange={(o) => !o && setMoving(null)} opportunityId={moving.id} currentStage={moving.stage} stages={stages} hasNextAction={moving.hasNext} initialTarget={moving.target} />}
-      {detail && <OpportunityDrawer opp={detail} stages={stages} members={members} suggestedQuoteNumber={suggestedQuoteNumber} onClose={() => setOpp(null)} />}
+      {creating && <CreateOpportunityDialog open onOpenChange={setCreating} members={members} />}
+      {detail && <OpportunityDrawer key={`${detail.id}-${detail.version}`} opp={detail} stages={stages} members={members} suggestedQuoteNumber={suggestedQuoteNumber} onClose={() => setOpp(null)} />}
       <p className="text-[11px] text-muted-foreground">
         Board and list share one canonical stage state. Use the ⋯ menu on a card (or the Stage button in the drawer) to move stages — no drag required.{" "}
         <Link href="/sales/projects" className="hover:underline">

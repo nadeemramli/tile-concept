@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Eye } from "lucide-react";
@@ -359,6 +359,7 @@ export function TaskDialog({ open, onOpenChange, members, links, defaultAssignee
 export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults }: DialogProps & { members: MemberOption[]; defaults?: { contact_id?: string; contact_name?: string; account_id?: string; account_name?: string } }) {
   const router = useRouter();
   const [withOpp, setWithOpp] = useState(true);
+  const request = useRef<string | null>(null);
   return (
     <FormDialog
       open={open}
@@ -369,11 +370,13 @@ export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults
       className="sm:max-w-xl"
       action={async (fd) => {
         const o = clean(formToObject(fd));
+        request.current ??= crypto.randomUUID();
+        o.request_id = request.current;
         o.create_opportunity = withOpp;
         o.product_interest = fd.getAll("product_interest[]");
         return createProjectOpportunityAction(o);
       }}
-      onSuccess={(d) => router.push(d.opportunity_id ? `/sales/pipeline?opportunity=${d.opportunity_id}` : `/sales/projects/${d.project_id}`)}
+      onSuccess={(d) => { request.current = null; router.push(d.opportunity_id ? `/sales/pipeline?opportunity=${d.opportunity_id}` : `/sales/projects/${d.project_id}`); }}
     >
       <Field label="Project name" htmlFor="project_name" required>
         <Input id="project_name" name="project_name" required autoFocus placeholder="Condo renovation — Cheras" />
@@ -416,8 +419,8 @@ export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults
             <Field label="Next action" htmlFor="next_action">
               <Input id="next_action" name="next_action" defaultValue="Follow up" />
             </Field>
-            <Field label="Due" htmlFor="next_action_due_at">
-              <Input id="next_action_due_at" name="next_action_due_at" type="datetime-local" />
+            <Field label="Due (Malaysia time)" htmlFor="next_action_due_at">
+              <Input id="next_action_due_at" name="next_action_due_at" type="datetime-local" required />
             </Field>
           </div>
           <Field label="Source">

@@ -4,7 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getAuditFor, getPurchasesFor, getQuotesForOpportunities, getTimeline, type AuditRow, type PurchaseSummary, type QuoteSummary } from "@/server/queries/contacts";
 import type { TimelineItem } from "@/components/patterns/timeline";
 
-export type PipelineView = "open" | "overdue" | "missing-next-action" | "won" | "lost" | "quotes" | "all";
+export type PipelineView = "open" | "overdue" | "missing-next-action" | "won" | "lost" | "quotes" | "all" | "archived";
 
 export interface OpportunityRow {
   id: string;
@@ -36,6 +36,9 @@ export interface OpportunityRow {
   created_at: string;
   updated_at: string;
   has_quote: boolean;
+  version: number;
+  archived_at: string | null;
+  archive_reason: string | null;
 }
 
 function mapRow(o: Record<string, unknown>): OpportunityRow {
@@ -69,6 +72,9 @@ function mapRow(o: Record<string, unknown>): OpportunityRow {
     created_at: o.created_at as string,
     updated_at: o.updated_at as string,
     has_quote: false,
+    version: Number(o.version),
+    archived_at: o.archived_at as string | null,
+    archive_reason: o.archive_reason as string | null,
   };
 }
 
@@ -77,6 +83,7 @@ const SELECT = "*, accounts(name), contacts(display_name)";
 export async function listOpportunities(view: PipelineView): Promise<OpportunityRow[]> {
   const supabase = await createServerSupabase();
   let q = supabase.from("opportunities").select(SELECT).order("next_action_due_at", { ascending: true, nullsFirst: false }).limit(2000);
+  q = view === "archived" ? q.not("archived_at", "is", null) : q.is("archived_at", null);
   const since30 = new Date(Date.now() - 30 * 86400000).toISOString();
   switch (view) {
     case "open":
@@ -119,6 +126,7 @@ export interface OpportunityDetail extends OpportunityRow {
   purchases: PurchaseSummary[];
   timeline: TimelineItem[];
   audit: AuditRow[];
+  photos: { id: string; remark: string; file_name: string; created_at: string; url: string | null }[];
 }
 
 export async function getOpportunityDetail(id: string): Promise<OpportunityDetail | null> {
@@ -126,16 +134,22 @@ export async function getOpportunityDetail(id: string): Promise<OpportunityDetai
   const { data: o } = await supabase.from("opportunities").select(`${SELECT}, projects(name)`).eq("id", id).maybeSingle();
   if (!o) return null;
   const base = mapRow(o as unknown as Record<string, unknown>);
-  const [quotes, { data: events }, { data: tasks }, purchases, timeline, audit] = await Promise.all([
+  const [quotes, { data: events }, { data: tasks }, purchases, timeline, audit, { data: photoRows }] = await Promise.all([
     getQuotesForOpportunities([id], new Map([[id, base.name]])),
     supabase.from("opportunity_stage_events").select("id, from_stage_key, to_stage_key, is_backward, reason, actor_id, occurred_at").eq("opportunity_id", id).order("occurred_at", { ascending: false }),
     supabase.from("tasks").select("id, title, status, due_at, assignee_id, priority").eq("opportunity_id", id).order("due_at", { ascending: true, nullsFirst: false }),
     getPurchasesFor({ opportunity_id: id }),
     getTimeline("opportunity", id),
     getAuditFor([id]),
+    supabase.from("opportunity_photos").select("id,remark,file_name,created_at,object_path").eq("opportunity_id",id).not("uploaded_at","is",null).is("removed_at",null).order("created_at",{ ascending:false }),
   ]);
+  const photos = await Promise.all((photoRows ?? []).map(async (p) => {
+    const { data } = await supabase.storage.from("opportunity-photos").createSignedUrl(p.object_path!,300);
+    return { id:p.id!, remark:p.remark!, file_name:p.file_name!, created_at:p.created_at!, url:data?.signedUrl ?? null };
+  }));
   return {
     ...base,
+    photos,
     has_quote: quotes.length > 0,
     project_name: ((o as unknown as { projects: { name: string } | null }).projects)?.name ?? null,
     quotes,

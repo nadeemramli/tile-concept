@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { ArrowRightLeft, FileText, ListTodo, MessageSquarePlus, Pencil, UserCog } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FormDialog } from "@/features/crm/components/form-dialog";
+import { Field } from "@/components/patterns/field";
+import { Textarea } from "@/components/ui/textarea";
+import { archiveOpportunityAction } from "@/server/commands/opportunities";
+import { OpportunityPhotos } from "./opportunity-photos";
 import { Button } from "@/components/ui/button";
 import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/record-drawer";
 import { StatusPill, TonePill } from "@/components/patterns/status-pill";
@@ -20,15 +26,17 @@ import { EditOpportunityDialog, QuoteVersionDialog, ReassignDialog } from "@/fea
 import { ActivityDialog, TaskDialog } from "@/features/crm/components/dialogs";
 import { PurchasesList, QuotesList } from "@/features/crm/components/detail-sections";
 
-type Which = "stage" | "edit" | "quote" | "activity" | "task" | "reassign" | null;
+type Which = "stage" | "edit" | "quote" | "activity" | "task" | "reassign" | "archive" | null;
 
 export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, onClose }: { opp: OpportunityDetail; stages: StageRef[]; members: MemberOption[]; suggestedQuoteNumber: string; onClose: () => void }) {
+  const router = useRouter();
+  const request = useRef<string | null>(null);
   const { can, session } = useSession();
   const [open, setOpen] = useState<Which>(null);
   const stage = stages.find((s) => s.key === opp.stage_key);
   const names = new Map(members.map((m) => [m.user_id, m.full_name]));
   const isOwner = can("sales.read_all") || !opp.owner_id || opp.owner_id === session.userId;
-  const canWrite = can("sales.write") && isOwner;
+  const canWrite = can("sales.write") && isOwner && !opp.archived_at;
   const closed = opp.status !== "open";
   const stageLabel = (k: string | null) => stages.find((s) => s.key === k)?.label ?? k ?? "—";
   const ownerName = names.get(opp.owner_id ?? "") ?? "its owner";
@@ -37,6 +45,7 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
   /** Role gate first (Gated), then the ownership rule the database also enforces. */
   const write = (node: React.ReactElement<{ disabled?: boolean }>) => {
     if (!can("sales.write")) return <Gated permission="sales.write">{node}</Gated>;
+    if (opp.archived_at) return <DisabledHint reason="Restore this opportunity first.">{React.cloneElement(node, { disabled: true })}</DisabledHint>;
     if (!isOwner) return <DisabledHint reason={OWNER_ONLY}>{React.cloneElement(node, { disabled: true })}</DisabledHint>;
     return node;
   };
@@ -46,6 +55,8 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
       open
       onOpenChange={(o) => !o && onClose()}
       width="xl"
+      autoFocusTitle
+      className="data-[side=right]:w-full"
       title={
         <span className="flex flex-wrap items-center gap-2">
           {opp.name}
@@ -83,6 +94,7 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         </Button>,
       )}
     >
+      {opp.archived_at && <div className="rounded-md border bg-muted p-3 text-sm"><strong>Archived</strong><p>{opp.archive_reason}</p><p className="text-xs">The opportunity and its evidence are retained. Restore it to resume work.</p></div>}
       {closed && (
         <div className={cn("rounded-md border px-3 py-2 text-sm", opp.status === "won" ? "border-success/30 bg-success/10 text-success" : opp.status === "lost" ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-border bg-muted/50")}>
           <span className="font-medium">{titleCase(opp.status)}</span>
@@ -115,11 +127,14 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
           </Button>,
         )}
         <Gated permission="sales.assign">
-          <Button variant="outline" size="sm" onClick={() => setOpen("reassign")}>
+          <Button variant="outline" size="sm" disabled={!!opp.archived_at} onClick={() => setOpen("reassign")} title={opp.archived_at ? "Restore this opportunity first." : undefined}>
             <UserCog className="size-3.5" aria-hidden /> Reassign
           </Button>
         </Gated>
       </div>
+
+      {can("sales.write") && isOwner && <Button variant="outline" size="sm" onClick={() => setOpen("archive")}>{opp.archived_at ? "Restore opportunity" : "Archive opportunity"}</Button>}
+      <DrawerSection title="Photos and remarks"><OpportunityPhotos opp={opp} canWrite={canWrite} /></DrawerSection>
 
       <DrawerSection title="Facts">
         <FactList
@@ -216,9 +231,13 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
           <QuoteVersionDialog open={open === "quote"} onOpenChange={() => setOpen(null)} opp={opp} suggestedNumber={suggestedQuoteNumber} />
           <ActivityDialog open={open === "activity"} onOpenChange={() => setOpen(null)} links={{ opportunity_id: opp.id, contact_id: opp.contact_id ?? undefined, account_id: opp.account_id ?? undefined, project_id: opp.project_id ?? undefined }} />
           <TaskDialog open={open === "task"} onOpenChange={() => setOpen(null)} members={members} links={{ opportunity_id: opp.id, contact_id: opp.contact_id ?? undefined, account_id: opp.account_id ?? undefined, project_id: opp.project_id ?? undefined }} defaultAssignee={session.userId} />
-          {can("sales.assign") && <ReassignDialog open={open === "reassign"} onOpenChange={() => setOpen(null)} oppId={opp.id} members={members} current={opp.owner_id} />}
+          {can("sales.assign") && <ReassignDialog open={open === "reassign"} onOpenChange={() => setOpen(null)} oppId={opp.id} version={opp.version} members={members} current={opp.owner_id} />}
         </>
       )}
+      <FormDialog open={open === "archive"} onOpenChange={() => setOpen(null)} title={opp.archived_at ? "Restore opportunity" : "Archive opportunity"} description="Archiving removes it from active pipeline views and preserves contacts, projects, photos and linked sales. Existing tasks remain available in Tasks. This is reversible." submitLabel={opp.archived_at ? "Restore" : "Archive"}
+        action={async (fd) => { request.current ??= crypto.randomUUID(); return archiveOpportunityAction({ id:opp.id, version:opp.version, request_id:request.current, action:opp.archived_at ? "restore" : "archive", reason:String(fd.get("reason") ?? "") }); }} onSuccess={() => { request.current=null; router.refresh(); }}>
+        <Field label="Reason" htmlFor="archive-reason" required><Textarea id="archive-reason" name="reason" required maxLength={2000} /></Field>
+      </FormDialog>
     </RecordDrawer>
   );
 }

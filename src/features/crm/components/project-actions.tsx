@@ -7,10 +7,11 @@ import { Gated, Hint } from "@/components/patterns/explain";
 import { useSession } from "@/components/shell/session-context";
 import type { ProjectDetail } from "@/server/queries/projects";
 import type { MemberOption } from "@/features/crm/components/selects";
+import { CreateOpportunityDialog } from "@/features/pipeline/components/create-opportunity-dialog";
 import { ActivityDialog, AddSiteDialog, EditProjectDialog, TaskDialog } from "@/features/crm/components/dialogs";
 import { NominateDialog } from "@/features/marketing/components/nominate-dialog";
 
-type Which = "edit" | "activity" | "task" | "site" | "nominate" | null;
+type Which = "edit" | "activity" | "task" | "site" | "nominate" | "opportunity" | null;
 
 export function ProjectActions({ project, members }: { project: ProjectDetail; members: MemberOption[] }) {
   const { session } = useSession();
@@ -18,6 +19,8 @@ export function ProjectActions({ project, members }: { project: ProjectDetail; m
   const links = { project_id: project.id, contact_id: project.contact_id ?? undefined, account_id: project.account_id ?? undefined };
   return (
     <div className="flex flex-wrap gap-2">
+      <Gated permission="sales.write"><Button variant="outline" size="sm" onClick={() => setOpen("opportunity")}>New opportunity</Button></Gated>
+      {open === "opportunity" && <CreateOpportunityDialog open onOpenChange={() => setOpen(null)} members={members} defaults={{ project_id:project.id, contact_id:project.contact_id ?? undefined, contact_name:project.contact_name ?? undefined, account_id:project.account_id ?? undefined, account_name:project.account_name ?? undefined }} />}
       <Gated permission="marketing.write">
         <Hint content="Put this project forward for a testimonial, before/after or site shoot. Marketing reviews readiness and the customer's media permission before anything is booked.">
           <Button variant="outline" size="sm" onClick={() => setOpen("nominate")}>
