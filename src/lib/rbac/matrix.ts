@@ -23,6 +23,9 @@ export const PERMISSIONS = [
   "marketing.read",
   "marketing.write",
   "marketing.confirm",
+  "creative.approve",
+  "creative.publish",
+  "creative.self_approve",
   "marketing.spend.read",
   "marketing.spend.write",
   "marketing.spend.review",
@@ -88,6 +91,9 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   "marketing.read": "See content opportunities and the shoot calendar",
   "marketing.write": "Nominate projects, record customer media permission, hold shoot dates",
   "marketing.confirm": "Confirm crew capacity and mark shoot assets usable",
+  "creative.approve": "Review and approve a specific creative version",
+  "creative.publish": "Record scheduling and publication of approved creative versions",
+  "creative.self_approve": "Approve your own creative submission with an audited decision",
   "marketing.spend.read": "See marketing costs and spending coverage",
   "marketing.spend.write": "Record daily advertising and shared marketing costs",
   "marketing.spend.review": "Correct marketing costs and confirm period coverage",
@@ -107,16 +113,16 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
  * and to render Help & glossary; the database decides.
  */
 export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
-  admin: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "settings.manage", "export.customer"],
+  admin: ["creative.approve", "creative.publish", "creative.self_approve", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "settings.manage", "export.customer"],
   management: ["marketing.spend.read", "sales.read", "sales.read_all", "sales.leads.read_all", "contact.reveal", "catalog.read", "price.read", "stock.read", "marketing.read", "report.read", "audit.read"],
   sales_manager: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "report.read", "audit.read", "export.customer"],
   sales_rep: ["sales.read", "sales.leads.read_all", "sales.write", "contact.reveal", "purchase.write", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "audit.read"],
   showroom: ["sales.read", "sales.leads.read_all", "sales.write", "feedback.send", "purchase.write", "catalog.read", "price.read", "stock.read", "audit.read"],
-  marketing_coordinator: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "marketing.read", "marketing.write", "marketing.confirm", "catalog.read", "audit.read"],
+  marketing_coordinator: ["creative.approve", "creative.publish", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "marketing.read", "marketing.write", "marketing.confirm", "catalog.read", "audit.read"],
   catalog_pricing: ["catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "source.import", "review.approve", "audit.read"],
   stock_coordinator: ["catalog.read", "price.read", "stock.read", "stock.write", "audit.read"],
   analyst: ["marketing.spend.read", "report.read", "catalog.read", "price.read"],
-  guest: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "export.customer"],
+  guest: ["creative.approve", "creative.publish", "creative.self_approve", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "export.customer"],
 };
 
 /** Roles that hold a permission, excluding the demo guest. */
@@ -149,6 +155,9 @@ export const PERMISSION_EXPLAINERS: Record<PermissionKey, string> = {
   "marketing.read": "Marketing coordination needs a marketing, sales, or management role.",
   "marketing.write": "Nominating projects, recording customer media permission and holding shoot dates needs a sales or marketing coordinator role.",
   "marketing.confirm": "Confirming crew capacity and marking shoot assets usable is restricted to marketing coordinators.",
+  "creative.approve": "Creative approval needs the assigned marketing coordinator or an administrator; creators do not receive approval rights automatically.",
+  "creative.publish": "Recording a scheduled or published release needs a marketing coordinator or administrator and an approved version.",
+  "creative.self_approve": "Only administrators may approve their own creative submission. Demo guests may exercise the flow inside the isolated demo workspace.",
   "marketing.spend.read": "Marketing costs are visible to marketing coordinators, sales managers, management, administrators and analysts.",
   "marketing.spend.write": "Recording marketing costs needs a marketing coordinator, sales manager or administrator role.",
   "marketing.spend.review": "Correcting marketing costs and confirming complete coverage needs a marketing coordinator, sales manager or administrator role, with a reason.",
