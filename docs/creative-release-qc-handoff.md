@@ -76,9 +76,19 @@ E2E_BASE_URL=http://localhost:4317 pnpm exec playwright test tests/e2e/smoke.spe
 
 Use fixture admin credentials only against a local seeded stack. For a hosted read-only check, use the official guest button and the guest tests or CLI; do not try fixture admin credentials against production. Keep mutation testing in an isolated local database.
 
+## Integration update
+
+Creative integration has now merged `origin/main` through `faac3aa`, including
+Claude's performance PR #11 and sidebar/handoff PR #12. The original dirty
+checkout remains untouched. The integrated optimized app passed **89** route
+smoke tests, including the newly registered Creative page, on port 4328.
+The historical results above describe the earlier baseline; current Creative
+flow coverage and the unresolved hosted sales-permission interaction are in
+`creative-production-handoff.md`.
+
 ## Claude merge and release checklist
 
-1. Preserve the original `perf/inbox-drawer-and-shell` checkout and any uncommitted work. Compare its diff with the integrated branch; do not reset or overwrite it. Port compatible performance changes in a separate worktree and resolve overlapping Inbox/shell changes explicitly.
+1. Preserve the original `perf/inbox-drawer-and-shell` checkout and any uncommitted work. Its committed performance changes are already on main and integrated here. Compare any further dirty changes explicitly in a separate worktree; do not reset or overwrite them.
 2. Retain the new Inbox lifecycle/attribution fields, follow-up visibility, receipts and walk-in links when merging drawer/query optimizations. Validate both guest and the reported affected role/record volume; the 14-row demo alone is insufficient.
 3. Apply the integrated forward-only migrations in a disposable fixture database, regenerate database types, and run required database permission/scope tests. Never reset the original database containing private corpus data.
 4. Run the app's typecheck, lint, unit checks and the expanded smoke suite. Test an optimized build as well as development when evaluating route/interaction timing; per-route test structure addresses cumulative cold-compile test timeouts without changing product performance claims.

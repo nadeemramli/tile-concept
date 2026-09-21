@@ -217,7 +217,7 @@ export function OpportunityDrawer({
         )}
       </DrawerSection>
 
-      <RelatedCreatives sourceId={detail.id} />
+      <RelatedCreatives sourceId={detail.id} createDisabledReason={["accepted", "scheduled", "completed"].includes(detail.status) ? null : "Accept this content opportunity before creating a creative from it."} />
 
       <DrawerSection title={`Assets (${detail.outputs.length})`}>
         <OutputsList outputs={detail.outputs} contentOpportunityId={detail.id} permissionStatus={detail.permission?.status ?? null} permissionExpiresAt={detail.permission?.expires_at ?? null} />

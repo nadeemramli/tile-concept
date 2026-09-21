@@ -61,3 +61,6 @@ export function creativeHref(current: string, patch: Record<string, string | num
   const query = params.toString();
   return `/marketing/creative${query ? `?${query}` : ""}`;
 }
+
+/** Keep database record identifiers out of the human action hint. */
+export function creativeRiskLabel(risk: string) { return risk.replace(/:\s*[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i, " — check Sources"); }

@@ -11,7 +11,7 @@ import { DisabledHint, Gated } from "@/components/patterns/explain";
 import { useSession } from "@/components/shell/session-context";
 import { formatDate, formatDateTime, titleCase } from "@/lib/format";
 import type { CreativeDetail, CreativeOptions } from "../types";
-import { CHANNEL_LABELS, CREATIVE_CONDITION_META, CREATIVE_STAGE_META, FORMAT_LABELS, LINK_LABELS, PUBLICATION_META, SOURCE_MODE_META, TEMPLATE_META, USE_LABELS } from "../presentation";
+import { CHANNEL_LABELS, CREATIVE_CONDITION_META, CREATIVE_STAGE_META, FORMAT_LABELS, LINK_LABELS, PUBLICATION_META, SOURCE_MODE_META, TEMPLATE_META, creativeRiskLabel, USE_LABELS } from "../presentation";
 import { EditCreativeDialog } from "./creative-forms";
 import { CreativeActionDialog, type CreativeDialogSelection } from "./creative-action-dialog";
 
@@ -43,7 +43,7 @@ export function CreativeDrawer({ detail, options, onClose }: { detail: CreativeD
       <Gated permission="marketing.write"><Button size="sm" variant="outline" onClick={() => setSelection({ action: "condition" })}>Update work status</Button></Gated>
     </div>
     {detail.condition !== "active" && <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm"><p className="font-medium">{detail.blocker_reason ?? CREATIVE_CONDITION_META[detail.condition].label}</p>{detail.next_action && <p className="mt-1">Next: {detail.next_action}</p>}<p className="mt-1 text-xs text-muted-foreground">{names.get(detail.blocker_owner_id ?? "") ?? "No responsible person"} · Review {formatDate(detail.blocker_review_date)}</p></div>}
-    {detail.risks.length > 0 && <div className="rounded-md border border-warning/30 bg-warning/5 p-3"><p className="text-xs font-semibold">Needs attention</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-muted-foreground">{detail.risks.map((risk) => <li key={risk}>{titleCase(risk)}</li>)}</ul></div>}
+    {detail.risks.length > 0 && <div className="rounded-md border border-warning/30 bg-warning/5 p-3"><p className="text-xs font-semibold">Needs attention</p><ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-muted-foreground">{detail.risks.map((risk) => <li key={risk}>{creativeRiskLabel(risk)}</li>)}</ul></div>}
     <Tabs value={tab} onValueChange={setTab} className="min-w-0">
       <div className="max-w-full overflow-x-auto"><TabsList className="w-max"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="brief">Brief & shot plan</TabsTrigger><TabsTrigger value="sources">Sources</TabsTrigger><TabsTrigger value="versions">Versions & review</TabsTrigger><TabsTrigger value="publishing">Publishing</TabsTrigger><TabsTrigger value="activity">Activity</TabsTrigger></TabsList></div>
       <TabsContent value="overview" className="space-y-5 pt-3">

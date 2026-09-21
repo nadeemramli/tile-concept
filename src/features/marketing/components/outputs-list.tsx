@@ -85,7 +85,7 @@ export function OutputsList({
               </span>
               <MarketingPill map={OUTPUT_STATE} value={o.state} />
               <DownloadButton path={o.storage_path} />
-              {contentOpportunityId && <Gated permission="marketing.write"><Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => router.push(`/marketing/creative?new=1&source=${contentOpportunityId}&output=${o.id}${shootId ? `&shoot=${shootId}` : ""}`)}>Use in creative</Button></Gated>}
+              {contentOpportunityId && <DisabledHint reason={!["usable", "restricted"].includes(o.state) ? "Review this asset before using it in a creative." : null}><Gated permission="marketing.write"><Button disabled={!["usable", "restricted"].includes(o.state)} variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={() => router.push(`/marketing/creative?new=1&source=${contentOpportunityId}&output=${o.id}${shootId ? `&shoot=${shootId}` : ""}`)}>Use in creative</Button></Gated></DisabledHint>}
               {o.state !== "usable" &&
                 (blocked ? (
                   <DisabledHint reason={blockedReason}>

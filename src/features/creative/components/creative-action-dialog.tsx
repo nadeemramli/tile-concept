@@ -44,7 +44,7 @@ function SourceFields({ initialOptions }: { initialOptions: CreativeOptions }) {
   }, [query, initialOptions]);
   const options = result.options;
   return <>
-    <Field label="Find a source" htmlFor="source_search" hint="Search accepted content opportunities and shoot titles. Existing relationships retain customer media permission."><Input id="source_search" value={query} onChange={(e) => { setQuery(e.target.value); setSource(""); setShoot(""); }} placeholder="Project or story angle…" /></Field>
+    <Field label="Find a source" htmlFor="source_search" hint="Search accepted content opportunities and shoot titles. Existing relationships retain customer media permission."><Input id="source_search" value={query} onChange={(e) => { setQuery(e.target.value); setSource(""); setShoot(""); }} placeholder="Project or shoot title…" /></Field>
     <p role="status" className="text-xs text-muted-foreground">{isSearching ? "Searching…" : `${options.opportunities.length} of ${options.opportunities_total} opportunities · ${options.bookings.length} of ${options.bookings_total} shoots. Narrow the search if needed.`}</p>
     {result.error && <p role="alert" className="text-xs text-destructive">{result.error}</p>}
     <Field label="Content opportunity" htmlFor="content_opportunity_id"><select id="content_opportunity_id" name="content_opportunity_id" className={CREATIVE_SELECT_CLASS} value={source} onChange={(e) => { setSource(e.target.value); setShoot(""); }} disabled={isSearching}><option value="">Choose an opportunity or a shoot below</option>{options.opportunities.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}</select></Field>
