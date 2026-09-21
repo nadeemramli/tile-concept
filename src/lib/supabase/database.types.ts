@@ -2517,6 +2517,466 @@ export type Database = {
           },
         ]
       }
+      creative_events: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          creative_id: string | null
+          data: Json | null
+          id: string | null
+          occurred_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_id?: string | null
+          creative_id?: string | null
+          data?: Json | null
+          id?: string | null
+          occurred_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_id?: string | null
+          creative_id?: string | null
+          data?: Json | null
+          id?: string | null
+          occurred_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_events_workspace_id_creative_id_fkey"
+            columns: ["workspace_id", "creative_id"]
+            isOneToOne: false
+            referencedRelation: "creative_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      creative_items: {
+        Row: {
+          approved_version_id: string | null
+          blocker_owner_id: string | null
+          blocker_reason: string | null
+          blocker_review_date: string | null
+          brief: Json | null
+          channels: string[] | null
+          condition: string | null
+          created_at: string | null
+          created_by: string | null
+          format: string | null
+          id: string | null
+          next_action: string | null
+          owner_id: string | null
+          phase: string | null
+          priority: string | null
+          production_due: string | null
+          review_due: string | null
+          reviewer_id: string | null
+          revision: number | null
+          rights_confirmed: boolean | null
+          source_mode: string | null
+          source_readiness_note: string | null
+          source_ready: boolean | null
+          template: string | null
+          title: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          approved_version_id?: string | null
+          blocker_owner_id?: string | null
+          blocker_reason?: string | null
+          blocker_review_date?: string | null
+          brief?: Json | null
+          channels?: string[] | null
+          condition?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          format?: string | null
+          id?: string | null
+          next_action?: string | null
+          owner_id?: string | null
+          phase?: string | null
+          priority?: string | null
+          production_due?: string | null
+          review_due?: string | null
+          reviewer_id?: string | null
+          revision?: number | null
+          rights_confirmed?: boolean | null
+          source_mode?: string | null
+          source_readiness_note?: string | null
+          source_ready?: boolean | null
+          template?: string | null
+          title?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          approved_version_id?: string | null
+          blocker_owner_id?: string | null
+          blocker_reason?: string | null
+          blocker_review_date?: string | null
+          brief?: Json | null
+          channels?: string[] | null
+          condition?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          format?: string | null
+          id?: string | null
+          next_action?: string | null
+          owner_id?: string | null
+          phase?: string | null
+          priority?: string | null
+          production_due?: string | null
+          review_due?: string | null
+          reviewer_id?: string | null
+          revision?: number | null
+          rights_confirmed?: boolean | null
+          source_mode?: string | null
+          source_readiness_note?: string | null
+          source_ready?: boolean | null
+          template?: string | null
+          title?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_approved_version_fk"
+            columns: ["id", "approved_version_id"]
+            isOneToOne: false
+            referencedRelation: "creative_versions"
+            referencedColumns: ["creative_id", "id"]
+          },
+          {
+            foreignKeyName: "creative_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "creative_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creative_links: {
+        Row: {
+          access_state: string | null
+          created_at: string | null
+          created_by: string | null
+          creative_id: string | null
+          id: string | null
+          kind: string | null
+          label: string | null
+          removed_at: string | null
+          url: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          access_state?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_id?: string | null
+          id?: string | null
+          kind?: string | null
+          label?: string | null
+          removed_at?: string | null
+          url?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          access_state?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_id?: string | null
+          id?: string | null
+          kind?: string | null
+          label?: string | null
+          removed_at?: string | null
+          url?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_links_workspace_id_creative_id_fkey"
+            columns: ["workspace_id", "creative_id"]
+            isOneToOne: false
+            referencedRelation: "creative_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      creative_publications: {
+        Row: {
+          account_label: string | null
+          cancellation_reason: string | null
+          channel: string | null
+          created_at: string | null
+          created_by: string | null
+          creative_id: string | null
+          external_action_note: string | null
+          external_action_required: boolean | null
+          id: string | null
+          intended_use: string | null
+          live_url: string | null
+          published_at: string | null
+          scheduled_at: string | null
+          scheduling_method: string | null
+          status: string | null
+          target_date: string | null
+          updated_at: string | null
+          version_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          account_label?: string | null
+          cancellation_reason?: string | null
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_id?: string | null
+          external_action_note?: string | null
+          external_action_required?: boolean | null
+          id?: string | null
+          intended_use?: string | null
+          live_url?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          scheduling_method?: string | null
+          status?: string | null
+          target_date?: string | null
+          updated_at?: string | null
+          version_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          account_label?: string | null
+          cancellation_reason?: string | null
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_id?: string | null
+          external_action_note?: string | null
+          external_action_required?: boolean | null
+          id?: string | null
+          intended_use?: string | null
+          live_url?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          scheduling_method?: string | null
+          status?: string | null
+          target_date?: string | null
+          updated_at?: string | null
+          version_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_publications_creative_id_version_id_fkey"
+            columns: ["creative_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "creative_versions"
+            referencedColumns: ["creative_id", "id"]
+          },
+          {
+            foreignKeyName: "creative_publications_workspace_id_creative_id_fkey"
+            columns: ["workspace_id", "creative_id"]
+            isOneToOne: false
+            referencedRelation: "creative_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      creative_reviews: {
+        Row: {
+          creative_id: string | null
+          decision: string | null
+          id: string | null
+          notes: string | null
+          restrictions_confirmed: boolean | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          version_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          creative_id?: string | null
+          decision?: string | null
+          id?: string | null
+          notes?: string | null
+          restrictions_confirmed?: boolean | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          version_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          creative_id?: string | null
+          decision?: string | null
+          id?: string | null
+          notes?: string | null
+          restrictions_confirmed?: boolean | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          version_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_reviews_creative_id_version_id_fkey"
+            columns: ["creative_id", "version_id"]
+            isOneToOne: false
+            referencedRelation: "creative_versions"
+            referencedColumns: ["creative_id", "id"]
+          },
+          {
+            foreignKeyName: "creative_reviews_workspace_id_creative_id_fkey"
+            columns: ["workspace_id", "creative_id"]
+            isOneToOne: false
+            referencedRelation: "creative_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      creative_sources: {
+        Row: {
+          added_at: string | null
+          added_by: string | null
+          booking_ends_at: string | null
+          booking_starts_at: string | null
+          content_opportunity_id: string | null
+          creative_id: string | null
+          id: string | null
+          removed_at: string | null
+          shoot_booking_id: string | null
+          shoot_output_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          added_at?: string | null
+          added_by?: string | null
+          booking_ends_at?: string | null
+          booking_starts_at?: string | null
+          content_opportunity_id?: string | null
+          creative_id?: string | null
+          id?: string | null
+          removed_at?: string | null
+          shoot_booking_id?: string | null
+          shoot_output_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          added_at?: string | null
+          added_by?: string | null
+          booking_ends_at?: string | null
+          booking_starts_at?: string | null
+          content_opportunity_id?: string | null
+          creative_id?: string | null
+          id?: string | null
+          removed_at?: string | null
+          shoot_booking_id?: string | null
+          shoot_output_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_sources_content_opportunity_id_fkey"
+            columns: ["content_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "content_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_sources_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_sources_shoot_booking_id_fkey"
+            columns: ["shoot_booking_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_calendar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_sources_shoot_output_id_fkey"
+            columns: ["shoot_output_id"]
+            isOneToOne: false
+            referencedRelation: "shoot_outputs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_sources_workspace_id_creative_id_fkey"
+            columns: ["workspace_id", "creative_id"]
+            isOneToOne: false
+            referencedRelation: "creative_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      creative_versions: {
+        Row: {
+          brief_snapshot: Json | null
+          creative_id: string | null
+          export_label: string | null
+          final_url: string | null
+          id: string | null
+          notes: string | null
+          review_url: string | null
+          source_snapshot: Json | null
+          submitted_at: string | null
+          submitted_by: string | null
+          version_no: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          brief_snapshot?: Json | null
+          creative_id?: string | null
+          export_label?: string | null
+          final_url?: string | null
+          id?: string | null
+          notes?: string | null
+          review_url?: string | null
+          source_snapshot?: Json | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          version_no?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          brief_snapshot?: Json | null
+          creative_id?: string | null
+          export_label?: string | null
+          final_url?: string | null
+          id?: string | null
+          notes?: string | null
+          review_url?: string | null
+          source_snapshot?: Json | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          version_no?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_versions_workspace_id_creative_id_fkey"
+            columns: ["workspace_id", "creative_id"]
+            isOneToOne: false
+            referencedRelation: "creative_items"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
       current_variant_prices: {
         Row: {
           amount: number | null
@@ -10699,6 +11159,20 @@ export type Database = {
       }
       create_manual_inquiry: {
         Args: { p_input: Json; p_request_id: string }
+        Returns: Json
+      }
+      creative_command: {
+        Args: {
+          p_action: string
+          p_data?: Json
+          p_expected_revision?: number
+          p_id?: string
+          p_request_id?: string
+        }
+        Returns: Json
+      }
+      creative_query: {
+        Args: { p_filters?: Json; p_id?: string; p_mode: string }
         Returns: Json
       }
       entity_timeline: {
