@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getLocations, getMemberMap } from "@/server/queries/reference";
+import type { Database } from "@/lib/supabase/database.types";
 import type { OpenOpportunityRef, PurchaseRow, VisitRow } from "@/features/walkins/types";
 
 async function nameMaps(contactIds: string[], accountIds: string[]) {
@@ -18,14 +19,9 @@ async function nameMaps(contactIds: string[], accountIds: string[]) {
 
 const uniq = (xs: (string | null | undefined)[]) => Array.from(new Set(xs.filter((x): x is string => !!x)));
 
-export async function listVisits(limit = 500): Promise<VisitRow[]> {
-  const supabase = await createServerSupabase();
-  const { data } = await supabase
-    .from("visits")
-    .select("id, occurred_at, location_id, staff_user_id, contact_id, account_id, lead_id, opportunity_id, customer_type, origin_area, renovation_area, inquiry_source, purpose, quotation_ref, quotation_amount, is_new_customer, notes")
-    .order("occurred_at", { ascending: false })
-    .limit(limit);
-  const rows = data ?? [];
+type VisitRecord = Database["api"]["Views"]["visits"]["Row"];
+
+async function hydrateVisits(rows: VisitRecord[]): Promise<VisitRow[]> {
   const [names, members, locations] = await Promise.all([nameMaps(uniq(rows.map((r) => r.contact_id)), []), getMemberMap(), getLocations()]);
   const locMap = new Map(locations.map((l) => [l.id, l.name]));
   return rows.map((r) => ({
@@ -39,6 +35,9 @@ export async function listVisits(limit = 500): Promise<VisitRow[]> {
     contact_name: r.contact_id ? (names.contact.get(r.contact_id) ?? null) : null,
     account_id: r.account_id,
     lead_id: r.lead_id,
+    inquiry_link_state: r.inquiry_link_state ?? "legacy",
+    inquiry_link_reason: r.inquiry_link_reason,
+    inquiry_link_version: r.inquiry_link_version ?? 0,
     opportunity_id: r.opportunity_id,
     customer_type: r.customer_type,
     origin_area: r.origin_area,
@@ -52,23 +51,58 @@ export async function listVisits(limit = 500): Promise<VisitRow[]> {
   }));
 }
 
-export async function getVisit(id: string): Promise<VisitRow | null> {
-  const all = await listVisits(500);
-  const hit = all.find((v) => v.id === id);
-  if (hit) return hit;
+export async function listVisits(limit = 500): Promise<VisitRow[]> {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("visits").select("id").eq("id", id).maybeSingle();
-  return data ? (await listVisits(5000)).find((v) => v.id === id) ?? null : null;
+  const { data, error } = await supabase.from("visits").select("*").order("occurred_at", { ascending: false }).order("id").limit(limit);
+  if (error) throw error;
+  return hydrateVisits(data ?? []);
 }
 
-export async function listPurchases(limit = 500): Promise<PurchaseRow[]> {
+export async function getVisitPage(requestedPage: number, needsLinking: boolean) {
   const supabase = await createServerSupabase();
-  const { data } = await supabase
-    .from("purchases")
-    .select("id, purchased_at, external_ref, contact_id, account_id, opportunity_id, project_id, visit_id, amount, currency, purchase_source, location_id, salesperson_id, is_repeat, status, notes")
-    .order("purchased_at", { ascending: false })
-    .limit(limit);
-  const rows = data ?? [];
+  let totalQuery = supabase.from("visits").select("id", { count: "exact", head: true });
+  if (needsLinking) totalQuery = totalQuery.eq("inquiry_link_state", "needs_linking");
+  const { count, error: countError } = await totalQuery;
+  if (countError) throw countError;
+  const total = count ?? 0;
+  const page = Math.min(Math.max(1, requestedPage), Math.max(1, Math.ceil(total / 25)));
+  let query = supabase.from("visits").select("*").order("occurred_at", { ascending: false }).order("id").range((page - 1) * 25, page * 25 - 1);
+  if (needsLinking) query = query.eq("inquiry_link_state", "needs_linking");
+  const { data, error } = await query;
+  if (error) throw error;
+  return { rows: await hydrateVisits(data ?? []), total, page };
+}
+
+export async function getVisit(id: string): Promise<VisitRow | null> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.from("visits").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? (await hydrateVisits([data]))[0] : null;
+}
+
+export async function getVisitLinkHistory(id: string) {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.from("activities").select("id, occurred_at, body")
+    .eq("visit_id", id).eq("subject", "Visit inquiry link corrected").order("occurred_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ id: String(r.id), occurred_at: String(r.occurred_at), reason: r.body ?? "" }));
+}
+
+export async function listPurchases(limit = 500, filter?: { visitIds?: string[]; id?: string }): Promise<PurchaseRow[]> {
+  const supabase = await createServerSupabase();
+  if (filter?.visitIds?.length === 0) return [];
+  const rows: Database["api"]["Views"]["purchases"]["Row"][] = [];
+  // Visit drawers must also find older purchases outside the recent ledger.
+  for (let offset = 0; ; offset += 500) {
+    let query = supabase.from("purchases").select("*").order("purchased_at", { ascending: false }).order("id");
+    if (filter?.visitIds) query = query.in("visit_id", filter.visitIds);
+    if (filter?.id) query = query.eq("id", filter.id);
+    query = filter ? query.range(offset, offset + 499) : query.limit(limit);
+    const { data, error } = await query;
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!filter || (data?.length ?? 0) < 500) break;
+  }
   const ids = rows.map((r) => String(r.id));
   const [names, members, locations, pays, items] = await Promise.all([
     nameMaps(uniq(rows.map((r) => r.contact_id)), uniq(rows.map((r) => r.account_id))),
@@ -120,7 +154,7 @@ export async function listPurchases(limit = 500): Promise<PurchaseRow[]> {
 }
 
 export async function getPurchase(id: string): Promise<PurchaseRow | null> {
-  return (await listPurchases(500)).find((p) => p.id === id) ?? null;
+  return (await listPurchases(1, { id }))[0] ?? null;
 }
 
 export async function getOpenOpportunitiesForContact(contactId: string): Promise<OpenOpportunityRef[]> {

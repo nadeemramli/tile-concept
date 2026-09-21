@@ -30,9 +30,13 @@ export const purchaseSchema = z.object({
 });
 
 export const walkInSchema = z.object({
+  request_id: uuid(),
+  inquiry_mode: z.enum(["automatic", "choose", "new", "unlinked"]).default("automatic"),
+  inquiry_lead_id: uuid().optional().or(z.literal("")),
+  inquiry_reason: z.string().trim().max(1000).optional(),
   contact_id: uuid(),
   account_id: uuid().optional().or(z.literal("")),
-  occurred_at: z.string().min(1),
+  occurred_at: z.iso.datetime({ offset: true }),
   location_id: uuid().optional().or(z.literal("")),
   staff_user_id: uuid().optional().or(z.literal("")),
   customer_type: z.enum(CUSTOMER_TYPES).optional().or(z.literal("")),
@@ -49,6 +53,10 @@ export const walkInSchema = z.object({
   project_name: z.string().trim().max(200).optional().or(z.literal("")),
   opportunity_name: z.string().trim().max(200).optional().or(z.literal("")),
   purchase: purchaseSchema.nullable().default(null),
+}).superRefine((v, ctx) => {
+  if (v.inquiry_mode === "choose" && !v.inquiry_lead_id) ctx.addIssue({ code: "custom", path: ["inquiry_lead_id"], message: "Choose the original inquiry." });
+  if (["choose", "new"].includes(v.inquiry_mode) && (v.inquiry_reason?.length ?? 0) < 5) ctx.addIssue({ code: "custom", path: ["inquiry_reason"], message: "Explain the inquiry decision (at least 5 characters)." });
+  if (v.opportunity_mode === "link" && !v.opportunity_id) ctx.addIssue({ code: "custom", path: ["opportunity_id"], message: "Choose an opportunity." });
 });
 export type WalkInInput = z.input<typeof walkInSchema>;
 export type WalkInParsed = z.output<typeof walkInSchema>;

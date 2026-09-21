@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Phone, Plus, Trash2, UserPlus, UserSearch } from "lucide-react";
@@ -21,10 +21,10 @@ import { normalizePhone } from "@/lib/identity/normalize";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
 import { createWalkInContactAction, findCandidatesAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
-import { createContactForLeadAction } from "@/server/commands/leads";
+import { EMPTY_INQUIRY_CHOICE, InquiryLinkChoice } from "./inquiry-link-choice";
 import { CUSTOMER_TYPES, PAYMENT_METHODS, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
 import type { IdentityCandidate } from "@/features/inbox/types";
-import type { OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
+import type { InquiryChoice, OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
 import type { ProfileRef } from "@/server/queries/reference";
 
 const SOURCES = ["walk_in", "tiktok", "meta", "website", "whatsapp", "dm", "call", "email", "referral", "other"] as const;
@@ -35,15 +35,17 @@ interface Payment { method: (typeof PAYMENT_METHODS)[number]; amount: string; re
 interface Item { description: string; quantity: string; unit: string; unit_price: string }
 
 function localNow() {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 16);
+  return new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 19);
 }
 
 export function WalkInWizard({ locations, members }: { locations: { id: string; name: string }[]; members: ProfileRef[] }) {
   const { session } = useSession();
   const [step, setStep] = useState(0);
   const [pending, start] = useTransition();
+  const saving = useRef(false);
+  const selectedCustomer = useRef<string | null>(null);
+  const retry = useRef<{ payload: string; id: string } | null>(null);
+  const [inquiryChoice, setInquiryChoice] = useState<InquiryChoice>(EMPTY_INQUIRY_CHOICE);
 
   // step 1
   const [phone, setPhone] = useState("");
@@ -55,7 +57,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [contact, setContact] = useState<{ id: string; name: string; lifecycle?: string | null; isNew: boolean } | null>(null);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<string>("homeowner");
-  /** An unlinked enquiry the customer picked: the new contact is created from it and the enquiry linked. */
+  /** A prior inquiry selected at identity confirmation; saved with the visit. */
   const [fromLead, setFromLead] = useState<IdentityCandidate | null>(null);
   const [accountId, setAccountId] = useState<string>("");
   const [openOpps, setOpenOpps] = useState<OpenOpportunityRef[]>([]);
@@ -104,6 +106,11 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
         return;
       }
       setCandidates(r.data);
+      setFromLead(null);
+      setContact(null);
+      selectedCustomer.current = null;
+      setAccountId("");
+      setInquiryChoice(EMPTY_INQUIRY_CHOICE);
       setStep(1);
     });
   }
@@ -118,41 +125,53 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       // They enquired before but were never registered: register them now from
       // the enquiry so its phone, email, history and salesperson stay attached.
       setFromLead(c);
+      setContact(null); selectedCustomer.current = null;
+      setInquiryChoice(EMPTY_INQUIRY_CHOICE);
+      setOppId(""); setOppMode("none"); setOpenOpps([]);
       if (c.display_name && c.display_name !== "Enquiry") setNewName(c.display_name);
-      toast.info("Register the customer below. The enquiry will be linked to the new contact.");
+      toast.info("Register the customer below, then confirm the original inquiry with the visit.");
       return;
     }
     setContact({ id: c.entity_id, name: c.display_name, lifecycle: c.lifecycle_state, isNew: false });
+    selectedCustomer.current = c.entity_id;
+    setFromLead(null);
+    setInquiryChoice(EMPTY_INQUIRY_CHOICE);
+    setOppId(""); setOppMode("none"); setOpenOpps([]);
     start(async () => {
       const r = await getOpenOpportunitiesAction(c.entity_id);
-      if (r.ok) setOpenOpps(r.data);
+      if (r.ok && selectedCustomer.current === c.entity_id) setOpenOpps(r.data);
     });
     setStep(2);
   }
 
   function createContact(provisional: boolean) {
     start(async () => {
-      const r = fromLead
-        ? await createContactForLeadAction({ lead_id: fromLead.entity_id, display_name: newName, customer_type: newType })
-        : await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, source, provisional });
+      const r = await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, provisional });
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
       toast.success(r.message);
       setContact({ id: r.data.contact_id, name: newName.trim(), lifecycle: "new", isNew: true });
+      selectedCustomer.current = r.data.contact_id;
       setCustomerType(newType);
       setOpenOpps([]);
+      setOppId(""); setOppMode("none");
+      setInquiryChoice(fromLead ? { mode: "choose", leadId: fromLead.entity_id, reason: "" } : EMPTY_INQUIRY_CHOICE);
       setStep(2);
     });
   }
 
   function submit() {
-    if (!contact) return;
+    if (!contact || saving.current) return;
     const input: WalkInInput = {
+      request_id: retry.current?.id ?? crypto.randomUUID(),
+      inquiry_mode: inquiryChoice.mode,
+      inquiry_lead_id: inquiryChoice.leadId,
+      inquiry_reason: inquiryChoice.reason,
       contact_id: contact.id,
       account_id: accountId,
-      occurred_at: occurredAt,
+      occurred_at: `${occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt}+08:00`,
       location_id: locationId,
       staff_user_id: staffId,
       customer_type: customerType as WalkInInput["customer_type"],
@@ -178,24 +197,30 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           }
         : null,
     };
+    const payload = JSON.stringify({ ...input, request_id: undefined });
+    if (retry.current?.payload !== payload) retry.current = { payload, id: crypto.randomUUID() };
+    input.request_id = retry.current.id;
     const check = walkInSchema.safeParse(input);
     if (!check.success) {
       const issue = check.error.issues[0];
       toast.error(issue ? `${issue.path.join(".") || "Form"}: ${issue.message}` : "Check the details.");
       return;
     }
+    saving.current = true;
     start(async () => {
-      const r = await recordWalkInAction(input);
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
-      toast.success(r.message);
-      setResult(r.data);
+      try {
+        const r = await recordWalkInAction(input);
+        if (!r.ok) { toast.error(r.error); return; }
+        toast.success(r.message);
+        setResult(r.data);
+      } catch {
+        toast.error("The save result could not be confirmed. Retry with the same details; the visit will not be recorded twice.");
+      } finally { saving.current = false; }
     });
   }
 
   function reset() {
+    retry.current = null; selectedCustomer.current = null; setFromLead(null); setInquiryChoice(EMPTY_INQUIRY_CHOICE);
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
     setOccurredAt(localNow()); setArea(""); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
     setHasPurchase(false); setOrc(""); setAmount(""); setPayments([{ method: "cash", amount: "", reference: "" }]); setItems([]); setResult(null);
@@ -215,7 +240,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
         </div>
         <div className="flex flex-wrap gap-2">
           {result.new_customer ? (
-            <TonePill tone="info" label="New customer" size="md" hint="A new contact was created for this visit. Any duplicate suggestions go to Identity Review; nothing is merged automatically." />
+            <TonePill tone="info" label="New customer" size="md" hint="This is the first recorded showroom visit for this customer. Their earlier inquiries remain linked." />
           ) : (
             <TonePill tone="ai" label="Existing customer · repeat signal kept" size="md" hint="The visit was attached to a customer already in the app, so their history and repeat status carry on." />
           )}
@@ -223,6 +248,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           {result.opportunity_id && <TonePill tone="info" label="Opportunity linked" size="md" hint="The visit was linked to a pipeline opportunity, so it shows on that opportunity's timeline." />}
         </div>
         <ul className="space-y-1 text-sm">
+          <li>{result.inquiry_link_state === "needs_linking" ? "Needs linking: this visit is saved for inquiry review." : "Original inquiry linked. Acquisition source and salesperson preserved."}</li>
+          {result.lead_id && <li><Link href={`/sales/inbox?view=all&lead=${result.lead_id}`} className="text-info hover:underline">Open original inquiry</Link></li>}
           <li><Link href={`/sales/contacts/${contact?.id}`} className="text-info hover:underline">Open {contact?.name}’s 360</Link></li>
           {result.opportunity_id && <li><Link href={`/sales/pipeline?opportunity=${result.opportunity_id}`} className="text-info hover:underline">Open opportunity</Link></li>}
           {result.purchase_id && <li><Link href={`/sales/walk-ins?tab=purchases&purchase=${result.purchase_id}`} className="text-info hover:underline">Open purchase</Link></li>}
@@ -296,7 +323,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             {fromLead && (
               <p className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-ai/25 bg-ai/5 px-2 py-1.5 text-xs">
                 <span>
-                  Creates the contact with the phone and email from the enquiry, and links that enquiry, its history and its salesperson to the new record.
+                  Creates a customer with the phone and email you entered. Confirm the inquiry on the Review step; its source and salesperson are preserved when the visit is saved.
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setFromLead(null)}>
                   Register without the enquiry
@@ -345,7 +372,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <Button variant="ghost" size="sm" className="ml-auto h-6 px-2 text-xs" onClick={() => setStep(1)}>Change</Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Date & time" required><Input type="datetime-local" className="h-9" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} /></Field>
+            <Field label="Date & time (Malaysia)" required><Input step="1" type="datetime-local" className="h-9" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} /></Field>
             <Field label="Showroom / location">
               <Select value={locationId} onValueChange={setLocationId}>
                 <SelectTrigger className="h-9"><SelectValue placeholder="Location" /></SelectTrigger>
@@ -492,6 +519,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       {/* Step 5 */}
       {step === 4 && contact && (
         <Card className="space-y-4 p-4">
+          <InquiryLinkChoice key={`${contact.id}:${occurredAt}`} contactId={contact.id} occurredAt={`${occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt}+08:00`} value={inquiryChoice} onChange={setInquiryChoice} />
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
             <Row label="Customer" value={contact.name} />
             <Row label="When" value={occurredAt.replace("T", " ")} />
@@ -500,7 +528,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <Row label="Type" value={titleCase(customerType)} />
             <Row label="From" value={area || "—"} />
             <Row label="Area / renovation" value={renovationArea || "—"} />
-            <Row label="Source" value={statusMeta(SOURCE_CHANNEL, source).label} />
+            <Row label="How they heard (reported)" value={statusMeta(SOURCE_CHANNEL, source).label} />
             <Row label="Purpose" value={titleCase(purpose)} />
             <Row label="Quotation" value={sqNumber || quotationAmount ? `${sqNumber || "—"}${quotationAmount ? ` · ${formatMoney(Number(quotationAmount))}` : ""}` : "—"} />
             <Row label="Interest" value={interest.map((i) => INTEREST_LABEL[i]).join(", ") || "—"} />

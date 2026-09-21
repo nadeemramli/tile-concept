@@ -3,7 +3,7 @@ import { uuid } from "@/lib/zod";
 
 export const SOURCE_CHANNELS = ["tiktok", "meta", "website", "whatsapp", "dm", "call", "email", "referral", "walk_in", "other"] as const;
 export const PRODUCT_INTERESTS = ["wall_panel", "tile", "cut_tile", "mosaic", "finishing", "accessory"] as const;
-export const LEAD_VIEWS = ["needs-action", "new", "waiting", "replied", "contacted", "unassigned", "mine", "no-response", "follow-up", "follow-ups-due", "upcoming", "follow-ups-completed", "duplicates", "qualified", "disqualified", "all", "aging"] as const;
+export const LEAD_VIEWS = ["needs-action", "new", "waiting", "replied", "contacted", "unassigned", "mine", "no-response", "follow-up", "follow-ups-due", "upcoming", "follow-ups-completed", "duplicates", "qualified", "disqualified", "all", "aging", "showroom"] as const;
 export type LeadView = (typeof LEAD_VIEWS)[number];
 
 export const newInquirySchema = z.object({

@@ -11,6 +11,7 @@ import type { LeadView } from "@/features/inbox/schema";
 export const VIEW_LABELS: Record<LeadView, string> = {
   "needs-action": "Needs action",
   replied: "Customer replied",
+  showroom: "Visited showroom",
   upcoming: "Upcoming",
   "follow-ups-completed": "Completed follow-ups",
   new: "New",
@@ -38,6 +39,7 @@ export interface LeadLocation {
   duplicate_of_lead_id: string | null;
   created_at: string;
   first_customer_reply_at?: string | null;
+  first_showroom_at?: string | null;
 }
 
 export interface Whereabouts {
@@ -82,6 +84,7 @@ export function whereIsLead(lead: LeadLocation, userId: string, now: Date = new 
       home = "all";
   }
   const also: LeadView[] = [];
+  if (lead.first_showroom_at) also.push("showroom");
   if (lead.first_customer_reply_at && !["disqualified", "duplicate"].includes(lead.status)) home = "replied";
   if (lead.owner_id === userId && (ACTIVE.has(lead.status) || ["qualified", "converted"].includes(lead.status))) also.push("mine");
   if (lead.owner_id === null && (ACTIVE.has(lead.status) || ["qualified", "converted"].includes(lead.status))) also.push("unassigned");

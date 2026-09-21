@@ -87,6 +87,11 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
           <div><span className="text-muted-foreground">First WhatsApp sent</span><p>{lead.first_whatsapp_sent_at ? formatDateTime(lead.first_whatsapp_sent_at) : "Not recorded"}</p></div>
           <div><span className="text-muted-foreground">First customer reply</span><p>{lead.first_customer_reply_at ? formatDateTime(lead.first_customer_reply_at) : "Not recorded"}</p></div>
         </div>
+        <div className="border-t pt-2 text-sm">
+          <p className="font-medium">{lead.first_showroom_at ? `Visited showroom · ${lead.showroom_visits} visit${lead.showroom_visits === 1 ? "" : "s"}` : "Showroom visit not recorded"}</p>
+          {lead.first_showroom_at && <p className="text-xs text-muted-foreground">First visit: {formatDateTime(lead.first_showroom_at)}. Repeat visits count once as an inquiry conversion.</p>}
+          <Button asChild size="sm" variant="outline" className="mt-2"><a href="/sales/walk-ins/new">Record showroom visit</a></Button>
+        </div>
         {!closed && <div className="flex flex-wrap gap-2">
           {(["whatsapp_sent", "customer_replied", "no_response", "contact_attempt"] as const).map((key) => (
             <Button key={key} size="sm" variant={key === "customer_replied" ? "default" : "outline"} disabled={!canWrite || pending} onClick={() => open(key)}>{LABELS[key]}</Button>

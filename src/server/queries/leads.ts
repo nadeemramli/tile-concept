@@ -39,6 +39,8 @@ function mapLead(r: RawLead, ownerName: string | null): LeadRow {
     follow_up_owner_id: (r.follow_up_owner_id as string | null) ?? null,
     open_follow_ups: Number(r.open_follow_ups ?? 0),
     completed_follow_ups: Number(r.completed_follow_ups ?? 0),
+    first_showroom_at: (r.first_showroom_at as string | null) ?? null,
+    showroom_visits: Number(r.showroom_visits ?? 0),
     first_whatsapp_sent_at: (r.first_whatsapp_sent_at as string | null) ?? null,
     first_customer_reply_at: (r.first_customer_reply_at as string | null) ?? null,
     first_whatsapp_reply_at: (r.first_whatsapp_reply_at as string | null) ?? null,

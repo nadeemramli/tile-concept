@@ -28,6 +28,8 @@ export interface LeadRow {
   follow_up_owner_id: string | null;
   open_follow_ups: number;
   completed_follow_ups: number;
+  first_showroom_at: string | null;
+  showroom_visits: number;
   first_whatsapp_sent_at: string | null;
   first_customer_reply_at: string | null;
   first_whatsapp_reply_at: string | null;

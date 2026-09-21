@@ -3400,6 +3400,7 @@ export type Database = {
           first_customer_reply_at: string | null
           first_response_at: string | null
           first_response_due_at: string | null
+          first_showroom_at: string | null
           first_whatsapp_reply_at: string | null
           first_whatsapp_sent_at: string | null
           follow_up_owner_id: string | null
@@ -3424,6 +3425,7 @@ export type Database = {
           raw_name: string | null
           raw_phone: string | null
           raw_phone_normalized: string | null
+          showroom_visits: number | null
           source_channel: string | null
           source_detail: string | null
           status: string | null
@@ -9782,6 +9784,9 @@ export type Database = {
           created_by: string | null
           customer_type: string | null
           id: string | null
+          inquiry_link_reason: string | null
+          inquiry_link_state: string | null
+          inquiry_link_version: number | null
           inquiry_source: string | null
           is_new_customer: boolean | null
           lead_id: string | null
@@ -9805,6 +9810,9 @@ export type Database = {
           created_by?: string | null
           customer_type?: string | null
           id?: string | null
+          inquiry_link_reason?: string | null
+          inquiry_link_state?: string | null
+          inquiry_link_version?: number | null
           inquiry_source?: string | null
           is_new_customer?: boolean | null
           lead_id?: string | null
@@ -9828,6 +9836,9 @@ export type Database = {
           created_by?: string | null
           customer_type?: string | null
           id?: string | null
+          inquiry_link_reason?: string | null
+          inquiry_link_state?: string | null
+          inquiry_link_version?: number | null
           inquiry_source?: string | null
           is_new_customer?: boolean | null
           lead_id?: string | null
@@ -10469,6 +10480,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_showroom_visit: {
+        Args: { p_input: Json; p_request_id: string }
+        Returns: Json
+      }
       record_supplier_availability: {
         Args: {
           p_availability: string
@@ -10666,6 +10681,16 @@ export type Database = {
         Args: { p_case_id: string; p_notes: string; p_status: string }
         Returns: undefined
       }
+      resolve_visit_inquiry: {
+        Args: {
+          p_expected_version?: number
+          p_lead_id?: string
+          p_mode: string
+          p_reason?: string
+          p_visit_id: string
+        }
+        Returns: undefined
+      }
       reveal_contact_points: {
         Args: { p_contact_id: string }
         Returns: {
@@ -10751,6 +10776,10 @@ export type Database = {
           p_title?: string
         }
         Returns: string
+      }
+      walk_in_inquiries: {
+        Args: { p_contact_id: string; p_occurred_at?: string }
+        Returns: Json
       }
       work_inquiry: {
         Args: {

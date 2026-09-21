@@ -102,7 +102,9 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
     (typeof latestPayload?.form_name === "string" && latestPayload.form_name) ||
     (typeof latestPayload?.campaign_name === "string" && latestPayload.campaign_name) ||
     lead.source_detail;
-  const responseLine = lead.first_response_at
+  const responseLine = lead.first_showroom_at
+    ? `visited showroom ${formatRelative(lead.first_showroom_at)}`
+    : lead.first_response_at
     ? `first contacted ${formatRelative(lead.first_response_at)}`
     : lead.contact_attempts > 0
       ? `${lead.contact_attempts} attempt${lead.contact_attempts === 1 ? "" : "s"}, no reply yet`

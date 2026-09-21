@@ -1,6 +1,6 @@
 # Inquiry operations — first reporting foundation
 
-This branch implements the first bounded delivery (F1) of the marketing funnel scope approved for development on 21 September 2026. It does not yet implement showroom matching, sale/receipt capture, marketing expenses or the funnel dashboard. No hosted migration or production rollout has been performed.
+This document records the first bounded delivery (F1, commit `10fe5e7`) of the marketing funnel scope approved for development on 21 September 2026. The branch now also includes [F2 walk-in linkage](walk-in-linkage-handoff.md). Sale/receipt capture, marketing expenses and the funnel dashboard remain later packages. No hosted migration or production rollout has been performed.
 
 ## Result
 
@@ -60,4 +60,4 @@ Report reproducible findings against the exact commit. Resolve findings before r
 
 ## Remaining delivery
 
-F2 links confirmed walk-ins to the original inquiry without guessing ambiguous phone matches. F3 separates recorded sale value from collections and adds receipt evidence. F4 adds daily/event marketing expenses. F5 builds the reconciled business-period and lead-cohort dashboard. The accepted reporting basis remains recorded sales for MER, with collections separate; sample redacted business documents are still needed to settle historical sale/collection and tax mappings.
+F2 is now implemented locally; see [its review handoff](walk-in-linkage-handoff.md). F3 separates recorded sale value from collections and adds receipt evidence. F4 adds daily/event marketing expenses. F5 builds the reconciled business-period and lead-cohort dashboard. The accepted reporting basis remains recorded sales for MER, with collections separate; sample redacted business documents are still needed to settle historical sale/collection and tax mappings.

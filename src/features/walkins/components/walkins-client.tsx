@@ -23,6 +23,7 @@ import { formatDateTime, formatMoney, formatRelative, titleCase } from "@/lib/fo
 import { useSession } from "@/components/shell/session-context";
 import { correctPurchaseAction } from "@/server/commands/walkins";
 import type { PurchaseRow, VisitRow } from "@/features/walkins/types";
+import { VisitInquiryLink } from "./visit-inquiry-link";
 
 /** Column meanings follow the showroom Daily Tracker sheet the team already knows. */
 const HINTS = {
@@ -49,22 +50,27 @@ const HINTS = {
 } as const;
 
 interface Props {
+  selectedVisit: VisitRow | null;
+  linkHistory: { id: string; occurred_at: string; reason: string }[];
+  visitPage: number;
+  visitTotal: number;
+  needsLinking: boolean;
   tab: "visits" | "purchases";
   visits: VisitRow[];
   purchases: PurchaseRow[];
   counts: { visitsToday: number; visits7d: number; purchases7d: number; repeat7d: number };
 }
 
-export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
+export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, linkHistory, visitPage, visitTotal, needsLinking }: Props) {
   const router = useRouter();
   const { can, session } = useSession();
   const [, setTab] = useQueryState("tab", { shallow: false });
-  const [visitId, setVisitId] = useQueryState("visit");
+  const [visitId, setVisitId] = useQueryState("visit", { shallow: false });
   const [purchaseId, setPurchaseId] = useQueryState("purchase");
   const [correcting, setCorrecting] = useState(false);
   const [pending, start] = useTransition();
 
-  const visit = visits.find((v) => v.id === visitId) ?? null;
+  const visit = selectedVisit?.id === visitId ? selectedVisit : visits.find((v) => v.id === visitId) ?? null;
   const purchase = purchases.find((p) => p.id === purchaseId) ?? null;
 
   // The Daily Tracker shows the day's collection (ORC + amount) on the same
@@ -82,6 +88,7 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
     () => [
       { accessorKey: "occurred_at", header: "Date", cell: ({ row }) => <span className="tnum" title={formatDateTime(row.original.occurred_at)}>{formatRelative(row.original.occurred_at)}</span> },
       { accessorKey: "staff_name", header: "SMP", meta: { hint: HINTS.smp }, cell: ({ row }) => row.original.staff_name ?? "—" },
+      { accessorKey: "inquiry_link_state", header: "Inquiry link", meta: { hint: "Linked visits retain the inquiry’s acquisition source. Needs linking visits await staff review. Legacy links have not been inferred or reassigned." }, cell: ({ row }) => <TonePill tone={row.original.inquiry_link_state === "needs_linking" ? "warning" : "neutral"} label={titleCase(row.original.inquiry_link_state)} hint={row.original.inquiry_link_state === "needs_linking" ? "Open this visit to resolve its original inquiry." : "Open this visit to inspect or correct the inquiry link."} /> },
       {
         accessorKey: "contact_name",
         header: "Customer",
@@ -213,8 +220,20 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
         )}
       </div>
 
-      {tab === "visits" ? (
-        <DataTable columns={visitColumns} data={visits} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setVisitId(r.id)} isRowActive={(r) => r.id === visitId} emptyTitle="No visits yet" emptyDescription="Record a walk-in from the showroom or import the existing workbook." emptyAction={{ label: "New walk-in", href: "/sales/walk-ins/new" }} />
+      {tab === "visits" ? (<>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant={needsLinking ? "outline" : "secondary"} size="sm"><Link href="/sales/walk-ins?tab=visits">All visits</Link></Button>
+          <Button asChild variant={needsLinking ? "secondary" : "outline"} size="sm"><Link href="/sales/walk-ins?tab=visits&filter=needs-linking">Needs linking</Link></Button>
+        </div>
+        <DataTable columns={visitColumns} data={visits} rowKey={(r) => r.id} searchable searchPlaceholder="Filter this page…" hidePagination columnToggle onRowClick={(r) => setVisitId(r.id)} isRowActive={(r) => r.id === visitId} emptyTitle={needsLinking ? "No visits need linking" : "No visits yet"} emptyDescription={needsLinking ? "Ambiguous matches will appear here for staff review." : "Record a walk-in from the showroom or import the existing workbook."} emptyAction={{ label: "New walk-in", href: "/sales/walk-ins/new" }} />
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span>{visitTotal} visits · Page {visitPage} of {Math.max(1, Math.ceil(visitTotal / 25))}</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={visitPage <= 1} onClick={() => router.push(`/sales/walk-ins?tab=visits&page=${visitPage - 1}${needsLinking ? "&filter=needs-linking" : ""}`)}>Previous</Button>
+            <Button variant="outline" size="sm" disabled={visitPage * 25 >= visitTotal} onClick={() => router.push(`/sales/walk-ins?tab=visits&page=${visitPage + 1}${needsLinking ? "&filter=needs-linking" : ""}`)}>Next</Button>
+          </div>
+        </div>
+      </>
       ) : (
         <DataTable columns={purchaseColumns} data={purchases} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setPurchaseId(r.id)} isRowActive={(r) => r.id === purchaseId} emptyTitle="No purchases yet" emptyDescription="Purchases are captured in the walk-in flow or imported." />
       )}
@@ -223,6 +242,9 @@ export function WalkinsClient({ tab, visits, purchases, counts }: Props) {
       <RecordDrawer open={!!visit} onOpenChange={(o) => !o && setVisitId(null)} title="Showroom visit" description={visit ? `${formatDateTime(visit.occurred_at)} · ${visit.location_name ?? "Unknown location"}` : undefined} width="md">
         {visit && (
           <>
+            <DrawerSection title="Original inquiry">
+              <VisitInquiryLink key={`${visit.id}:${visit.inquiry_link_version}`} visit={visit} history={linkHistory} />
+            </DrawerSection>
             <DrawerSection title="Visit">
               <FactList
                 items={[

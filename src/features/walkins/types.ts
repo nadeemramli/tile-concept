@@ -9,6 +9,9 @@ export interface VisitRow {
   contact_name: string | null;
   account_id: string | null;
   lead_id: string | null;
+  inquiry_link_state: string;
+  inquiry_link_reason: string | null;
+  inquiry_link_version: number;
   opportunity_id: string | null;
   customer_type: string | null;
   origin_area: string | null;
@@ -56,9 +59,36 @@ export interface OpenOpportunityRef {
 
 export interface WalkInResult {
   visit_id: string;
-  lead_id: string;
+  lead_id: string | null;
+  inquiry_link_state: string;
   opportunity_id: string | null;
   project_id: string | null;
   purchase_id: string | null;
   new_customer: boolean;
+}
+
+export interface InquiryChoice {
+  mode: "automatic" | "choose" | "new" | "unlinked";
+  leadId: string;
+  reason: string;
+}
+
+export interface WalkInInquiryMatches {
+  automatic_lead_id: string | null;
+  can_start_direct: boolean;
+  needs_review: boolean;
+  candidates: {
+    id: string;
+    name: string;
+    source_channel: string;
+    status: string;
+    created_at: string;
+    interest: string | null;
+    opportunity_id: string | null;
+    opportunity_name: string | null;
+    match_reason: string;
+    can_link: boolean;
+    closed: boolean;
+    auto_eligible: boolean;
+  }[];
 }
