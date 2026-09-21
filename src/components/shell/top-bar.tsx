@@ -62,14 +62,14 @@ export function TopBar({ notifications = [] }: { notifications?: Notification[] 
         <span className="truncate font-medium">{current?.label ?? "Tile Concept OS"}</span>
       </div>
 
-      <Button variant="outline" size="sm" className="h-8 w-full max-w-xs justify-start gap-2 px-2.5 text-muted-foreground md:ml-2 md:w-64" onClick={() => setSearchOpen(true)} aria-label="Open global search">
+      <Button variant="outline" size="sm" className="h-8 min-w-0 max-w-xs flex-1 shrink justify-start gap-2 px-2.5 text-muted-foreground md:ml-2 md:w-64 md:flex-none" onClick={() => setSearchOpen(true)} aria-label="Open global search">
         <Search className="size-3.5" aria-hidden />
         <span className="flex-1 truncate text-left text-xs">Search…</span>
         <Kbd className="hidden md:inline-flex">⌘K</Kbd>
       </Button>
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <div className="hidden sm:block">
           <ModePill />
         </div>
@@ -77,7 +77,7 @@ export function TopBar({ notifications = [] }: { notifications?: Notification[] 
         {can("sales.write") && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" className="h-8 gap-1.5">
+              <Button size="sm" className="h-8 gap-1.5" aria-label="Create">
                 <Plus className="size-3.5" aria-hidden /> <span className="hidden sm:inline">Create</span>
                 <ChevronDown className="size-3 opacity-70" aria-hidden />
               </Button>

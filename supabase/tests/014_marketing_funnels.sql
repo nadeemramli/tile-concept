@@ -18,6 +18,7 @@ select throws_ok($$select api.record_marketing_spend('save',pg_temp.cost('{"befo
 select throws_ok($$select api.record_marketing_spend('save',pg_temp.cost('{"tax":null}'),gen_random_uuid())$$,'23514',null,'tax cannot be silently guessed');
 select throws_ok($$select api.record_marketing_spend('save',pg_temp.cost('{"before_tax":1.001}'),gen_random_uuid())$$,'23514',null,'fractional cents refused');
 select throws_ok($$select api.record_marketing_spend('save',pg_temp.cost('{"original_currency":"USD","original_amount":30}'),gen_random_uuid())$$,'23514',null,'foreign conversion evidence required');
+select throws_ok($$select api.record_marketing_spend('save',pg_temp.cost('{"original_amount":30,"conversion_note":"Synthetic conversion"}'),gen_random_uuid())$$,'23514',null,'conversion cannot omit its original currency');
 select throws_ok($$update api.spend_entries set tax=0 where id=(select id from expense)$$,'42501',null,'direct updates denied');
 select is((api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')->'summary'->>'spend')::numeric,106::numeric,'period denominator includes tax');
 select ok(api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')->'summary'->>'mer' is null,'incomplete coverage means no MER');
@@ -25,6 +26,7 @@ select throws_ok($$select api.record_marketing_spend('coverage','{"platform":"ti
 select api.record_marketing_spend('coverage',jsonb_build_object('platform',p,'date_from','2026-08-01','date_to','2026-08-31','reason','Synthetic platform statements checked, including zero days','complete',true),gen_random_uuid()) from unnest(array['tiktok','meta','google_ads','shared']) p;
 select is((api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')->'summary'->>'spend_complete')::boolean,true,'all four cost groups reconciled');
 select lives_ok($$select api.record_marketing_spend('credit',pg_temp.cost()||jsonb_build_object('id',e.id,'version',1,'before_tax',20,'tax',1.2,'incurred_on','2026-08-12','entry_key','credit-one','reference','CREDIT-ONE','reason','Synthetic vendor credit'),gen_random_uuid()) from expense e$$,'dated vendor credit accepted');
+select throws_ok($$select api.record_marketing_spend('credit',pg_temp.cost()||jsonb_build_object('id',e.id,'version',1,'before_tax',20,'tax',1.2,'incurred_on','2026-08-13','entry_key','credit-duplicate','reference','credit-one','reason','Synthetic duplicate credit'),gen_random_uuid()) from expense e$$,'23505',null,'same vendor credit cannot be counted again under a different date and key');
 select is((api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')->'summary'->>'spend')::numeric,84.8::numeric,'credit reduces incurred expense in its own period');
 select is((api.funnel_dashboard('2026-08-01','2026-08-31','2026-09-21')->'summary'->>'spend_complete')::boolean,false,'new cost invalidates reconciliation');
 select throws_ok($$select api.record_marketing_spend('credit',pg_temp.cost()||jsonb_build_object('id',e.id,'version',1,'before_tax',81,'tax',0,'entry_key','too-much','reason','Synthetic excess credit'),gen_random_uuid()) from expense e$$,'23514','Credit exceeds the original cost or predates it','cannot overcredit original cost');

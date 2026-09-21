@@ -3004,12 +3004,16 @@ export type Database = {
           purchase_ref: string | null
           purchased_at: string | null
           question_set_version: string | null
+          review_outcome: string | null
+          review_outcome_at: string | null
+          review_outcome_note: string | null
           salesperson_id: string | null
           salesperson_name: string | null
           status: string | null
           updated_at: string | null
           visit_id: string | null
           whatsapp_consent: boolean | null
+          whatsapp_sent_at: string | null
           workspace_id: string | null
         }
         Relationships: [
@@ -4951,6 +4955,8 @@ export type Database = {
       opportunities: {
         Row: {
           account_id: string | null
+          archive_reason: string | null
+          archived_at: string | null
           competitor: string | null
           contact_id: string | null
           created_at: string | null
@@ -4982,6 +4988,8 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
           competitor?: string | null
           contact_id?: string | null
           created_at?: string | null
@@ -5013,6 +5021,8 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
           competitor?: string | null
           contact_id?: string | null
           created_at?: string | null
@@ -5087,6 +5097,73 @@ export type Database = {
           },
           {
             foreignKeyName: "opportunities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_photos: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string | null
+          object_path: string | null
+          opportunity_id: string | null
+          remark: string | null
+          removed_at: string | null
+          uploaded_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          opportunity_id?: string | null
+          remark?: string | null
+          removed_at?: string | null
+          uploaded_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          opportunity_id?: string | null
+          remark?: string | null
+          removed_at?: string | null
+          uploaded_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_photos_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_photos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "opportunity_photos_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -9053,6 +9130,154 @@ export type Database = {
           },
         ]
       }
+      spend_coverage: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          date_from: string | null
+          date_to: string | null
+          id: string | null
+          invalidated_at: string | null
+          platform: string | null
+          reason: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          date_from?: string | null
+          date_to?: string | null
+          id?: string | null
+          invalidated_at?: string | null
+          platform?: string | null
+          reason?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          date_from?: string | null
+          date_to?: string | null
+          id?: string | null
+          invalidated_at?: string | null
+          platform?: string | null
+          reason?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spend_coverage_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "spend_coverage_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spend_entries: {
+        Row: {
+          before_tax: number | null
+          category: string | null
+          conversion_note: string | null
+          created_at: string | null
+          created_by: string | null
+          credit_of: string | null
+          currency: string | null
+          description: string | null
+          entry_key: string | null
+          entry_mode: string | null
+          id: string | null
+          incurred_on: string | null
+          original_amount: number | null
+          original_currency: string | null
+          platform: string | null
+          reference: string | null
+          status: string | null
+          tax: number | null
+          updated_at: string | null
+          vendor: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          before_tax?: number | null
+          category?: string | null
+          conversion_note?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_of?: string | null
+          currency?: string | null
+          description?: string | null
+          entry_key?: string | null
+          entry_mode?: string | null
+          id?: string | null
+          incurred_on?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
+          platform?: string | null
+          reference?: string | null
+          status?: string | null
+          tax?: number | null
+          updated_at?: string | null
+          vendor?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          before_tax?: number | null
+          category?: string | null
+          conversion_note?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_of?: string | null
+          currency?: string | null
+          description?: string | null
+          entry_key?: string | null
+          entry_mode?: string | null
+          id?: string | null
+          incurred_on?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
+          platform?: string | null
+          reference?: string | null
+          status?: string | null
+          tax?: number | null
+          updated_at?: string | null
+          vendor?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spend_entries_credit_of_fkey"
+            columns: ["credit_of"]
+            isOneToOne: false
+            referencedRelation: "spend_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spend_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "spend_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stale_supplier_queue: {
         Row: {
           aging_hours: number | null
@@ -10357,6 +10582,19 @@ export type Database = {
         }
         Returns: Json
       }
+      annotate_inquiry: {
+        Args: {
+          p_action: string
+          p_body: string
+          p_detail?: string
+          p_expected_detail?: string
+          p_expected_source?: string
+          p_lead_id: string
+          p_request_id: string
+          p_source?: string
+        }
+        Returns: Json
+      }
       approve_certificate_candidate: {
         Args: { p_candidate_id: string; p_corrections?: Json; p_note?: string }
         Returns: string
@@ -10459,6 +10697,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_manual_inquiry: {
+        Args: { p_input: Json; p_request_id: string }
+        Returns: Json
+      }
       entity_timeline: {
         Args: { p_entity_id: string; p_entity_type: string; p_limit?: number }
         Returns: {
@@ -10475,6 +10717,15 @@ export type Database = {
           purchase_id: string
           subject: string
           visit_id: string
+        }[]
+      }
+      feedback_photos_by_token: {
+        Args: { p_token_hash: string }
+        Returns: {
+          bucket_id: string
+          media_id: string
+          mime_type: string
+          object_path: string
         }[]
       }
       feedback_purchase_context: {
@@ -10495,6 +10746,14 @@ export type Database = {
           salesperson_name: string
           visit_id: string
         }[]
+      }
+      feedback_workbench: {
+        Args: {
+          p_purchase_id?: string
+          p_request_id?: string
+          p_visit_id?: string
+        }
+        Returns: Json
       }
       find_identity_candidates: {
         Args: {
@@ -10544,6 +10803,30 @@ export type Database = {
         Returns: undefined
       }
       flag_stale_suppliers: { Args: never; Returns: number }
+      funnel_dashboard: {
+        Args: {
+          p_as_of: string
+          p_from: string
+          p_location?: string
+          p_spend_basis?: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      funnel_history: {
+        Args: {
+          p_as_of: string
+          p_channel?: string
+          p_contact?: string
+          p_from: string
+          p_kind?: string
+          p_location?: string
+          p_page?: number
+          p_staff?: string
+          p_to: string
+        }
+        Returns: Json
+      }
       get_feedback_by_token: {
         Args: { p_token_hash: string }
         Returns: {
@@ -10627,6 +10910,16 @@ export type Database = {
         }
         Returns: string
       }
+      manage_feedback_request: {
+        Args: {
+          p_action: string
+          p_expires_at?: string
+          p_note?: string
+          p_request_id: string
+          p_token_hash?: string
+        }
+        Returns: undefined
+      }
       map_inventory_item: {
         Args: {
           p_ignore?: boolean
@@ -10635,6 +10928,10 @@ export type Database = {
           p_variant_id: string
         }
         Returns: undefined
+      }
+      marketing_spend_period: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
       }
       merge_contacts: {
         Args: {
@@ -10688,6 +10985,28 @@ export type Database = {
         }
         Returns: string
       }
+      opportunity_command: {
+        Args: { p_action: string; p_input: Json; p_request_id: string }
+        Returns: Json
+      }
+      opportunity_photo_command: {
+        Args: {
+          p_action: string
+          p_input?: Json
+          p_opportunity_id: string
+          p_photo_id: string
+        }
+        Returns: string
+      }
+      prepare_feedback_photo: {
+        Args: {
+          p_media_id: string
+          p_mime_type: string
+          p_request_id: string
+          p_size_bytes: number
+        }
+        Returns: string
+      }
       prepare_sale_receipt: {
         Args: {
           p_name: string
@@ -10698,6 +11017,7 @@ export type Database = {
         }
         Returns: string
       }
+      prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
       publish_price: {
         Args: {
           p_override?: boolean
@@ -10750,6 +11070,10 @@ export type Database = {
           p_source_timestamp?: string
           p_unit_id?: string
         }
+        Returns: string
+      }
+      record_marketing_spend: {
+        Args: { p_action: string; p_input: Json; p_request_id: string }
         Returns: string
       }
       record_media_permission: {

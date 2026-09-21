@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { confirmCustomerFeedbackAction } from "@/server/commands/feedback";
 import type { CustomerFeedbackView } from "@/features/feedback/types";
+import { isGoogleListingLink } from "@/features/feedback/google-destination";
 
 export function CustomerFeedbackCard({ token, feedback }: { token: string; feedback: CustomerFeedbackView }) {
   const [draft, setDraft] = useState(feedback.draft_text);
@@ -85,9 +86,10 @@ export function CustomerFeedbackCard({ token, feedback }: { token: string; feedb
         <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
           <h2 className="font-semibold">Optional: share an honest Google review</h2>
           <p className="text-sm text-muted-foreground">Google does not let this app prefill or submit the review. Copy your draft, then choose the rating, edit the text, and attach any photo yourself in Google.</p>
+          {isGoogleListingLink(feedback.review_url) && <p className="text-sm text-muted-foreground">This link opens the business listing. Choose “Write a review” there, then paste or edit your draft and add any photos.</p>}
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={copyDraft}><Copy className="size-4" aria-hidden /> Copy my draft</Button>
-            {feedback.review_url ? <Button asChild><a href={`/review/${encodeURIComponent(token)}/google`} target="_blank" rel="noreferrer">Open Google <ExternalLink className="size-4" aria-hidden /></a></Button> : <Button disabled>Google link not configured</Button>}
+            {feedback.review_url ? <Button asChild><a href={`/review/${encodeURIComponent(token)}/google`} target="_blank" rel="noreferrer">{isGoogleListingLink(feedback.review_url) ? "Open Google listing" : "Open Google"} <ExternalLink className="size-4" aria-hidden /></a></Button> : <Button disabled>Google link not configured</Button>}
           </div>
         </div>
       ) : null}

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatDateTime, titleCase } from "@/lib/format";
 import { requireSession } from "@/server/session";
+import { isGoogleListingLink } from "@/features/feedback/google-destination";
 
 export const metadata: Metadata = { title: "Request customer feedback" };
 
@@ -25,6 +26,7 @@ export default async function NewFeedbackPage({ searchParams }: PageProps<"/sale
     <PageBody className="max-w-3xl">
       <PageHeader title="Customer feedback & Google review" description="Record the customer’s answers, add agreed photos, then prepare one WhatsApp message. The customer chooses whether to publish on Google." />
       {!process.env.TC_GOOGLE_REVIEW_URL?.trim() ? <Alert><AlertTitle>Google review destination needs setup</AlertTitle><AlertDescription>Ask an administrator to add the showroom’s Google review link before sending. Private feedback works, but the customer cannot open Google from this request yet.</AlertDescription></Alert> : null}
+      {isGoogleListingLink(process.env.TC_GOOGLE_REVIEW_URL) && <Alert><AlertTitle>Google business listing configured</AlertTitle><AlertDescription>The customer will open the listing and choose “Write a review”. This is a listing fallback; a verified direct review link can be configured later.</AlertDescription></Alert>}
       {previous?.id && previous.id !== purchase.existing_request_id ? <Alert><AlertTitle>A Google review is already recorded for this customer</AlertTitle><AlertDescription>{titleCase(previous.review_outcome ?? "unknown")}{previous.review_outcome_at ? ` · ${formatDateTime(previous.review_outcome_at)}` : ""}. <Link className="underline" href={`/sales/feedback/new?request=${previous.id}`}>Open earlier request</Link></AlertDescription></Alert> : null}
       <FeedbackCaptureForm purchase={purchase} />
     </PageBody>

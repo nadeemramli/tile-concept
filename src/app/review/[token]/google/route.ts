@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { hashFeedbackToken } from "@/features/feedback/token";
+import { googleDestination } from "@/features/feedback/google-destination";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
   const { data, error } = await admin.rpc("get_feedback_by_token", { p_token_hash: tokenHash }).maybeSingle();
   const reviewUrl = data?.review_url ?? (data?.benefit_status === "not_offered" ? process.env.TC_GOOGLE_REVIEW_URL?.trim() : undefined);
   if (error || !reviewUrl) return NextResponse.redirect(new URL(`/review/${encodeURIComponent(token)}`, request.url));
-  let destination: URL;
-  try { destination = new URL(reviewUrl); } catch { return NextResponse.redirect(new URL(`/review/${encodeURIComponent(token)}`, request.url)); }
-  const host = destination.hostname.toLowerCase();
-  const allowed = destination.protocol === "https:" && (host === "g.page" || host === "maps.app.goo.gl" || host === "search.google.com" || host === "google.com" || host.endsWith(".google.com"));
-  if (!allowed) return NextResponse.redirect(new URL(`/review/${encodeURIComponent(token)}`, request.url));
+  const destination = googleDestination(reviewUrl);
+  if (!destination) return NextResponse.redirect(new URL(`/review/${encodeURIComponent(token)}`, request.url));
   await admin.rpc("log_feedback_customer_event", { p_token_hash: tokenHash, p_event_type: "google_handoff_opened" });
   return NextResponse.redirect(destination, { headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
 }

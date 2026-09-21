@@ -13,17 +13,16 @@ import { FEEDBACK_QUESTIONS, customerDraftSchema, feedbackCaptureSchema, feedbac
 import type { FeedbackCreationResult, FeedbackPurchaseContext } from "@/features/feedback/types";
 import { uuid } from "@/lib/zod";
 import { hashFeedbackToken } from "@/features/feedback/token";
+import { googleDestination } from "@/features/feedback/google-destination";
 
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function configuredReviewUrl(): string | null {
   const raw = process.env.TC_GOOGLE_REVIEW_URL?.trim();
   if (!raw) return null;
-  const url = new URL(raw);
-  const host = url.hostname.toLowerCase();
-  const allowed = host === "g.page" || host === "maps.app.goo.gl" || host === "search.google.com" || host === "google.com" || host.endsWith(".google.com");
-  if (url.protocol !== "https:" || !allowed) throw new Error("TC_GOOGLE_REVIEW_URL must be an owner-verified HTTPS Google review link.");
-  return url.toString();
+  const url = googleDestination(raw);
+  if (!url) throw new Error("TC_GOOGLE_REVIEW_URL must be an HTTPS Google review or business-listing link.");
+  return url;
 }
 
 function handoff(token: string, requestId: string, context: FeedbackPurchaseContext, mode: "llm" | "deterministic" = "deterministic"): FeedbackCreationResult {

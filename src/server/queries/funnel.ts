@@ -12,7 +12,10 @@ export async function getFunnel(period: ReportPeriod, namedHistory: boolean) {
     db.from("business_locations").select("id,name").eq("is_active", true).order("name"),
   ]);
   for (const r of [dashboard, history, locations]) if (r.error) throw r.error;
-  return { data: funnelSchema.parse(dashboard.data), history: namedHistory ? historySchema.parse(history.data) : null,
+  const data = funnelSchema.parse(dashboard.data);
+  const channelOrder = ["tiktok", "meta", "google_ads", "shared", "walk_in", "other_unknown"];
+  data.channels.sort((a, b) => channelOrder.indexOf(a.platform) - channelOrder.indexOf(b.platform));
+  return { data, history: namedHistory ? historySchema.parse(history.data) : null,
     locations: (locations.data ?? []).filter((x): x is { id: string; name: string } => !!x.id && !!x.name) };
 }
 export async function getSpend(period: Pick<ReportPeriod, "from" | "to" | "page">) {

@@ -37,6 +37,7 @@ create index spend_entries_period_idx on marketing.spend_entries(workspace_id,in
 create index spend_entries_credit_idx on marketing.spend_entries(credit_of) where credit_of is not null;
 create unique index spend_entries_key_idx on marketing.spend_entries(workspace_id,incurred_on,platform,lower(entry_key)) where status='recorded';
 create unique index spend_event_reference_idx on marketing.spend_entries(workspace_id,lower(vendor),lower(reference)) where status='recorded' and entry_mode='event';
+create unique index spend_credit_reference_idx on marketing.spend_entries(credit_of,lower(reference)) where status='recorded' and credit_of is not null;
 create table marketing.spend_coverage (
   id uuid primary key default gen_random_uuid(), workspace_id uuid not null references core.workspaces(id),
   platform text not null check(platform in ('tiktok','meta','google_ads','shared')),
@@ -138,8 +139,9 @@ begin
       if key is null or nullif(btrim(p_input->>'vendor'),'') is null or nullif(btrim(p_input->>'description'),'') is null or nullif(btrim(p_input->>'reference'),'') is null then
         raise exception 'Enter campaign or event key, vendor, description and source reference' using errcode='23514'; end if;
       original:=nullif(p_input->>'original_amount','')::numeric;
-      if nullif(p_input->>'original_currency','') is not null and p_input->>'original_currency'<>'MYR' and
-        (original is null or original<=0 or original::text in ('NaN','Infinity','-Infinity') or nullif(btrim(p_input->>'conversion_note'),'') is null) then
+      if (nullif(p_input->>'original_currency','') is not null or original is not null or nullif(p_input->>'conversion_note','') is not null) and
+        (coalesce(p_input->>'original_currency','') !~ '^[A-Z]{3}$' or original is null or original<=0 or original::text in ('NaN','Infinity','-Infinity')
+          or round(original,2)<>original or nullif(btrim(p_input->>'conversion_note'),'') is null) then
         raise exception 'Foreign costs need the original amount and evidence for the MYR conversion' using errcode='23514'; end if;
       if id is null then
         insert into marketing.spend_entries(workspace_id,incurred_on,platform,category,entry_mode,entry_key,vendor,description,reference,before_tax,tax,currency,original_currency,original_amount,conversion_note,credit_of,created_by)

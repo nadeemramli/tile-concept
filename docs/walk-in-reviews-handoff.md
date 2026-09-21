@@ -14,7 +14,9 @@ This extends the existing private feedback module to showroom visits without req
 
 ## Configuration before real use
 
-Set **`TC_GOOGLE_REVIEW_URL`** in the deployment environment to the owner's verified Google Business Profile **Get more reviews** link. It must be HTTPS on an allowed Google domain. There is no new settings-screen field. The same existing environment variable is used throughout the feedback module; do not invent a Place ID or use the synthetic test URL. Redeploy after changing a production environment variable. Also verify **`NEXT_PUBLIC_APP_URL`** is the actual public HTTPS application origin, and the existing server-only Supabase secret is configured for the narrowly scoped customer-token RPCs.
+Set **`TC_GOOGLE_REVIEW_URL`** in the deployment environment to a verified Google Business Profile **Get more reviews** link, or the business's Google listing link as a fallback. It must be HTTPS on an allowed Google domain. Listing links display **Open Google listing** and tell the customer to choose **Write a review**. There is no new settings-screen field. The same existing environment variable is used throughout the feedback module; do not invent a Place ID or use the synthetic test URL. Redeploy after changing a production environment variable. Also verify **`NEXT_PUBLIC_APP_URL`** is the actual public HTTPS application origin, and the existing server-only Supabase secret is configured for the narrowly scoped customer-token RPCs.
+
+The user supplied `https://share.google/PNz6R4QrCC4xRNhFm` for Tile Concept Showroom (Kota Damansara). It is configured only in the ignored local environment as a listing fallback. A direct review URL could not be verified: Google Search presented a CAPTCHA, and the official public Place ID Finder reported an exhausted quota. No owner email is needed to use the supplied listing link. Production configuration has not been changed.
 
 The staff page explicitly shows when the destination is missing. Previously prepared non-incentivized requests with no stored destination use the configured destination once it becomes available. A stored destination remains stable. Configuration currently supports one business review destination per app environment; multi-location destination routing is not implemented.
 
@@ -44,4 +46,4 @@ Use synthetic customers in a local/test workspace. Never send the test message t
 - Synthetic browser records/media were removed after QC. No hosted database, real customer, real WhatsApp message or Google review was touched.
 - Phone camera capture is offered through the browser file input; device-specific camera/gallery behavior and real WhatsApp/Google account handoff need human phone QC. HEIC conversion is not included.
 - Photo selection retry preserves its upload ID while the page stays open. Abandoned upload intents consume one of the six slots; cleanup/reclaim after leaving mid-upload is not yet exposed in UI. Customer media permission must be recorded during preparation; this version can continue without photos or revoke sharing, but does not edit the original agreement.
-- Production build, clean migration replay, combined DB advisors/lint and cross-feature integration remain the root task's checks.
+- Combined integration checks and deployment steps are recorded in [the release and QC guide](./reporting-release-qc.md).

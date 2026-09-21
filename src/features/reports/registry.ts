@@ -151,7 +151,7 @@ export const REPORTS: ReportDef[] = [
       { key: "visits", label: "Visits", format: "number" },
       { key: "new_customers", label: "New customers", format: "number" },
       { key: "purchases", label: "Purchases", format: "number" },
-      { key: "amount", label: "Amount", format: "money" },
+      { key: "amount", label: "Document total", format: "money" },
       { key: "payment_mix", label: "Payment mix", format: "json" },
     ],
     chart: {
@@ -163,6 +163,7 @@ export const REPORTS: ReportDef[] = [
       ],
       caption: "Visits and the purchases recorded against them, per location.",
     },
+    scopeNote: "Historical document summary, including unclassified amounts. Use Marketing & showroom dashboard for reviewed net revenue, collections and sale conversion.",
   },
   {
     slug: "cohorts",
@@ -188,7 +189,7 @@ export const REPORTS: ReportDef[] = [
       ],
       caption: "Customers acquired each month and how many bought again.",
     },
-    scopeNote: "A cohort is the month of a customer's first recorded purchase.",
+    scopeNote: "Historical document cohort, including unclassified amounts. A cohort is the month of the customer's first recorded purchase. Use Marketing & showroom dashboard for reviewed net revenue and collections.",
   },
   {
     slug: "demand",
