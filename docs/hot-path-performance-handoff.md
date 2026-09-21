@@ -47,8 +47,10 @@ The exact separately hosted sales-role grant was also captured as repository
 migration `20260921073229_sales_rep_review_and_reports.sql`. A subsequent
 linked dry run succeeded and listed only the two pending Creative migrations.
 Its interaction with existing ownership checks is documented in
-`creative-production-handoff.md`; the grant's intended edit policy still needs
-resolution before the final release checks can pass.
+`creative-production-handoff.md`. The current release preserves the shared
+editing already enabled in production, with tests reconciled to that behaviour
+while retaining workspace and role boundaries. The alternate owner-limited
+candidate remains unapplied.
 
 `src/lib/supabase/database.types.ts` was **not** regenerated, and does not need
 to be: `api.inbox_leads` keeps its columns and `api.entity_timeline` keeps its

@@ -4,6 +4,7 @@ select no_plan();
 create function pg_temp.act_as(uid text) returns void language sql as $$ select set_config('request.jwt.claims',json_build_object('sub',uid,'role','authenticated')::text,true); $$;
 create temp table target(id uuid); grant all on target to authenticated;
 create temp table saved(key text,id uuid); grant all on saved to authenticated;
+create temp table calendar_baseline(september_total integer, unique_creatives integer); grant all on calendar_baseline to authenticated;
 create function pg_temp.draft(extra jsonb default '{}') returns jsonb language sql as $$ select jsonb_build_object('title','Synthetic creative contract','template','graphic','format','graphic','source_mode','no_filming','owner_id','aaaaaaaa-0000-0000-0000-000000000003','reviewer_id','aaaaaaaa-0000-0000-0000-000000000007','production_due','2030-09-01','review_due','2030-09-02','channels',jsonb_build_array('instagram','tiktok'),'brief',jsonb_build_object('objective','Explain tile care','audience','Homeowners','key_message','Use appropriate cleaning','cta','Learn more'))||extra; $$;
 create function pg_temp.cmd(action text,data jsonb default '{}',request uuid default gen_random_uuid()) returns jsonb language sql as $$ select api.creative_command(action,t.id,c.revision,request,data) from target t join api.creative_items c on c.id=t.id; $$;
 create function pg_temp.latest() returns uuid language sql as $$ select id from api.creative_versions where creative_id=(select id from target) order by version_no desc limit 1; $$;
@@ -41,11 +42,15 @@ select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000007');
 select lives_ok($$select pg_temp.review()$$,'designated reviewer approves exact latest version');
 select is(api.creative_query('detail','{}',(select id from target))->>'stage','approved','zero publication plans never implies published');
 select throws_ok($$update api.creative_reviews set notes='changed'$$,'42501',null,'reviews not directly editable');
+-- Compare increments so unrelated local browser-QC creatives do not affect this contract.
+insert into calendar_baseline select
+  (api.creative_query('calendar','{"from":"2026-09-01","to":"2026-10-01"}')->>'total')::integer,
+  (api.creative_query('calendar','{"from":"2026-09-01","to":"2026-11-01"}')->>'unique_creatives')::integer;
 select lives_ok($$select pg_temp.cmd('publication_plan','{"channel":"instagram","account_label":"Main","intended_use":"organic_social","target_date":"2026-09-01"}')$$,'plan before scheduling');
 select lives_ok($$select pg_temp.cmd('publication_plan','{"channel":"tiktok","account_label":"Main","intended_use":"organic_social","target_date":"2026-10-01"}')$$,'second channel separate publication');
 insert into saved select channel,id from api.creative_publications where creative_id=(select id from target);
-select is((api.creative_query('calendar','{"from":"2026-09-01","to":"2026-10-01"}')->>'total')::integer,1,'September target count differs from October');
-select is((api.creative_query('calendar','{"from":"2026-09-01","to":"2026-11-01"}')->>'unique_creatives')::integer,1,'two channel plans count one creative');
+select is((api.creative_query('calendar','{"from":"2026-09-01","to":"2026-10-01"}')->>'total')::integer,(select september_total+1 from calendar_baseline),'September includes only the September release, excluding October');
+select is((api.creative_query('calendar','{"from":"2026-09-01","to":"2026-11-01"}')->>'unique_creatives')::integer,(select unique_creatives+1 from calendar_baseline),'two channel plans add one unique creative');
 select throws_ok($$select pg_temp.cmd('publication_schedule',jsonb_build_object('publication_id',(select id from saved where key='instagram'),'version_id',pg_temp.latest(),'scheduled_at','2030-09-01T10:00:00+08','restrictions_confirmed',true))$$,'23514',null,'date alone is not scheduling evidence');
 select lives_ok($$select pg_temp.cmd('publication_schedule',jsonb_build_object('publication_id',(select id from saved where key='instagram'),'version_id',pg_temp.latest(),'scheduled_at','2030-09-01T10:00:00+08','scheduling_method','Synthetic external scheduler confirmation','restrictions_confirmed',true))$$,'schedule exact approved version');
 select is(api.creative_query('detail','{}',(select id from target))->>'stage','approved','partial scheduling stays approved');
