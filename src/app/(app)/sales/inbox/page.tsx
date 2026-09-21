@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { requireSession } from "@/server/session";
 import { PermissionDenied } from "@/components/patterns/states";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
-import { getInquiryPage, getLead, getLeadIntakeEvents, getLeadTimeline, getLinkedContactSummary } from "@/server/queries/leads";
+import { getInquiryDetail, getInquiryPage } from "@/server/queries/leads";
 import { getLocations, getMembers } from "@/server/queries/reference";
 import { LEAD_VIEWS, SOURCE_CHANNELS, type LeadView } from "@/features/inbox/schema";
 import { InboxClient } from "@/features/inbox/components/inbox-client";
@@ -25,15 +25,14 @@ export default async function InboxPage({ searchParams }: PageProps<"/sales/inbo
   };
   const selectedId = uuid().safeParse(sp.lead).data ?? null;
 
-  const [inbox, members, locations, selected] = await Promise.all([
+  // One wave: the list, reference data and the whole drawer detail together.
+  const [inbox, members, locations, detail] = await Promise.all([
     getInquiryPage(filters),
     getMembers(),
     getLocations(),
-    selectedId ? getLead(selectedId) : Promise.resolve(null),
+    selectedId ? getInquiryDetail(selectedId) : Promise.resolve(null),
   ]);
-  const [intake, timeline, contact] = selected
-    ? await Promise.all([getLeadIntakeEvents(selected.id), getLeadTimeline(selected.id), getLinkedContactSummary(selected.contact_id)])
-    : [[], [], null];
+  const selected = detail?.lead ?? null;
 
   return (
     <PageBody>
@@ -47,10 +46,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/sales/inbo
         filters={filters}
         members={members}
         locations={locations}
-        selected={selected}
-        selectedIntake={intake}
-        selectedTimeline={timeline}
-        selectedContact={contact}
+        selected={detail}
       />
     </PageBody>
   );

@@ -43,6 +43,8 @@ interface Props {
   intake: IntakeEventRow[];
   timeline: TimelineItem[];
   contact: { id: string; display_name: string; lifecycle_state: string; customer_type: string | null } | null;
+  /** Intake history and activity are still being read; the lead row itself is already current. */
+  loading?: boolean;
   members: ProfileRef[];
   initialSuggestions?: IdentityCandidate[];
   /** The inbox view the drawer was opened from, and whether the lead still appears in it. */
@@ -57,7 +59,7 @@ const TIMELINE_PREVIEW = 5;
 
 const MASKED_HINT = "Shown masked because your role does not include contact.reveal. Revealing a phone number or email is audited with who, when and which record.";
 
-export function LeadDrawer({ lead, intake, timeline, contact, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
+export function LeadDrawer({ lead, intake, timeline, contact, loading = false, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
   const router = useRouter();
   const { can, session } = useSession();
   const [pending, start] = useTransition();
@@ -336,7 +338,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
                   ) : undefined
                 }
               >
-                <Timeline items={visibleActivity} emptyText="No messages or calls logged yet." />
+                <Timeline items={visibleActivity} emptyText={loading ? "Loading activity…" : "No messages or calls logged yet."} />
               </DrawerSection>
             </div>
           </div>

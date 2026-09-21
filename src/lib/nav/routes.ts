@@ -50,6 +50,13 @@ export interface RouteDef {
   status: "live" | "next-module";
   /** Permission that gates seeing this item; undefined = everyone with a membership. */
   permission?: PermissionKey;
+  /**
+   * Where the shell presents this route. Sidebar items are the daily work
+   * list; a placed route is reachable from the shell chrome instead (the
+   * sidebar brand, or the top bar) and is deliberately not repeated in the
+   * sidebar, which keeps the list short enough never to scroll.
+   */
+  placement?: "brand" | "top-bar";
   description?: string;
   nextModule?: { phase: string; summary: string; workflow: string[]; unlocks: string[] };
 }
@@ -62,6 +69,7 @@ export const ROUTES: RouteDef[] = [
     icon: LayoutDashboard,
     group: "Command Centre",
     status: "live",
+    placement: "brand",
     description: "What needs attention now: aging leads, overdue follow-ups, data health.",
   },
   // Sales
@@ -69,11 +77,10 @@ export const ROUTES: RouteDef[] = [
   { key: "projects", label: "Projects", path: "/sales/projects", icon: FolderKanban, group: "Sales", status: "live", permission: "sales.read" },
   { key: "walkins", label: "Walk-ins & Purchases", path: "/sales/walk-ins", icon: Store, group: "Sales", status: "live", permission: "sales.read" },
   { key: "feedback", label: "Customer Feedback", path: "/sales/feedback", icon: MessageSquareText, group: "Sales", status: "live", permission: "sales.read" },
-  { key: "tasks", label: "Tasks", path: "/sales/tasks", icon: ListTodo, group: "Sales", status: "live", permission: "sales.read" },
+  { key: "tasks", label: "Tasks", path: "/sales/tasks", icon: ListTodo, group: "Sales", status: "live", permission: "sales.read", placement: "top-bar" },
   // Customer — the resolved identity records behind the sales work
   { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Customer", status: "live", permission: "sales.read" },
   { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
-  { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Customer", status: "live", permission: "sales.read" },
   // Marketing
   { key: "creative", label: "Creative", path: "/marketing/creative", icon: KanbanSquare, group: "Marketing", status: "live", permission: "marketing.read", description: "Production board, release calendar and your creative work." },
   { key: "marketing-spend", label: "Marketing Spend", path: "/marketing/spend", icon: Tags, group: "Marketing", status: "live", permission: "marketing.spend.read" },
@@ -88,7 +95,10 @@ export const ROUTES: RouteDef[] = [
   { key: "review", label: "Imports & OCR Review", path: "/sources/review", icon: ClipboardCheck, group: "Sources", status: "live", permission: "review.approve" },
   // Insights
   { key: "reports", label: "Reports", path: "/insights/reports", icon: BarChart3, group: "Insights", status: "live", permission: "report.read" },
-  // Platform
+  // Platform — administration, reached from the user menu
+  // Identity Review is a periodic clean-up queue, not daily work, so it sits
+  // with the other administration surfaces rather than in the sidebar.
+  { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Platform", status: "live", permission: "sales.read" },
   { key: "integrations", label: "Integrations", path: "/platform/integrations", icon: Cable, group: "Platform", status: "live", permission: "audit.read" },
   { key: "connectors", label: "Lead Connectors", path: "/platform/connectors", icon: Webhook, group: "Platform", status: "live", permission: "settings.manage" },
   { key: "data-health", label: "Data Health", path: "/platform/data-health", icon: Activity, group: "Platform", status: "live", permission: "audit.read" },
@@ -110,7 +120,12 @@ export function visibleRoutes(perms: ReadonlySet<string>): RouteDef[] {
 export const SIDEBAR_GROUPS = ROUTE_GROUPS.filter((g) => g !== "Platform");
 
 export function sidebarRoutes(perms: ReadonlySet<string>): RouteDef[] {
-  return visibleRoutes(perms).filter((r) => r.group !== "Platform");
+  return visibleRoutes(perms).filter((r) => r.group !== "Platform" && !r.placement);
+}
+
+/** Routes the shell chrome renders itself, so the sidebar can leave them out. */
+export function chromeRoutes(perms: ReadonlySet<string>, placement: NonNullable<RouteDef["placement"]>): RouteDef[] {
+  return visibleRoutes(perms).filter((r) => r.placement === placement);
 }
 
 export function platformRoutes(perms: ReadonlySet<string>): RouteDef[] {

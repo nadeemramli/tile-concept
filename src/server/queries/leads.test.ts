@@ -10,7 +10,7 @@ const filters = { view: "all" as const, search: "Sensitive search fixture", owne
 const leadId = "eeeeeeee-2109-0016-0000-000000000001";
 
 beforeEach(() => {
-  mock.from.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle: mock.result, order: mock.result }) }) }));
+  mock.from.mockImplementation(() => ({ select: () => ({ eq: () => ({ maybeSingle: mock.result, order: () => ({ limit: mock.result }) }) }) }));
 });
 afterEach(() => { vi.restoreAllMocks(); vi.resetAllMocks(); });
 
