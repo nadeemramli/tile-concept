@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectHealthyRoute, PRIMARY_ROUTES, REPORT_ROUTES, SECONDARY_ROUTES } from "./route-smoke";
 
 /**
  * Guest mode is the only path into this app that needs no credentials, which
@@ -52,25 +53,13 @@ test("a guest sees priced products with a stated basis", async ({ page }) => {
   await expect(page.getByText(/Retail 2026|Showroom 2026|Project 2026/).first()).toBeVisible({ timeout: 15_000 });
 });
 
-test("the routes a guest is allowed to see all render", async ({ page }) => {
-  await enterAsGuest(page);
-  for (const path of [
-    "/sales/inbox",
-    "/sales/pipeline",
-    "/sales/accounts",
-    "/sales/projects",
-    "/sales/walk-ins",
-    "/sales/tasks",
-    "/merchandise/catalog",
-    "/merchandise/pricing",
-    "/merchandise/stock",
-    "/sources/review",
-  ]) {
-    const res = await page.goto(path);
-    expect(res?.status(), path).toBeLessThan(500);
-    await expect(page.locator("main h1").first(), path).toBeVisible();
-  }
-});
+const guestRoutes = PRIMARY_ROUTES.filter((route) => route.permission !== "settings.manage");
+for (const path of [...guestRoutes.map((route) => route.path), ...REPORT_ROUTES, ...SECONDARY_ROUTES]) {
+  test(`guest route renders: ${path}`, async ({ page }) => {
+    await enterAsGuest(page);
+    await expectHealthyRoute(page, path);
+  });
+}
 
 test("a guest cannot manage settings", async ({ page }) => {
   await enterAsGuest(page);
@@ -80,13 +69,19 @@ test("a guest cannot manage settings", async ({ page }) => {
   await expect(page.getByText(/Not available/)).toBeVisible();
 });
 
-test("what a guest creates is still there after a reload", async ({ page }) => {
+test("a guest cannot manage lead connectors", async ({ page }) => {
+  await enterAsGuest(page);
+  await page.goto("/platform/connectors");
+  await expect(page.getByRole("heading", { name: /Not available/ })).toBeVisible();
+});
+
+test("guest walk-in rows remain visible after a reload", async ({ page }) => {
   await enterAsGuest(page);
   await page.goto("/sales/walk-ins");
   await expect(page.locator("main h1").first()).toBeVisible();
 
-  // The count before and after a reload must match: guest writes are ordinary
-  // writes, not a session-local illusion.
+  // Read-only continuity check. This does not create a visit or prove persistence
+  // of a write; mutation workflows are covered separately with local fixtures.
   const before = await page.locator("table tbody tr").count();
   await page.reload();
   await expect(page.locator("main h1").first()).toBeVisible();
