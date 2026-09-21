@@ -9,6 +9,7 @@ import { uuid } from "@/lib/zod";
 import { convertLeadSchema, logResponseSchema, newInquirySchema, type NewInquiryInput } from "@/features/inbox/schema";
 import { whereIsLead, whereSentence } from "@/features/inbox/lib/whereabouts";
 import type { IdentityCandidate } from "@/features/inbox/types";
+import { getInquiryDetail, type InquiryDetail } from "@/server/queries/leads";
 
 const INBOX = "/sales/inbox";
 
@@ -259,6 +260,21 @@ export async function convertLeadAction(input: z.input<typeof convertLeadSchema>
     revalidatePath("/sales/projects");
     revalidatePath("/");
     return ok(r, "Lead converted to opportunity.");
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/**
+ * Drawer detail for one inquiry, read as the signed-in user. Opening the
+ * drawer no longer re-renders the inbox page; the row already in the list
+ * shows immediately and this fills in intake history and the timeline.
+ */
+export async function loadInquiryDetailAction(leadId: string): Promise<ActionResult<InquiryDetail | null>> {
+  try {
+    await requirePermission("sales.read");
+    const id = uuid().parse(leadId);
+    return ok(await getInquiryDetail(id));
   } catch (e) {
     return fail(e);
   }

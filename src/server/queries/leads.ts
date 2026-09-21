@@ -100,13 +100,17 @@ export async function getLead(id: string): Promise<LeadRow | null> {
   return mapLead(data as RawLead, data.owner_id ? members.get(data.owner_id)?.full_name ?? null : null);
 }
 
+/** Newest submissions first; older ones are still in Activity. Each row carries the full payload. */
+const INTAKE_HISTORY_LIMIT = 25;
+
 export async function getLeadIntakeEvents(leadId: string): Promise<IntakeEventRow[]> {
   const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .from("intake_events")
     .select("id, source_channel, provider, external_id, received_at, payload, raw_text, status")
     .eq("lead_id", leadId)
-    .order("received_at", { ascending: false });
+    .order("received_at", { ascending: false })
+    .limit(INTAKE_HISTORY_LIMIT);
   if (error) throw new Error("Unable to load inquiry source history.");
   return (data ?? []).map((e) => ({
     id: String(e.id),
@@ -142,4 +146,23 @@ export async function getLinkedContactSummary(contactId: string | null) {
   const { data } = await supabase.from("contacts").select("id, display_name, lifecycle_state, customer_type").eq("id", contactId).maybeSingle();
   if (!data) return null;
   return { id: String(data.id), display_name: String(data.display_name ?? ""), lifecycle_state: data.lifecycle_state ?? "new", customer_type: data.customer_type ?? null };
+}
+
+export interface InquiryDetail {
+  lead: LeadRow;
+  intake: IntakeEventRow[];
+  timeline: TimelineItem[];
+  contact: Awaited<ReturnType<typeof getLinkedContactSummary>>;
+}
+
+/**
+ * Everything the inquiry drawer shows for one lead, fetched in one wave. The
+ * lead id is known up front, so intake history and the timeline never wait
+ * on the lead row; only the linked contact summary depends on it.
+ */
+export async function getInquiryDetail(leadId: string): Promise<InquiryDetail | null> {
+  const [lead, intake, timeline] = await Promise.all([getLead(leadId), getLeadIntakeEvents(leadId), getLeadTimeline(leadId)]);
+  if (!lead) return null;
+  const contact = await getLinkedContactSummary(lead.contact_id);
+  return { lead, intake, timeline, contact };
 }
