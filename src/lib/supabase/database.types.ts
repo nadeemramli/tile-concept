@@ -335,6 +335,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_purchase_fk"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activities_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
@@ -2279,6 +2286,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "content_opportunities_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "content_opportunities_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3021,6 +3035,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "requests_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: true
+            referencedRelation: "sale_balances"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "requests_salesperson_id_fkey"
             columns: ["salesperson_id"]
             isOneToOne: false
@@ -3390,6 +3411,7 @@ export type Database = {
           account_id: string | null
           assigned_at: string | null
           completed_follow_ups: number | null
+          confirmed_sales: number | null
           contact_attempts: number | null
           contact_id: string | null
           converted_opportunity_id: string | null
@@ -3400,6 +3422,7 @@ export type Database = {
           first_customer_reply_at: string | null
           first_response_at: string | null
           first_response_due_at: string | null
+          first_sale_at: string | null
           first_showroom_at: string | null
           first_whatsapp_reply_at: string | null
           first_whatsapp_sent_at: string | null
@@ -3425,6 +3448,7 @@ export type Database = {
           raw_name: string | null
           raw_phone: string | null
           raw_phone_normalized: string | null
+          recorded_net_sales: number | null
           showroom_visits: number | null
           source_channel: string | null
           source_detail: string | null
@@ -6861,6 +6885,13 @@ export type Database = {
             referencedRelation: "purchases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
+            referencedColumns: ["id"]
+          },
         ]
       }
       purchase_payments: {
@@ -6868,38 +6899,67 @@ export type Database = {
           amount: number | null
           created_at: string | null
           currency: string | null
+          direction: string | null
+          evidence_id: string | null
           id: string | null
           method: string | null
           paid_at: string | null
           purchase_id: string | null
+          reason: string | null
+          recorded_by: string | null
           reference: string | null
+          review_state: string | null
         }
         Insert: {
           amount?: number | null
           created_at?: string | null
           currency?: string | null
+          direction?: string | null
+          evidence_id?: string | null
           id?: string | null
           method?: string | null
           paid_at?: string | null
           purchase_id?: string | null
+          reason?: string | null
+          recorded_by?: string | null
           reference?: string | null
+          review_state?: string | null
         }
         Update: {
           amount?: number | null
           created_at?: string | null
           currency?: string | null
+          direction?: string | null
+          evidence_id?: string | null
           id?: string | null
           method?: string | null
           paid_at?: string | null
           purchase_id?: string | null
+          reason?: string | null
+          recorded_by?: string | null
           reference?: string | null
+          review_state?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_payments_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "sale_receipts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_payments_purchase_id_fkey"
             columns: ["purchase_id"]
             isOneToOne: false
             referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_payments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
             referencedColumns: ["id"]
           },
         ]
@@ -6908,13 +6968,22 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number | null
+          collection_parent_id: string | null
+          confirmed_at: string | null
           contact_id: string | null
           created_at: string | null
           currency: string | null
+          discount_amount: number | null
+          document_type: string | null
           external_ref: string | null
+          financial_state: string | null
+          gross_before_discount: number | null
           id: string | null
           is_repeat: boolean | null
+          lead_id: string | null
+          legacy_snapshot: Json | null
           location_id: string | null
+          net_sale_amount: number | null
           notes: string | null
           opportunity_id: string | null
           project_id: string | null
@@ -6923,6 +6992,7 @@ export type Database = {
           recorded_by: string | null
           salesperson_id: string | null
           status: string | null
+          tax_amount: number | null
           updated_at: string | null
           version: number | null
           visit_id: string | null
@@ -6931,13 +7001,22 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount?: number | null
+          collection_parent_id?: string | null
+          confirmed_at?: string | null
           contact_id?: string | null
           created_at?: string | null
           currency?: string | null
+          discount_amount?: number | null
+          document_type?: string | null
           external_ref?: string | null
+          financial_state?: string | null
+          gross_before_discount?: number | null
           id?: string | null
           is_repeat?: boolean | null
+          lead_id?: string | null
+          legacy_snapshot?: Json | null
           location_id?: string | null
+          net_sale_amount?: number | null
           notes?: string | null
           opportunity_id?: string | null
           project_id?: string | null
@@ -6946,6 +7025,7 @@ export type Database = {
           recorded_by?: string | null
           salesperson_id?: string | null
           status?: string | null
+          tax_amount?: number | null
           updated_at?: string | null
           version?: number | null
           visit_id?: string | null
@@ -6954,13 +7034,22 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number | null
+          collection_parent_id?: string | null
+          confirmed_at?: string | null
           contact_id?: string | null
           created_at?: string | null
           currency?: string | null
+          discount_amount?: number | null
+          document_type?: string | null
           external_ref?: string | null
+          financial_state?: string | null
+          gross_before_discount?: number | null
           id?: string | null
           is_repeat?: boolean | null
+          lead_id?: string | null
+          legacy_snapshot?: Json | null
           location_id?: string | null
+          net_sale_amount?: number | null
           notes?: string | null
           opportunity_id?: string | null
           project_id?: string | null
@@ -6969,6 +7058,7 @@ export type Database = {
           recorded_by?: string | null
           salesperson_id?: string | null
           status?: string | null
+          tax_amount?: number | null
           updated_at?: string | null
           version?: number | null
           visit_id?: string | null
@@ -6983,10 +7073,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchases_collection_parent_id_fkey"
+            columns: ["collection_parent_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_collection_parent_id_fkey"
+            columns: ["collection_parent_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchases_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
@@ -7559,6 +7677,193 @@ export type Database = {
           },
           {
             foreignKeyName: "routing_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_balances: {
+        Row: {
+          balance_due: number | null
+          collections: number | null
+          financial_state: string | null
+          id: string | null
+          lead_id: string | null
+          net_sales: number | null
+          sales_tax: number | null
+          status: string | null
+          unreviewed_payments: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string | null
+          evidence_id: string | null
+          id: string | null
+          kind: string | null
+          net_delta: number | null
+          occurred_at: string | null
+          purchase_id: string | null
+          reason: string | null
+          tax_delta: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string | null
+          evidence_id?: string | null
+          id?: string | null
+          kind?: string | null
+          net_delta?: number | null
+          occurred_at?: string | null
+          purchase_id?: string | null
+          reason?: string | null
+          tax_delta?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string | null
+          evidence_id?: string | null
+          id?: string | null
+          kind?: string | null
+          net_delta?: number | null
+          occurred_at?: string | null
+          purchase_id?: string | null
+          reason?: string | null
+          tax_delta?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_events_evidence_fk"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "sale_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_events_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_events_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "sale_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_receipts: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string | null
+          object_path: string | null
+          purchase_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          purchase_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          purchase_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_receipts_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_receipts_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "sale_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_receipts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "sale_receipts_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -10383,6 +10688,16 @@ export type Database = {
         }
         Returns: string
       }
+      prepare_sale_receipt: {
+        Args: {
+          p_name: string
+          p_purchase_id: string
+          p_receipt_id: string
+          p_size: number
+          p_type: string
+        }
+        Returns: string
+      }
       publish_price: {
         Args: {
           p_override?: boolean
@@ -10705,6 +11020,10 @@ export type Database = {
       review_shoot_output: {
         Args: { p_decision: string; p_output_id: string; p_reason?: string }
         Returns: undefined
+      }
+      sale_command: {
+        Args: { p_action: string; p_input: Json; p_request_id: string }
+        Returns: string
       }
       sales_scorecard: { Args: { p_year?: number }; Returns: Json }
       set_content_opportunity_status: {

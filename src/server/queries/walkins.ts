@@ -104,16 +104,19 @@ export async function listPurchases(limit = 500, filter?: { visitIds?: string[];
     if (!filter || (data?.length ?? 0) < 500) break;
   }
   const ids = rows.map((r) => String(r.id));
-  const [names, members, locations, pays, items] = await Promise.all([
+  const [names, members, locations, pays, items, balances] = await Promise.all([
     nameMaps(uniq(rows.map((r) => r.contact_id)), uniq(rows.map((r) => r.account_id))),
     getMemberMap(),
     getLocations(),
-    ids.length ? supabase.from("purchase_payments").select("id, purchase_id, method, amount, reference").in("purchase_id", ids) : Promise.resolve({ data: [] as never[] }),
-    ids.length ? supabase.from("purchase_items").select("id, purchase_id, description, quantity, unit, unit_price, line_total, position").in("purchase_id", ids).order("position") : Promise.resolve({ data: [] as never[] }),
+    ids.length ? supabase.from("purchase_payments").select("id, purchase_id, method, amount, reference, review_state, direction").in("purchase_id", ids) : Promise.resolve({ data: [] as never[], error: null }),
+    ids.length ? supabase.from("purchase_items").select("id, purchase_id, description, quantity, unit, unit_price, line_total, position").in("purchase_id", ids).order("position") : Promise.resolve({ data: [] as never[], error: null }),
+    ids.length ? supabase.from("sale_balances").select("id,collections").in("id", ids) : Promise.resolve({ data: [], error: null }),
   ]);
   const locMap = new Map(locations.map((l) => [l.id, l.name]));
+  if (pays.error || items.error || balances.error) throw pays.error ?? items.error ?? balances.error;
+  const collectionById = new Map((balances.data ?? []).map(b => [b.id, Number(b.collections ?? 0)]));
   const payBy = new Map<string, PurchaseRow["payments"]>();
-  for (const p of (pays.data ?? []) as { id: string | null; purchase_id: string | null; method: string | null; amount: number | null; reference: string | null }[]) {
+  for (const p of (pays.data ?? []) as { id: string | null; purchase_id: string | null; method: string | null; amount: number | null; reference: string | null; review_state: string | null; direction: string | null }[]) {
     const k = String(p.purchase_id);
     (payBy.get(k) ?? payBy.set(k, []).get(k)!).push({ id: String(p.id), method: String(p.method ?? "other"), amount: Number(p.amount ?? 0), reference: p.reference });
   }
@@ -127,6 +130,8 @@ export async function listPurchases(limit = 500, filter?: { visitIds?: string[];
     const payments = payBy.get(id) ?? [];
     return {
       id,
+      financial_state: r.financial_state ?? "legacy_unclassified",
+      collections: collectionById.get(id) ?? 0,
       purchased_at: String(r.purchased_at),
       external_ref: r.external_ref,
       contact_id: r.contact_id,
@@ -171,8 +176,8 @@ export async function getWalkInCounts() {
   const [vt, vw, pw, rep] = await Promise.all([
     supabase.from("visits").select("id", { count: "exact", head: true }).gte("occurred_at", dayStart.toISOString()),
     supabase.from("visits").select("id", { count: "exact", head: true }).gte("occurred_at", weekAgo),
-    supabase.from("purchases").select("id", { count: "exact", head: true }).gte("purchased_at", weekAgo).neq("status", "voided"),
-    supabase.from("purchases").select("id", { count: "exact", head: true }).gte("purchased_at", weekAgo).eq("is_repeat", true).neq("status", "voided"),
+    supabase.from("purchases").select("id", { count: "exact", head: true }).gte("purchased_at", weekAgo).in("status", ["recorded", "corrected"]).eq("financial_state", "confirmed"),
+    supabase.from("purchases").select("id", { count: "exact", head: true }).gte("purchased_at", weekAgo).eq("is_repeat", true).in("status", ["recorded", "corrected"]).eq("financial_state", "confirmed"),
   ]);
   return { visitsToday: vt.count ?? 0, visits7d: vw.count ?? 0, purchases7d: pw.count ?? 0, repeat7d: rep.count ?? 0 };
 }

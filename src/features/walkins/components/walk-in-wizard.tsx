@@ -3,13 +3,12 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Phone, Plus, Trash2, UserPlus, UserSearch } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Phone, Plus, UserPlus, UserSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
 import { DisabledHint, Hint } from "@/components/patterns/explain";
@@ -22,7 +21,7 @@ import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
 import { createWalkInContactAction, findCandidatesAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
 import { EMPTY_INQUIRY_CHOICE, InquiryLinkChoice } from "./inquiry-link-choice";
-import { CUSTOMER_TYPES, PAYMENT_METHODS, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
+import { CUSTOMER_TYPES, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
 import type { IdentityCandidate } from "@/features/inbox/types";
 import type { InquiryChoice, OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
 import type { ProfileRef } from "@/server/queries/reference";
@@ -31,8 +30,6 @@ const SOURCES = ["walk_in", "tiktok", "meta", "website", "whatsapp", "dm", "call
 const INTEREST_LABEL: Record<string, string> = { wall_panel: "Wall panel", tile: "Tile", cut_tile: "Cut tile", mosaic: "Mosaic", finishing: "Finishing", accessory: "Accessory" };
 const STEPS = ["Phone", "Customer", "Visit", "Purchase", "Review"] as const;
 
-interface Payment { method: (typeof PAYMENT_METHODS)[number]; amount: string; reference: string }
-interface Item { description: string; quantity: string; unit: string; unit_price: string }
 
 function localNow() {
   return new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 19);
@@ -80,19 +77,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [projectName, setProjectName] = useState("");
   const [oppName, setOppName] = useState("");
 
-  // step 4
-  const [hasPurchase, setHasPurchase] = useState(false);
-  const [orc, setOrc] = useState("");
-  const [amount, setAmount] = useState("");
-  const [payments, setPayments] = useState<Payment[]>([{ method: "cash", amount: "", reference: "" }]);
-  const [items, setItems] = useState<Item[]>([]);
-
   const [result, setResult] = useState<WalkInResult | null>(null);
 
   const normalizedPhone = normalizePhone(phone);
-  const amountNum = Number(amount || 0);
-  const paidTotal = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-  const remaining = Math.round((amountNum - paidTotal) * 100) / 100;
 
   function search() {
     if (!normalizedPhone && !email.trim()) {
@@ -187,15 +174,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       opportunity_id: oppId,
       project_name: projectName,
       opportunity_name: oppName,
-      purchase: hasPurchase
-        ? {
-            amount: amountNum,
-            external_ref: orc,
-            payments: payments.filter((p) => Number(p.amount) > 0).map((p) => ({ method: p.method, amount: Number(p.amount), reference: p.reference })),
-            items: items.filter((i) => i.description.trim()).map((i) => ({ description: i.description, quantity: Number(i.quantity) || 1, unit: i.unit, unit_price: i.unit_price ? Number(i.unit_price) : undefined })),
-            purchase_source: "walk_in",
-          }
-        : null,
+      purchase: null,
     };
     const payload = JSON.stringify({ ...input, request_id: undefined });
     if (retry.current?.payload !== payload) retry.current = { payload, id: crypto.randomUUID() };
@@ -223,13 +202,11 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
     retry.current = null; selectedCustomer.current = null; setFromLead(null); setInquiryChoice(EMPTY_INQUIRY_CHOICE);
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
     setOccurredAt(localNow()); setArea(""); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
-    setHasPurchase(false); setOrc(""); setAmount(""); setPayments([{ method: "cash", amount: "", reference: "" }]); setItems([]); setResult(null);
+    setResult(null);
   }
 
   const canNextVisit = !!purpose && (oppMode !== "link" || !!oppId) && (oppMode !== "create" || projectName.trim().length > 1);
-  const canNextPurchase = !hasPurchase || (amountNum >= 0 && amount !== "" && (payments.every((p) => !p.amount) || Math.abs(remaining) < 0.005));
   const nextVisitReason = !purpose ? "Choose a visit purpose first." : oppMode === "link" && !oppId ? "Choose which open opportunity to link, or switch to None." : oppMode === "create" && projectName.trim().length <= 1 ? "Give the new project a name (at least 2 characters)." : undefined;
-  const nextPurchaseReason = !hasPurchase ? undefined : amount === "" || Number.isNaN(amountNum) || amountNum < 0 ? "Enter the total amount (zero or more)." : !payments.every((p) => !p.amount) && Math.abs(remaining) >= 0.005 ? `The payments entered must add up to the total: ${remaining > 0 ? `${formatMoney(remaining)} short` : `${formatMoney(Math.abs(remaining))} over`}. Use Fill remaining or clear the split.` : undefined;
 
   if (result) {
     return (
@@ -256,6 +233,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           <li><Link href={`/sales/walk-ins?visit=${result.visit_id}`} className="text-info hover:underline">Open visit</Link></li>
         </ul>
         <div className="flex gap-2">
+          <Button asChild><Link href={`/sales/record-sale?visit=${result.visit_id}`}>Sales & receipts</Link></Button>
           <Button onClick={reset}><Plus className="size-3.5" aria-hidden /> Record another walk-in</Button>
           <Button asChild variant="outline"><Link href={`/sales/contacts/${contact?.id}`}>Go to contact</Link></Button>
           {result.purchase_id ? <Button asChild variant="outline"><Link href={`/sales/feedback/new?purchase=${result.purchase_id}`}>Request feedback</Link></Button> : null}
@@ -400,7 +378,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
               </Select>
             </Field>
             <Field label="Visit purpose" required>
-              <ToggleGroup type="single" value={purpose} onValueChange={(v) => { if (v) { setPurpose(v); if (v === "purchase" || v === "collection") setHasPurchase(true); } }} variant="outline" size="sm" className="flex-wrap justify-start">
+              <ToggleGroup type="single" value={purpose} onValueChange={(v) => { if (v) { setPurpose(v);  } }} variant="outline" size="sm" className="flex-wrap justify-start">
                 {VISIT_PURPOSES.map((p) => <ToggleGroupItem key={p} value={p} className="h-7 px-2 text-xs">{titleCase(p)}</ToggleGroupItem>)}
               </ToggleGroup>
             </Field>
@@ -452,71 +430,12 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       )}
 
       {/* Step 4 */}
-      {step === 3 && (
-        <Card className="space-y-4 p-4">
-          <div className="flex items-center justify-between rounded-md border px-3 py-2">
-            <div>
-              <div className="text-sm font-medium">Record a purchase or collection</div>
-              <div className="text-[11px] text-muted-foreground">Document number and total are enough; lines are optional.</div>
-            </div>
-            <Switch checked={hasPurchase} onCheckedChange={setHasPurchase} aria-label="Has purchase" />
-          </div>
-          {hasPurchase && (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="ORC / external number"><Input className="h-9 font-mono" value={orc} onChange={(e) => setOrc(e.target.value)} placeholder="ORC-000123" /></Field>
-                <Field label="Total amount (MYR)" required><Input className="h-9 tnum" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></Field>
-              </div>
-              <div>
-                <div className="mb-1 flex items-center justify-between text-xs font-medium">
-                  Payments
-                  <span className={cn("tnum text-[11px]", Math.abs(remaining) < 0.005 ? "text-success" : "text-warning")}>{paidTotal > 0 ? `${formatMoney(paidTotal)} entered · ${remaining >= 0 ? "remaining" : "over by"} ${formatMoney(Math.abs(remaining))}` : "No payment split (total only)"}</span>
-                </div>
-                <div className="space-y-2">
-                  {payments.map((p, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2">
-                      <Select value={p.method} onValueChange={(v) => setPayments((ps) => ps.map((x, j) => (j === i ? { ...x, method: v as Payment["method"] } : x)))}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>{PAYMENT_METHODS.map((m) => <SelectItem key={m} value={m}>{titleCase(m)}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Input className="h-9 tnum" inputMode="decimal" placeholder="Amount" value={p.amount} onChange={(e) => setPayments((ps) => ps.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))} />
-                      <Input className="h-9" placeholder="Reference" value={p.reference} onChange={(e) => setPayments((ps) => ps.map((x, j) => (j === i ? { ...x, reference: e.target.value } : x)))} />
-                      <Button variant="ghost" size="icon" className="size-9" aria-label="Remove payment" onClick={() => setPayments((ps) => ps.filter((_, j) => j !== i))}><Trash2 className="size-4" /></Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="h-7" onClick={() => setPayments((ps) => [...ps, { method: "card", amount: remaining > 0 ? String(remaining) : "", reference: "" }])}><Plus className="size-3.5" aria-hidden /> Add payment</Button>
-                    {remaining > 0 && payments.length > 0 && <Button variant="ghost" size="sm" className="h-7" onClick={() => setPayments((ps) => ps.map((x, j) => (j === ps.length - 1 ? { ...x, amount: String((Number(x.amount) || 0) + remaining) } : x)))}>Fill remaining</Button>}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="mb-1 text-xs font-medium">Line items (optional)</div>
-                <div className="space-y-2">
-                  {items.map((it, i) => (
-                    <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-2">
-                      <Input className="h-9" placeholder="Description / code" value={it.description} onChange={(e) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))} />
-                      <Input className="h-9 tnum" placeholder="Qty" inputMode="decimal" value={it.quantity} onChange={(e) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))} />
-                      <Input className="h-9" placeholder="Unit" value={it.unit} onChange={(e) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, unit: e.target.value } : x)))} />
-                      <Input className="h-9 tnum" placeholder="Unit price" inputMode="decimal" value={it.unit_price} onChange={(e) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, unit_price: e.target.value } : x)))} />
-                      <Button variant="ghost" size="icon" className="size-9" aria-label="Remove item" onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))}><Trash2 className="size-4" /></Button>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" className="h-7" onClick={() => setItems((xs) => [...xs, { description: "", quantity: "1", unit: "pc", unit_price: "" }])}><Plus className="size-3.5" aria-hidden /> Add item</Button>
-                </div>
-              </div>
-            </>
-          )}
-          <div className="flex justify-between">
-            <Button variant="ghost" onClick={() => setStep(2)}><ArrowLeft className="size-4" aria-hidden /> Back</Button>
-            <DisabledHint reason={nextPurchaseReason}>
-              <Button onClick={() => setStep(4)} disabled={!canNextPurchase}>Review <ArrowRight className="size-4" aria-hidden /></Button>
-            </DisabledHint>
-          </div>
-        </Card>
-      )}
+      {step === 3 && <Card className="space-y-4 p-4">
+        <h2 className="font-semibold">Sales & payments</h2>
+        <p className="text-sm text-muted-foreground">Save the visit first. Then open Sales & receipts to record a documented sale or add a payment to an existing sale. A deposit is kept separate from the full sale value.</p>
+        <div className="flex gap-2"><Button variant="outline" onClick={() => setStep(2)}>Back</Button><Button onClick={() => setStep(4)}>Review visit</Button></div>
+      </Card>}
 
-      {/* Step 5 */}
       {step === 4 && contact && (
         <Card className="space-y-4 p-4">
           <InquiryLinkChoice key={`${contact.id}:${occurredAt}`} contactId={contact.id} occurredAt={`${occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt}+08:00`} value={inquiryChoice} onChange={setInquiryChoice} />
@@ -533,8 +452,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <Row label="Quotation" value={sqNumber || quotationAmount ? `${sqNumber || "—"}${quotationAmount ? ` · ${formatMoney(Number(quotationAmount))}` : ""}` : "—"} />
             <Row label="Interest" value={interest.map((i) => INTEREST_LABEL[i]).join(", ") || "—"} />
             <Row label="Opportunity" value={oppMode === "none" ? "None" : oppMode === "create" ? `Create: ${projectName}` : `Link: ${openOpps.find((o) => o.id === oppId)?.name ?? ""}`} />
-            <Row label="Purchase" value={hasPurchase ? `${formatMoney(amountNum)}${orc ? ` · ${orc}` : ""}` : "None"} />
-            <Row label="Payments" value={hasPurchase && paidTotal > 0 ? payments.filter((p) => Number(p.amount) > 0).map((p) => `${titleCase(p.method)} ${formatMoney(Number(p.amount))}`).join(", ") : "—"} />
+            <Row label="Sale / payment" value="Record after saving this visit" />
           </dl>
           {notes && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{notes}</p>}
           <div className="flex justify-between">

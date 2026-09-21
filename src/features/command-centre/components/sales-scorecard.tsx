@@ -27,7 +27,7 @@ const seg = (k: string) => SEGMENTS[k] ?? SEGMENTS.other;
 
 const STAT_HINTS = {
   target: "The annual sales target set by an administrator for this year.",
-  collected: "Purchases recorded in the app so far this year. Not reconciled with SQL Account.",
+  collected: "Reviewed payments less cash refunds dated this year. Credit terms and unreviewed historical amounts are excluded. Not reconciled with SQL Account.",
   pipeline: "The estimated value of open opportunities in your scope, unweighted: no probability is applied.",
   coverage: "Collected plus pipeline, as a share of the target. It shows how much of the year is already covered if every open opportunity closed; it is not a forecast.",
   gap: "What is left of the target after collected and pipeline. Zero when coverage reaches 100%.",
@@ -46,7 +46,7 @@ export function SalesScorecard({ data, canManage }: { data: Scorecard; canManage
 
   // Bar widths as a share of target: collected first, then pipeline up to the
   // target, gap fills the remainder.
-  const collectedW = target ? Math.min(data.collected / target, 1) : 0;
+  const collectedW = target ? Math.max(0, Math.min(data.collected / target, 1)) : 0;
   const pipelineW = target ? Math.min(data.pipeline / target, Math.max(0, 1 - data.collected / target)) : 0;
 
   const segTotal = useMemo(() => data.segments.reduce((s, x) => s + x.value, 0), [data.segments]);
@@ -89,7 +89,7 @@ export function SalesScorecard({ data, canManage }: { data: Scorecard; canManage
                 <Legend swatch="bg-info" label="Pipeline" value={formatMoney(data.pipeline, cur)} />
                 <Legend swatch="bg-muted-foreground/30" label="Gap" value={formatMoney(gap, cur)} />
               </div>
-              <p className="text-[11px] text-muted-foreground">Collection is app-recorded purchases (not reconciled with SQL Account); pipeline is unweighted open opportunity value in your scope.</p>
+              <p className="text-[11px] text-muted-foreground">Collections are reviewed payments less cash refunds; {data.unreviewed_records ?? 0} historical records remain unclassified. Not reconciled with SQL Account. Pipeline is unweighted open opportunity value in your scope.</p>
             </div>
 
             {/* Pipeline by segment */}

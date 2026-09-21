@@ -32,9 +32,9 @@ const HINTS = {
   status: "New means no earlier record of this customer; Existing means they were already in the app. Decided when the visit is recorded.",
   type: "Homeowner, contractor, designer and so on. Set on the customer and confirmed at the visit.",
   orc: "The official receipt number of the collection recorded at this visit. Blank when nothing was paid.",
-  collection: "Money taken at this visit, recorded as a linked purchase. Not reconciled with SQL Account.",
+  collection: "Reviewed collections on linked sale records, net of cash refunds. Historical unreviewed amounts are excluded.",
   sq: "The quotation number handed to the customer at this visit.",
-  quotation: "The quoted amount in MYR. A quotation is not a sale; the purchase column is.",
+  quotation: "The quoted amount in MYR. A quotation is not a sale; confirmed documented sales are recorded separately.",
   heard: "The channel the customer named when asked how they heard of the showroom.",
   purpose: "What the customer came to do: browse, collect, purchase, and so on.",
   opportunity: "The pipeline opportunity this visit was linked to, if any.",
@@ -77,7 +77,12 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
   // visit row; the app models that as a linked purchase, so map it here.
   const purchaseByVisit = useMemo(() => {
     const m = new Map<string, PurchaseRow>();
-    for (const p of purchases) if (p.visit_id) m.set(p.visit_id, p);
+    for (const p of purchases) if (p.visit_id) {
+      const prior = m.get(p.visit_id);
+      m.set(p.visit_id, prior ? { ...prior, collections: prior.collections + p.collections,
+        external_ref: [prior.external_ref, p.external_ref].filter(Boolean).join(", "),
+        financial_state: prior.financial_state === "legacy_unclassified" || p.financial_state === "legacy_unclassified" ? "legacy_unclassified" : prior.financial_state } : p);
+    }
     return m;
   }, [purchases]);
 
@@ -113,11 +118,11 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
       },
       {
         id: "collection",
-        header: "Collection",
+        header: "Linked collections",
         meta: { hint: HINTS.collection },
         cell: ({ row }) => {
           const p = purchaseByVisit.get(row.original.id);
-          return p ? <MoneyCell value={p.amount} currency={p.currency} className="font-medium" /> : <span className="text-muted-foreground">—</span>;
+          return p?.financial_state === "legacy_unclassified" ? <span className="text-warning">Needs review</span> : p ? <MoneyCell value={p.collections} currency={p.currency} className="font-medium" /> : <span className="text-muted-foreground">—</span>;
         },
       },
       { accessorKey: "quotation_ref", header: "SQ", meta: { hint: HINTS.sq }, cell: ({ row }) => <MonoCell value={row.original.quotation_ref} /> },
@@ -165,7 +170,9 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
           </div>
         ),
       },
-      { accessorKey: "amount", header: "Amount", cell: ({ row }) => <MoneyCell value={row.original.amount} currency={row.original.currency} className="font-medium" /> },
+      { accessorKey: "amount", header: "Document amount", cell: ({ row }) => row.original.status === "draft" ? <span>Pending evidence</span> : <MoneyCell value={row.original.amount} currency={row.original.currency} className="font-medium" /> },
+      { accessorKey: "financial_state", header: "Financial review", cell: ({ row }) => titleCase(row.original.financial_state) },
+      { accessorKey: "collections", header: "Reviewed collections", cell: ({ row }) => <MoneyCell value={row.original.collections} currency={row.original.currency} /> },
       { accessorKey: "payment_methods", header: "Payment method", cell: ({ row }) => (row.original.payment_methods.length ? row.original.payment_methods.map(titleCase).join(", ") : <span className="text-muted-foreground">—</span>) },
       { id: "ext_ref", header: "Bank / ext. ref", meta: { hint: HINTS.extRef }, cell: ({ row }) => <MonoCell value={row.original.payments.find((p) => p.reference)?.reference ?? null} /> },
       { accessorKey: "purchase_source", header: "Source", meta: { hint: HINTS.source }, cell: ({ row }) => (row.original.purchase_source ? titleCase(row.original.purchase_source) : "—") },
@@ -182,7 +189,7 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <MetricCard compact label="Visits today" value={counts.visitsToday} info={{ definition: "Visits recorded today.", grain: "Visit", source: "sales.visits" }} />
         <MetricCard compact label="Visits (7d)" value={counts.visits7d} info={{ definition: "Visits recorded in the last 7 days.", grain: "Visit", source: "sales.visits" }} />
-        <MetricCard compact label="Purchases (7d)" value={counts.purchases7d} info={{ definition: "Purchases recorded in the last 7 days, excluding voided.", grain: "Purchase", source: "sales.purchases" }} />
+        <MetricCard compact label="Purchases (7d)" value={counts.purchases7d} info={{ definition: "Confirmed documented sales in the last 7 days, excluding drafts, unreviewed historical amounts, collection-only records and voids.", grain: "Purchase", source: "sales.purchases" }} />
         <MetricCard compact label="Repeat purchases (7d)" value={counts.repeat7d} tone="ai" info={{ definition: "Purchases whose identity already had a prior accepted purchase.", grain: "Purchase", source: "sales.purchases", caveat: "Derived from app-recorded purchases only." }} />
       </div>
 
@@ -194,7 +201,8 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
           </TabsList>
         </Tabs>
         {can("sales.write") ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline" className="h-8"><Link href="/sales/record-sale">Sales & receipts</Link></Button>
             <Button asChild size="sm" variant="outline" className="h-8">
               <Link href="/sales/walk-ins/import">
                 <FileSpreadsheet className="size-3.5" aria-hidden /> Import spreadsheet
@@ -243,6 +251,7 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
         {visit && (
           <>
             <DrawerSection title="Original inquiry">
+              <Button asChild variant="outline"><Link href={`/sales/record-sale?visit=${visit.id}`}>Sales, receipts & payments</Link></Button>
               <VisitInquiryLink key={`${visit.id}:${visit.inquiry_link_version}`} visit={visit} history={linkHistory} />
             </DrawerSection>
             <DrawerSection title="Visit">
@@ -316,11 +325,11 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
                   </Button>
                 </DisabledHint>
               )}
-              <Gated permission="purchase.correct">
+              {purchase.financial_state === "legacy_unclassified" && <Gated permission="purchase.correct">
                 <Button size="sm" variant="outline" className="h-7" onClick={() => setCorrecting(true)}>
                   Correct amount
                 </Button>
-              </Gated>
+              </Gated>}
             </div>
           ) : undefined
         }
@@ -328,6 +337,8 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
         {purchase && (
           <>
             <DrawerSection title="Purchase">
+              <Button asChild variant="outline"><Link href={`/sales/record-sale?id=${purchase.id}`}>Sales, receipts & payments</Link></Button>
+              <p className="text-xs text-muted-foreground">{titleCase(purchase.financial_state)}. Document amounts and collections are separate.</p>
               <FactList
                 items={[
                   { label: "Customer", value: purchase.contact_id ? <Link href={`/sales/contacts/${purchase.contact_id}`} className="hover:underline">{purchase.contact_name}</Link> : "—" },

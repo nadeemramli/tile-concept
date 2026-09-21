@@ -12,6 +12,7 @@ export const VIEW_LABELS: Record<LeadView, string> = {
   "needs-action": "Needs action",
   replied: "Customer replied",
   showroom: "Visited showroom",
+  won: "Closed sales",
   upcoming: "Upcoming",
   "follow-ups-completed": "Completed follow-ups",
   new: "New",
@@ -39,6 +40,7 @@ export interface LeadLocation {
   duplicate_of_lead_id: string | null;
   created_at: string;
   first_customer_reply_at?: string | null;
+  confirmed_sales?: number;
   first_showroom_at?: string | null;
 }
 
@@ -58,6 +60,7 @@ function endOfTodayKl(now: Date): Date {
 }
 
 export function whereIsLead(lead: LeadLocation, userId: string, now: Date = new Date()): Whereabouts {
+  if ((lead.confirmed_sales ?? 0) > 0) return { home: "won", also: lead.first_showroom_at ? ["showroom"] : [] };
   const walkIn = lead.source_channel === "walk_in";
   let home: LeadView;
   switch (lead.status) {

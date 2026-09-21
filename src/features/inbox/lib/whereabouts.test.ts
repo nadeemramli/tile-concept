@@ -19,6 +19,12 @@ function lead(over: Partial<LeadLocation> = {}): LeadLocation {
 }
 
 describe("whereIsLead", () => {
+  it("a documented sale closes the inquiry independently of its old progress status", () => {
+    expect(whereIsLead(lead({ confirmed_sales: 1, first_showroom_at: "2026-09-11T01:00:00Z", owner_id: me, next_follow_up_at: "2026-09-11T01:00:00Z" }), me, now)).toEqual({ home: "won", also: ["showroom"] });
+  });
+  it("voiding the final sale exposes the original active workflow again", () => {
+    expect(whereIsLead(lead({ confirmed_sales: 0 }), me, now).home).toBe("new");
+  });
   it("a fresh unowned lead is in New and Unassigned", () => {
     expect(whereIsLead(lead(), me, now)).toEqual({ home: "new", also: ["unassigned"] });
   });

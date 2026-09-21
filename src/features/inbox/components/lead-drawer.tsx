@@ -132,10 +132,10 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
         className="data-[side=right]:w-full"
         title={
           <span className="flex flex-wrap items-center gap-2">
-            {lead.raw_name ?? lead.raw_company ?? "Inquiry"} <StatusPill map={LEAD_STATUS} value={lead.status} size="md" />
+            {lead.raw_name ?? lead.raw_company ?? "Inquiry"} <StatusPill map={LEAD_STATUS} value={lead.confirmed_sales > 0 ? "won" : lead.status} size="md" />
           </span>
         }
-        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)} · ${responseLine}`}
+        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)} · ${lead.confirmed_sales > 0 ? "Documented sale confirmed" : responseLine}`}
       >
         {/* Where the lead lives now, so a response never makes it vanish. */}
         {view && inCurrentView === false && view !== "all" && view !== where.home && (
@@ -224,7 +224,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, members, initialSu
           )}
         </div>
 
-        {slaOverdue && (
+        {slaOverdue && lead.confirmed_sales === 0 && (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             This customer has been waiting {formatRelative(lead.first_response_due_at).replace(" ago", "")} past the 4-hour reply target. Message them now.
           </p>

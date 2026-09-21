@@ -13,7 +13,7 @@ export default async function NewWalkInPage() {
   const [locations, members] = await Promise.all([getLocations(), getMembers()]);
   return (
     <PageBody className="max-w-3xl">
-      <PageHeader title="New walk-in" description="Phone first. Resolve the customer safely, capture the visit, add a purchase if any — one guided flow." />
+      <PageHeader title="New walk-in" description="Phone first. Resolve the customer safely, capture the visit, then record a sale or payment against its document." />
       <WalkInWizard locations={locations} members={members} />
     </PageBody>
   );

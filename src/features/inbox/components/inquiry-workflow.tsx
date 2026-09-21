@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field } from "@/components/patterns/field";
 import { DrawerSection } from "@/components/patterns/record-drawer";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import { followUpDueAt } from "@/features/inbox/lib/follow-up";
 import type { InquiryAction } from "@/features/inbox/schema";
 import type { LeadRow } from "@/features/inbox/types";
@@ -38,7 +38,7 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
   const [pending, start] = useTransition();
   const inFlight = useRef(false);
   const retry = useRef<{ payload: string; id: string } | null>(null);
-  const closed = ["disqualified", "duplicate"].includes(lead.status);
+  const closed = lead.confirmed_sales > 0 || ["disqualified", "duplicate"].includes(lead.status);
   const needsDate = action === "schedule" || action === "reschedule" || action === "reopen";
   const needsReason = action === "complete" || action === "lost" || action === "reopen" || action === "no_next_action";
 
@@ -91,6 +91,11 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
           <p className="font-medium">{lead.first_showroom_at ? `Visited showroom · ${lead.showroom_visits} visit${lead.showroom_visits === 1 ? "" : "s"}` : "Showroom visit not recorded"}</p>
           {lead.first_showroom_at && <p className="text-xs text-muted-foreground">First visit: {formatDateTime(lead.first_showroom_at)}. Repeat visits count once as an inquiry conversion.</p>}
           <Button asChild size="sm" variant="outline" className="mt-2"><a href="/sales/walk-ins/new">Record showroom visit</a></Button>
+        </div>
+        <div className="border-t pt-2 text-sm">
+          <p className="font-medium">{lead.confirmed_sales > 0 ? `Closed sale · ${formatMoney(lead.recorded_net_sales)} net revenue` : "No confirmed sale"}</p>
+          <p className="text-xs text-muted-foreground">Documented sales count once per inquiry. Collections are recorded separately.</p>
+          <Button asChild size="sm" variant="outline" className="mt-2"><a href={`/sales/record-sale?lead=${lead.id}`}>Sales, receipts & payments</a></Button>
         </div>
         {!closed && <div className="flex flex-wrap gap-2">
           {(["whatsapp_sent", "customer_replied", "no_response", "contact_attempt"] as const).map((key) => (

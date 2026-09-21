@@ -25,6 +25,8 @@ export interface VisitRow {
 }
 
 export interface PurchaseRow {
+  financial_state: string;
+  collections: number;
   id: string;
   purchased_at: string;
   external_ref: string | null;

@@ -31,7 +31,7 @@ import type { ProfileRef } from "@/server/queries/reference";
 import type { TimelineItem } from "@/components/patterns/timeline";
 import { cn } from "@/lib/utils";
 
-const PRIMARY_VIEWS: LeadView[] = ["needs-action", "waiting", "replied", "showroom", "follow-ups-due", "upcoming", "disqualified", "all"];
+const PRIMARY_VIEWS: LeadView[] = ["needs-action", "waiting", "replied", "showroom", "won", "follow-ups-due", "upcoming", "disqualified", "all"];
 
 const COLUMN_HINTS = {
   received: "When the inquiry arrived from the connector or was typed in.",
@@ -106,7 +106,7 @@ export function InboxClient({ view, leads, counts, members, locations, filters, 
           <div className="min-w-0">
             <div className="truncate font-medium">{row.original.raw_name ?? <span className="text-muted-foreground">Unknown</span>}</div>
             {row.original.raw_company && <div className="truncate text-[11px] text-muted-foreground">{row.original.raw_company}</div>}
-            <div className="text-[11px] text-muted-foreground">{row.original.first_showroom_at ? `Visited showroom · ${row.original.showroom_visits} visit${row.original.showroom_visits === 1 ? "" : "s"}` : row.original.last_contact_attempt_at ? `Last staff contact ${formatRelative(row.original.last_contact_attempt_at)}` : row.original.first_response_at ? `First staff contact ${formatRelative(row.original.first_response_at)}` : "No staff contact recorded"}</div>
+            <div className="text-[11px] text-muted-foreground">{row.original.confirmed_sales > 0 ? `Closed sale · ${row.original.confirmed_sales} sale${row.original.confirmed_sales === 1 ? "" : "s"}` : row.original.first_showroom_at ? `Visited showroom · ${row.original.showroom_visits} visit${row.original.showroom_visits === 1 ? "" : "s"}` : row.original.last_contact_attempt_at ? `Last staff contact ${formatRelative(row.original.last_contact_attempt_at)}` : row.original.first_response_at ? `First staff contact ${formatRelative(row.original.first_response_at)}` : "No staff contact recorded"}</div>
           </div>
         ),
       },
@@ -124,7 +124,7 @@ export function InboxClient({ view, leads, counts, members, locations, filters, 
       },
       { accessorKey: "interest", header: "Interest", cell: ({ row }) => <span className="block max-w-64 truncate" title={row.original.interest ?? ""}>{row.original.interest ?? "—"}</span> },
       { accessorKey: "owner_name", header: "Owner", meta: { hint: COLUMN_HINTS.owner }, cell: ({ row }) => row.original.owner_name ?? <TonePill tone="warning" label="Unassigned" hint="No salesperson owns this lead yet, so nobody is on the clock. A sales manager assigns it, or a rep picks it up." /> },
-      { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={LEAD_STATUS} value={row.original.status} /> },
+      { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={LEAD_STATUS} value={row.original.confirmed_sales > 0 ? "won" : row.original.status} /> },
       {
         id: "sla",
         header: "First response",

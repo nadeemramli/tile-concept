@@ -122,7 +122,7 @@ export async function recordWalkInAction(input: WalkInInput): Promise<ActionResu
   const v = parsed.data;
   if (v.purchase) {
     const paid = v.purchase.payments.reduce((s, p) => s + p.amount, 0);
-    if (v.purchase.payments.length > 0 && Math.abs(paid - v.purchase.amount) > 0.005) return fail(`Payments (${paid.toFixed(2)}) must equal the purchase amount (${v.purchase.amount.toFixed(2)}).`);
+    if (v.purchase.payments.length > 0 && paid - v.purchase.amount > 0.005) return fail(`Payments (${paid.toFixed(2)}) cannot exceed the purchase amount (${v.purchase.amount.toFixed(2)}).`);
   }
   try {
     await requirePermission("sales.write");
@@ -160,29 +160,12 @@ export async function correctPurchaseAction(input: z.input<typeof correctPurchas
   if (!parsed.success) return fail("Enter the corrected amount and a reason of at least 5 characters.");
   const v = parsed.data;
   try {
-    const session = await requirePermission("purchase.correct");
+    await requirePermission("purchase.correct");
     const supabase = await createServerSupabase();
-    const { data: p } = await supabase.from("purchases").select("id, amount, notes, contact_id, account_id, opportunity_id, project_id, visit_id, workspace_id").eq("id", v.purchase_id).maybeSingle();
-    if (!p) return fail("Purchase not found");
-    const old = Number(p.amount ?? 0);
-    const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
-    const note = `${p.notes ? p.notes + "\n" : ""}[${stamp}] Corrected ${old.toFixed(2)} → ${v.amount.toFixed(2)}: ${v.reason}`;
-    const { error } = await supabase.from("purchases").update({ amount: v.amount, status: "corrected", notes: note }).eq("id", v.purchase_id);
+    const { data: p, error: readError } = await supabase.from("purchases").select("version").eq("id", v.purchase_id).single();
+    if (readError) return fail(readError);
+    const { error } = await supabase.rpc("sale_command", { p_action: "correct_legacy", p_request_id: crypto.randomUUID(), p_input: { purchase_id: v.purchase_id, version: p.version, amount: v.amount, reason: v.reason } });
     if (error) return fail(error);
-    await supabase.from("activities").insert({
-      workspace_id: session.workspaceId,
-      kind: "note",
-      subject: "Purchase corrected",
-      body: `Amount ${old.toFixed(2)} → ${v.amount.toFixed(2)}. Reason: ${v.reason}`,
-      actor_id: session.userId,
-      contact_id: p.contact_id,
-      account_id: p.account_id,
-      opportunity_id: p.opportunity_id,
-      project_id: p.project_id,
-      visit_id: p.visit_id,
-      purchase_id: v.purchase_id,
-      metadata: { old_amount: old, new_amount: v.amount },
-    });
     revalidateWalkins();
     return ok(undefined, "Purchase corrected and audited.");
   } catch (e) {

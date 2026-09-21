@@ -18,6 +18,7 @@ export interface StatusMeta {
 export type StatusMap = Record<string, StatusMeta>;
 
 export const LEAD_STATUS: StatusMap = {
+  won: { label: "Closed sale", tone: "success", hint: "At least one confirmed documented sale retains positive net revenue. Deposits and opportunity creation alone do not close an inquiry." },
   new: { label: "New", tone: "info", hint: "Just arrived and nobody has reached out yet. The first-response clock is running." },
   contact_attempted: { label: "Contact attempted", tone: "warning", hint: "Someone tried to reach the customer but has not spoken to them yet." },
   contacted: { label: "Contacted", tone: "info", hint: "A conversation happened. The first-response clock has stopped." },
@@ -94,6 +95,7 @@ export const PRICE_STATE: StatusMap = {
 };
 
 export const PURCHASE_STATUS: StatusMap = {
+  draft: { label: "Pending evidence", tone: "warning", hint: "Saved sale details awaiting uploaded evidence and confirmation. Excluded from revenue and closed inquiries." },
   recorded: { label: "Recorded", tone: "success", hint: "Captured as entered at the counter." },
   corrected: { label: "Corrected", tone: "warning", hint: "The amount or payment was changed after recording, with a reason and an audit entry." },
   voided: { label: "Voided", tone: "destructive", hint: "Cancelled after recording. Kept for the audit trail; excluded from totals." },

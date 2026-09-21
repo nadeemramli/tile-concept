@@ -44,6 +44,7 @@ export interface SalesScorecard {
   target: number | null;
   currency: string;
   collected: number;
+  unreviewed_records: number;
   pipeline: number;
   segments: { segment: string; value: number }[];
   generated_at: string;
