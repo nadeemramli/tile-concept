@@ -37,10 +37,16 @@ Detailed checks: [inquiry operations](./inbox-live-handoff.md), [opportunity wor
 
 ## Deployment and operational follow-up
 
-1. Apply the eight new migrations from `20260921021742_inquiry_operations.sql` through `20260921051515_atomic_manual_inquiry.sql` to the intended hosted database in filename order before serving the new app. Use the normal reviewed migration/release process; **never use the local reset command on hosted data**. Migration files are committed; hosted migrations have not been run by this task.
+1. **Completed on 21 September 2026:** the eight migrations from `20260921021742_inquiry_operations.sql` through `20260921051515_atomic_manual_inquiry.sql` were applied to hosted Tile Concept after a dry run confirmed that exact set. The deployed funnel page had failed because code was released before these database functions existed. Reloading the hosted page after migration restored the dashboard and customer history. Future releases must apply compatible database migrations before serving dependent code; **never use the local reset command on hosted data**.
 2. Set `TC_GOOGLE_REVIEW_URL` to the supplied listing fallback `https://share.google/PNz6R4QrCC4xRNhFm`, or a subsequently verified direct Google review URL. Only the ignored local environment is configured now. Confirm `NEXT_PUBLIC_APP_URL` is the public HTTPS origin. One Google destination per environment is currently supported.
 3. Verify hosted private Storage policies and Realtime channel authorization. The inbox shows connection state and falls back to periodic refresh if live updates are unavailable.
 4. Run the QC journeys as manager, showroom and marketing roles on staging, then verify a real phone's camera/gallery, WhatsApp message and correct Google business listing. The app cannot silently submit a Google review or attach images through WhatsApp click-to-chat; the message links to the customer page containing the photos.
 5. Have Claude Code independently test concurrent edits/retries, role/workspace isolation, realistic history volumes and query performance. The handoff is local; it has not been sent to another service.
 
 Known limits: historical financial classification needs business review; platform cost-per-lead uses known source labels rather than ad-click attribution; the inherited opportunity pipeline query retains its 2,000-record ceiling; abandoned feedback photo intents can consume upload slots until cleanup; physical-device and hosted integration checks remain outstanding. The creative production board will be built separately.
+
+## Reporting display repair
+
+The featured dashboard link on the Reports index was an inline anchor containing block content. Its border/background and padding therefore rendered as fragmented strips instead of one card. It now has a block layout, mobile padding, and a nonshrinking arrow. A report-specific error boundary retains the app navigation and gives retry/back-to-reports actions if a report later fails.
+
+Browser verification covered the hosted funnel after migration, the repaired Reports card at desktop and phone sizes, and navigation into the dashboard. Hosted verification used the isolated guest/demo workspace; no customer records were changed. Existing hosted security-advisor warnings remain a separate hardening task (privileged-function grants, helper search paths and authentication configuration).
