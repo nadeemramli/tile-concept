@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Phone, Plus, UserPlus, UserSearch } from "lucide-react";
@@ -22,6 +22,9 @@ import { cn } from "@/lib/utils";
 import { createWalkInContactAction, findCandidatesAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
 import { EMPTY_INQUIRY_CHOICE, InquiryLinkChoice } from "./inquiry-link-choice";
 import { CUSTOMER_TYPES, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
+import { RENOVATION_AREA_PRESETS } from "@/features/walkins/presets";
+import { EMPTY_MALAYSIA_AREA, formatMalaysiaArea } from "@/lib/location/malaysia";
+import { MalaysiaAreaFields } from "./malaysia-area-fields";
 import type { IdentityCandidate } from "@/features/inbox/types";
 import type { InquiryChoice, OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
 import type { ProfileRef } from "@/server/queries/reference";
@@ -37,6 +40,7 @@ function localNow() {
 
 export function WalkInWizard({ locations, members }: { locations: { id: string; name: string }[]; members: ProfileRef[] }) {
   const { session } = useSession();
+  const renovationInputId = useId();
   const [step, setStep] = useState(0);
   const [pending, start] = useTransition();
   const saving = useRef(false);
@@ -64,7 +68,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [locationId, setLocationId] = useState(session.defaultLocationId ?? locations[0]?.id ?? "");
   const [staffId, setStaffId] = useState(session.userId);
   const [customerType, setCustomerType] = useState<string>("homeowner");
-  const [area, setArea] = useState("");
+  const [customerArea, setCustomerArea] = useState(EMPTY_MALAYSIA_AREA);
+  const area = formatMalaysiaArea(customerArea);
   const [renovationArea, setRenovationArea] = useState("");
   const [source, setSource] = useState<string>("walk_in");
   const [purpose, setPurpose] = useState<string>("browse");
@@ -201,7 +206,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   function reset() {
     retry.current = null; selectedCustomer.current = null; setFromLead(null); setInquiryChoice(EMPTY_INQUIRY_CHOICE);
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
-    setOccurredAt(localNow()); setArea(""); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
+    setOccurredAt(localNow()); setCustomerArea(EMPTY_MALAYSIA_AREA); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
     setResult(null);
   }
 
@@ -369,8 +374,13 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
                 <SelectContent>{CUSTOMER_TYPES.map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="From (customer's area)"><Input className="h-9" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Cheras, Puchong" /></Field>
-            <Field label="Area / renovation"><Input className="h-9" value={renovationArea} onChange={(e) => setRenovationArea(e.target.value)} placeholder="e.g. Wet kitchen, Master bath" /></Field>
+            <MalaysiaAreaFields value={customerArea} onChange={setCustomerArea} />
+            <Field label="Area / renovation" htmlFor={renovationInputId} hint="Choose a preset or type another renovation area.">
+              <Input id={renovationInputId} list={`${renovationInputId}-presets`} aria-describedby={`${renovationInputId}-hint`} className="h-9" value={renovationArea} onChange={(e) => setRenovationArea(e.target.value)} placeholder="Select or type a renovation area" maxLength={200} autoComplete="off" />
+              <datalist id={`${renovationInputId}-presets`}>
+                {RENOVATION_AREA_PRESETS.map((option) => <option key={option} value={option} />)}
+              </datalist>
+            </Field>
             <Field label="How did they hear of us?">
               <Select value={source} onValueChange={setSource}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>

@@ -1,0 +1,19 @@
+{
+  "title": "Malaysia Postcode Dataset",
+  "publisher": "Malaysian Communications and Multimedia Commission via data.gov.my",
+  "source": "https://data.gov.my/data-catalogue/poskod",
+  "download": "https://storage.data.gov.my/dictionaries/postcodes.csv",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "data_as_of": "2026-06",
+  "source_updated_at": "2026-08-02",
+  "retrieved_at": "2026-09-22T18:08:38.366576+00:00",
+  "source_sha256": "18e653d7600922c7de55a7e03b0a35aaac8cde8c0b3f0ed3c6a10f72c3e54bb7",
+  "source_rows": 2932,
+  "normalized_rows": 2931,
+  "unique_postcodes": 2930,
+  "states_and_federal_territories": 16,
+  "state_city_pairs": 397,
+  "modifications": "Trimmed surrounding whitespace; removed identical state/city/postcode triples; grouped and sorted by state and city. Preserved five-digit strings and shared postcodes. No district or neighbourhood mapping inferred.",
+  "caveat": "Reference snapshot updated annually by publisher; allow manual entry for unknown or unlisted areas."
+}
