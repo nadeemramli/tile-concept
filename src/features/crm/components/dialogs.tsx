@@ -412,15 +412,12 @@ export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults
           <Field label="Opportunity name" htmlFor="opportunity_name" hint="Defaults to project name">
             <Input id="opportunity_name" name="opportunity_name" />
           </Field>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Est. value (MYR)" htmlFor="estimated_value">
               <Input id="estimated_value" name="estimated_value" type="number" step="0.01" min="0" className="tnum" />
             </Field>
             <Field label="Next action" htmlFor="next_action">
               <Input id="next_action" name="next_action" defaultValue="Follow up" />
-            </Field>
-            <Field label="Due (Malaysia time)" htmlFor="next_action_due_at">
-              <Input id="next_action_due_at" name="next_action_due_at" type="datetime-local" required />
             </Field>
           </div>
           <Field label="Source">
