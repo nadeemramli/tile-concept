@@ -24,13 +24,12 @@ import { normalizePhone } from "@/lib/identity/normalize";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
 import { createWalkInContactAction, findCandidatesAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
-import { EMPTY_INQUIRY_CHOICE, InquiryLinkChoice } from "./inquiry-link-choice";
 import { CUSTOMER_TYPES, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
 import { RENOVATION_AREA_PRESETS } from "@/features/walkins/presets";
 import { EMPTY_MALAYSIA_AREA, formatMalaysiaArea } from "@/lib/location/malaysia";
 import { MalaysiaAreaFields } from "./malaysia-area-fields";
 import type { IdentityCandidate } from "@/features/inbox/types";
-import type { InquiryChoice, OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
+import type { OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
 import type { ProfileRef } from "@/server/queries/reference";
 
 const SOURCES = ["walk_in", "tiktok", "meta", "website", "whatsapp", "dm", "call", "email", "referral", "other"] as const;
@@ -50,7 +49,6 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const saving = useRef(false);
   const selectedCustomer = useRef<string | null>(null);
   const retry = useRef<{ payload: string; id: string } | null>(null);
-  const [inquiryChoice, setInquiryChoice] = useState<InquiryChoice>(EMPTY_INQUIRY_CHOICE);
 
   // step 1
   const [phone, setPhone] = useState("");
@@ -108,7 +106,6 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       setContact(null);
       selectedCustomer.current = null;
       setAccountId("");
-      setInquiryChoice(EMPTY_INQUIRY_CHOICE);
       setStep(1);
     });
   }
@@ -121,19 +118,17 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
     }
     if (c.entity_type === "lead") {
       // They enquired before but were never registered: register them now from
-      // the enquiry so its phone, email, history and salesperson stay attached.
+      // the enquiry; saving uses the same safe automatic matching as other visits.
       setFromLead(c);
       setContact(null); selectedCustomer.current = null;
-      setInquiryChoice(EMPTY_INQUIRY_CHOICE);
       setOppId(""); setOppMode("none"); setOpenOpps([]);
       if (c.display_name && c.display_name !== "Enquiry") setNewName(c.display_name);
-      toast.info("Register the customer below, then confirm the original inquiry with the visit.");
+      toast.info("Register the customer below. The visit will be matched to an earlier inquiry automatically when possible.");
       return;
     }
     setContact({ id: c.entity_id, name: c.display_name, lifecycle: c.lifecycle_state, isNew: false });
     selectedCustomer.current = c.entity_id;
     setFromLead(null);
-    setInquiryChoice(EMPTY_INQUIRY_CHOICE);
     setOppId(""); setOppMode("none"); setOpenOpps([]);
     start(async () => {
       const r = await getOpenOpportunitiesAction(c.entity_id);
@@ -155,7 +150,6 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       setCustomerType(newType);
       setOpenOpps([]);
       setOppId(""); setOppMode("none");
-      setInquiryChoice(fromLead ? { mode: "choose", leadId: fromLead.entity_id, reason: "" } : EMPTY_INQUIRY_CHOICE);
       setStep(2);
     });
   }
@@ -164,9 +158,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
     if (!contact || saving.current) return;
     const input: WalkInInput = {
       request_id: retry.current?.id ?? crypto.randomUUID(),
-      inquiry_mode: inquiryChoice.mode,
-      inquiry_lead_id: inquiryChoice.leadId,
-      inquiry_reason: inquiryChoice.reason,
+      inquiry_mode: "automatic",
       contact_id: contact.id,
       account_id: accountId,
       occurred_at: `${occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt}+08:00`,
@@ -211,7 +203,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   }
 
   function reset() {
-    retry.current = null; selectedCustomer.current = null; setFromLead(null); setInquiryChoice(EMPTY_INQUIRY_CHOICE);
+    retry.current = null; selectedCustomer.current = null; setFromLead(null);
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
     setOccurredAt(localNow()); setCustomerArea(EMPTY_MALAYSIA_AREA); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
     setQuotationFiles([]); setAttachmentsPending(false);
@@ -315,7 +307,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             {fromLead && (
               <p className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-ai/25 bg-ai/5 px-2 py-1.5 text-xs">
                 <span>
-                  Creates a customer with the phone and email you entered. Confirm the inquiry on the Review step; its source and salesperson are preserved when the visit is saved.
+                  Creates a customer with the phone and email you entered. Earlier inquiries are matched automatically when the visit is saved; uncertain matches are kept for later review.
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setFromLead(null)}>
                   Register without the enquiry
@@ -463,7 +455,6 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
       {step === 4 && contact && (
         <Card className="space-y-4 p-4">
-          <InquiryLinkChoice key={`${contact.id}:${occurredAt}`} contactId={contact.id} occurredAt={`${occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt}+08:00`} value={inquiryChoice} onChange={setInquiryChoice} />
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
             <Row label="Customer" value={contact.name} />
             <Row label="When" value={occurredAt.replace("T", " ")} />
