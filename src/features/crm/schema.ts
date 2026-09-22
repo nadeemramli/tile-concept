@@ -37,6 +37,7 @@ export const createAccountSchema = z.object({
   name: z.string().trim().min(2, "Name is required"),
   account_type: z.enum(ACCOUNT_TYPES).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   registration_number: optionalStr,
+  telephone: z.string().trim().max(50).optional(),
   website: optionalStr,
   city: optionalStr,
   state: optionalStr,
@@ -72,6 +73,9 @@ export const addTaskSchema = z.object({
 export const createProjectOpportunitySchema = z.object({
   request_id: uuid(),
   project_name: z.string().trim().min(2, "Project name is required"),
+  follow_up_contact_id: optionalUuid,
+  product_specification: z.string().trim().max(4000).optional(),
+  site_address: z.string().trim().max(1000).optional(),
   project_type: z.enum(PROJECT_TYPES).default("other"),
   area: optionalStr,
   contact_id: optionalUuid,
@@ -105,6 +109,8 @@ export const addSiteSchema = z.object({
 });
 
 export const updateProjectSchema = z.object({
+  follow_up_contact_id: optionalUuid,
+  product_specification: z.string().trim().max(4000).optional(),
   id: uuid(),
   name: z.string().trim().min(2),
   project_type: z.enum(PROJECT_TYPES),

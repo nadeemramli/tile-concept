@@ -269,7 +269,7 @@ export interface ProjectOption {
 export async function searchProjectsAction(query: string): Promise<ActionResult<ProjectOption[]>> {
   await requireSession();
   const supabase = await createServerSupabase();
-  let q = supabase.from("projects").select("id, name, area, status, contacts(display_name), accounts(name)").order("created_at", { ascending: false }).limit(20);
+  let q = supabase.from("projects").select("id, name, area, status, contacts!projects_primary_contact_id_fkey(display_name), accounts(name)").order("created_at", { ascending: false }).limit(20);
   const term = query.trim();
   if (term.length >= 2) q = q.ilike("name", `%${term}%`);
   const { data, error } = await q;

@@ -45,7 +45,7 @@ export async function listContacts(opts: { includeMerged?: boolean } = {}): Prom
 
   const [{ data: points }, { data: rels }, { data: opps }, { data: acts }] = await Promise.all([
     supabase.from("contact_points").select("contact_id, kind, normalized_value, is_primary, created_at").in("contact_id", ids),
-    supabase.from("account_contact_relationships").select("contact_id, account_id, is_primary, accounts(name)").in("contact_id", ids),
+    supabase.from("account_contact_relationships").select("contact_id, account_id, is_primary, accounts(name)").in("contact_id", ids).is("ended_at", null),
     supabase.from("opportunities").select("contact_id").eq("status", "open").is("archived_at", null).in("contact_id", ids),
     supabase.from("activities").select("contact_id, occurred_at").in("contact_id", ids).order("occurred_at", { ascending: false }).limit(5000),
   ]);
@@ -133,6 +133,7 @@ export interface OpportunitySummary {
 }
 
 export interface PurchaseSummary {
+  document_type: string | null;
   id: string;
   purchased_at: string;
   external_ref: string | null;
@@ -179,7 +180,7 @@ export async function getAuditFor(objectIds: string[], limit = 20): Promise<Audi
 
 export async function getPurchasesFor(filter: { contact_id?: string; account_id?: string; opportunity_id?: string; project_id?: string }): Promise<PurchaseSummary[]> {
   const supabase = await createServerSupabase();
-  let q = supabase.from("purchases").select("id, purchased_at, external_ref, amount, currency, is_repeat, status, purchase_source").order("purchased_at", { ascending: false }).limit(200);
+  let q = supabase.from("purchases").select("id, purchased_at, external_ref, amount, currency, is_repeat, status, purchase_source, document_type").order("purchased_at", { ascending: false }).limit(200);
   if (filter.contact_id) q = q.eq("contact_id", filter.contact_id);
   if (filter.account_id) q = q.eq("account_id", filter.account_id);
   if (filter.opportunity_id) q = q.eq("opportunity_id", filter.opportunity_id);
@@ -194,6 +195,7 @@ export async function getPurchasesFor(filter: { contact_id?: string; account_id?
     id: p.id!,
     purchased_at: p.purchased_at!,
     external_ref: p.external_ref,
+    document_type: p.document_type,
     amount: Number(p.amount ?? 0),
     currency: p.currency ?? "MYR",
     is_repeat: !!p.is_repeat,
@@ -255,8 +257,8 @@ export async function getContactDetail(id: string): Promise<ContactDetail | null
 
   const [{ data: points }, { data: rels }, { data: projects }, opportunities, purchases, { data: visits }, { data: consents }, { data: ext }, timeline, audit, merged, { data: enquiries }] = await Promise.all([
     supabase.from("contact_points").select("id, kind, normalized_value, is_primary, label, source").eq("contact_id", id).order("is_primary", { ascending: false }),
-    supabase.from("account_contact_relationships").select("id, account_id, role, is_primary, accounts(name)").eq("contact_id", id),
-    supabase.from("projects").select("id, name, status, project_type, area, expected_completion").eq("primary_contact_id", id).order("created_at", { ascending: false }),
+    supabase.from("account_contact_relationships").select("id, account_id, role, is_primary, accounts(name)").eq("contact_id", id).is("ended_at", null),
+    supabase.from("projects").select("id, name, status, project_type, area, expected_completion").or(`primary_contact_id.eq.${id},follow_up_contact_id.eq.${id}`).order("created_at", { ascending: false }),
     getOpportunitiesFor({ contact_id: id }),
     getPurchasesFor({ contact_id: id }),
     supabase.from("visits").select("id, occurred_at, purpose, is_new_customer, notes, business_locations(name)").eq("contact_id", id).order("occurred_at", { ascending: false }).limit(50),
@@ -314,12 +316,16 @@ export async function getContactDetail(id: string): Promise<ContactDetail | null
 
 export async function searchAccounts(q: string, limit = 10) {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("accounts").select("id, name, account_type").is("merged_into_account_id", null).ilike("name", `%${q}%`).order("name").limit(limit);
-  return (data ?? []).map((a) => ({ id: a.id!, name: a.name!, account_type: a.account_type }));
+  const { data, error } = await supabase.rpc("showroom_customer_search", { p_query: q, p_limit: 50 });
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as import("@/features/inbox/types").IdentityCandidate[];
+  return rows.filter((row) => row.entity_type === "account").slice(0, limit).map((row) => ({ id: row.entity_id, name: row.display_name, account_type: null }));
 }
 
-export async function searchContacts(q: string, limit = 10) {
+export async function searchContacts(q: string, limit = 10, accountId?: string) {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("contacts").select("id, display_name, customer_type").is("merged_into_contact_id", null).ilike("display_name", `%${q}%`).order("display_name").limit(limit);
-  return (data ?? []).map((c) => ({ id: c.id!, name: c.display_name!, customer_type: c.customer_type }));
+  const { data, error } = await supabase.rpc("showroom_customer_search", { p_query: q, p_account_id: accountId, p_limit: 50 });
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as import("@/features/inbox/types").IdentityCandidate[];
+  return rows.filter((row) => row.entity_type === "contact").slice(0, limit).map((row) => ({ id: row.entity_id, name: row.display_name, customer_type: null }));
 }

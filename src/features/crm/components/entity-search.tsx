@@ -13,12 +13,13 @@ interface Hit {
 }
 
 /** Minimal async search input for picking an account or contact; emits a hidden input with the id. */
-export function EntitySearch({ kind, name, label, defaultId, defaultName, onSelect, className }: { kind: "account" | "contact"; name: string; label?: string; defaultId?: string; defaultName?: string; onSelect?: (hit: Hit | null) => void; className?: string }) {
+export function EntitySearch({ kind, name, label, defaultId, defaultName, onSelect, className, accountId }: { kind: "account" | "contact"; name: string; label?: string; defaultId?: string; defaultName?: string; onSelect?: (hit: Hit | null) => void; className?: string; accountId?: string }) {
   const [q, setQ] = useState(defaultName ?? "");
   const [hits, setHits] = useState<Hit[]>([]);
   const [selected, setSelected] = useState<Hit | null>(defaultId ? { id: defaultId, name: defaultName ?? "" } : null);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [error, setError] = useState("");
   const inputId = useId();
   const listId = `${inputId}-results`;
   function choose(hit: Hit) {
@@ -29,18 +30,20 @@ export function EntitySearch({ kind, name, label, defaultId, defaultName, onSele
     if (selected && q === selected.name) return;
     let cancelled = false;
     const t = setTimeout(async () => {
-      if (q.trim().length < 1) {
+      if (q.trim().length < 2 && !accountId) {
         setHits([]);
         return;
       }
-      const res = kind === "account" ? await searchAccountsAction(q) : await searchContactsAction(q);
+      let res: Hit[];
+      try { res = kind === "account" ? await searchAccountsAction(q) : await searchContactsAction(q, accountId); }
+      catch { if (!cancelled) { setHits([]); setError("Search could not load. Try again."); } return; }
       if (cancelled) return;
-      setHits(res);
+      setError(""); setHits(res);
       setActive(0);
-      setOpen(true);
+      setOpen(document.activeElement?.id === inputId);
     }, 200);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [q, kind, selected]);
+  }, [q, kind, selected, accountId, inputId]);
 
   return (
     <div className={cn("relative", className)}>
@@ -54,9 +57,10 @@ export function EntitySearch({ kind, name, label, defaultId, defaultName, onSele
         aria-activedescendant={open && hits[active] ? `${listId}-${active}` : undefined}
         aria-label={label ?? (kind === "account" ? "Company" : "Contact")}
         value={q}
-        placeholder={kind === "account" ? "Search accounts…" : "Search contacts…"}
+        placeholder={kind === "account" ? "Company name or telephone…" : "Contact name or telephone…"}
         onChange={(e) => {
           setQ(e.target.value);
+          setHits([]); setError(""); setOpen(false);
           setSelected(null);
           onSelect?.(null);
         }}
@@ -72,6 +76,7 @@ export function EntitySearch({ kind, name, label, defaultId, defaultName, onSele
         }}
         aria-autocomplete="list"
       />
+      {error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}
       {selected && <p className="mt-1 text-[11px] text-success">Selected: {selected.name}</p>}
       {open && hits.length > 0 && (
         <ul id={listId} className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-sm shadow-md" role="listbox">

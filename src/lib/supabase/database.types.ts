@@ -148,6 +148,8 @@ export type Database = {
           owner_id: string | null
           registration_number: string | null
           registration_number_key: string | null
+          telephone: string | null
+          telephone_normalized: string | null
           updated_at: string | null
           updated_by: string | null
           version: number | null
@@ -172,6 +174,8 @@ export type Database = {
           owner_id?: string | null
           registration_number?: string | null
           registration_number_key?: string | null
+          telephone?: string | null
+          telephone_normalized?: string | null
           updated_at?: string | null
           updated_by?: string | null
           version?: number | null
@@ -196,6 +200,8 @@ export type Database = {
           owner_id?: string | null
           registration_number?: string | null
           registration_number_key?: string | null
+          telephone?: string | null
+          telephone_normalized?: string | null
           updated_at?: string | null
           updated_by?: string | null
           version?: number | null
@@ -7299,11 +7305,13 @@ export type Database = {
           created_by: string | null
           expected_completion: string | null
           expected_start: string | null
+          follow_up_contact_id: string | null
           id: string | null
           name: string | null
           notes: string | null
           owner_id: string | null
           primary_contact_id: string | null
+          product_specification: string | null
           project_type: string | null
           status: string | null
           updated_at: string | null
@@ -7317,11 +7325,13 @@ export type Database = {
           created_by?: string | null
           expected_completion?: string | null
           expected_start?: string | null
+          follow_up_contact_id?: string | null
           id?: string | null
           name?: string | null
           notes?: string | null
           owner_id?: string | null
           primary_contact_id?: string | null
+          product_specification?: string | null
           project_type?: string | null
           status?: string | null
           updated_at?: string | null
@@ -7335,11 +7345,13 @@ export type Database = {
           created_by?: string | null
           expected_completion?: string | null
           expected_start?: string | null
+          follow_up_contact_id?: string | null
           id?: string | null
           name?: string | null
           notes?: string | null
           owner_id?: string | null
           primary_contact_id?: string | null
+          product_specification?: string | null
           project_type?: string | null
           status?: string | null
           updated_at?: string | null
@@ -7352,6 +7364,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_follow_up_contact_id_fkey"
+            columns: ["follow_up_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -10766,6 +10785,67 @@ export type Database = {
           },
         ]
       }
+      visit_quotation_files: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string | null
+          object_path: string | null
+          uploaded_at: string | null
+          visit_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          uploaded_at?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          uploaded_at?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_quotation_files_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quotation_files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "visit_quotation_files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visits: {
         Row: {
           account_id: string | null
@@ -11857,6 +11937,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      showroom_customer_search: {
+        Args: { p_account_id?: string; p_limit?: number; p_query?: string }
+        Returns: Json
+      }
       start_import_run: {
         Args: {
           p_corpus_cutoff?: string
@@ -11891,6 +11975,15 @@ export type Database = {
           p_starts_at: string
           p_status?: string
           p_title?: string
+        }
+        Returns: string
+      }
+      visit_quotation_command: {
+        Args: {
+          p_action: string
+          p_file_id: string
+          p_input?: Json
+          p_visit_id: string
         }
         Returns: string
       }
