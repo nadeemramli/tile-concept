@@ -59,6 +59,7 @@ export interface CandidateReason {
 }
 
 export interface IdentityCandidate {
+  companies?: { id: string; name: string; role: string | null }[];
   /** `lead` is an enquiry nobody has linked to a contact yet. */
   entity_type: "contact" | "account" | "lead";
   entity_id: string;

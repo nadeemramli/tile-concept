@@ -250,6 +250,7 @@ function AccountFields({ members, account }: { members: MemberOption[]; account?
       <Field label="Company name" htmlFor="name" required>
         <Input id="name" name="name" required defaultValue={account?.name ?? ""} autoFocus={!account} />
       </Field>
+      <Field label="Company telephone" htmlFor="telephone" hint="Company switchboard or office number. Each PIC keeps their own contact number."><Input id="telephone" name="telephone" inputMode="tel" maxLength={50} defaultValue={account?.telephone ?? ""} placeholder="03-1234 5678" /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Type">
           <EnumSelect name="account_type" options={ACCOUNT_TYPES} defaultValue={account?.account_type} />
@@ -359,6 +360,7 @@ export function TaskDialog({ open, onOpenChange, members, links, defaultAssignee
 export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults }: DialogProps & { members: MemberOption[]; defaults?: { contact_id?: string; contact_name?: string; account_id?: string; account_name?: string } }) {
   const router = useRouter();
   const [withOpp, setWithOpp] = useState(true);
+  const [projectAccountId, setProjectAccountId] = useState(defaults?.account_id ?? "");
   const request = useRef<string | null>(null);
   return (
     <FormDialog
@@ -378,24 +380,28 @@ export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults
       }}
       onSuccess={(d) => { request.current = null; router.push(d.opportunity_id ? `/sales/pipeline?opportunity=${d.opportunity_id}` : `/sales/projects/${d.project_id}`); }}
     >
-      <Field label="Project name" htmlFor="project_name" required>
+      <Field label="Project title" htmlFor="project_name" required>
         <Input id="project_name" name="project_name" required autoFocus placeholder="Condo renovation — Cheras" />
       </Field>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Field label="Type">
           <EnumSelect name="project_type" options={PROJECT_TYPES} defaultValue="renovation" allowEmpty={false} />
         </Field>
         <Field label="Area" htmlFor="area">
           <Input id="area" name="area" placeholder="Cheras" />
         </Field>
-        <Field label="Owner">
+        <Field label="Internal salesperson">
           <MemberSelect name="owner_id" members={members} placeholder="Me" />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <EntitySearch kind="contact" name="contact_id" label="Primary contact" defaultId={defaults?.contact_id} defaultName={defaults?.contact_name} />
-        <EntitySearch kind="account" name="account_id" label="Account" defaultId={defaults?.account_id} defaultName={defaults?.account_name} />
+      <EntitySearch kind="account" name="account_id" label="Company (optional for personal customers)" defaultId={defaults?.account_id} defaultName={defaults?.account_name} onSelect={(hit) => setProjectAccountId(hit?.id ?? "")} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <EntitySearch kind="contact" name="contact_id" label="Customer / project owner" defaultId={defaults?.contact_id} defaultName={defaults?.contact_name} />
+        <EntitySearch key={projectAccountId} kind="contact" name="follow_up_contact_id" label="Customer/company PIC to follow up" accountId={projectAccountId || undefined} />
       </div>
+      <p className="text-xs text-muted-foreground">For company projects, choose a linked company contact as PIC. Link additional contacts from the company or contact page.</p>
+      <Field label="Site location / address" htmlFor="site_address"><Textarea id="site_address" name="site_address" maxLength={1000} rows={2} placeholder="Site address, town, state and postcode" /></Field>
+      <Field label="Products / specifications proposed" htmlFor="product_specification"><Textarea id="product_specification" name="product_specification" maxLength={4000} rows={3} placeholder="Product or model, size, finish, application and proposed quantity" /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Expected start" htmlFor="expected_start">
           <Input id="expected_start" name="expected_start" type="date" />
@@ -444,7 +450,7 @@ export function EditProjectDialog({ open, onOpenChange, project, members }: Dial
       <Field label="Name" htmlFor="name" required>
         <Input id="name" name="name" required defaultValue={project.name} />
       </Field>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Field label="Type">
           <EnumSelect name="project_type" options={PROJECT_TYPES} defaultValue={project.project_type ?? "other"} allowEmpty={false} />
         </Field>
@@ -455,8 +461,8 @@ export function EditProjectDialog({ open, onOpenChange, project, members }: Dial
           <Input id="area" name="area" defaultValue={project.area ?? ""} />
         </Field>
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="Owner">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Internal salesperson">
           <MemberSelect name="owner_id" members={members} defaultValue={project.owner_id} />
         </Field>
         <Field label="Expected start" htmlFor="expected_start">
@@ -466,6 +472,8 @@ export function EditProjectDialog({ open, onOpenChange, project, members }: Dial
           <Input id="expected_completion" name="expected_completion" type="date" defaultValue={project.expected_completion ?? ""} />
         </Field>
       </div>
+      <EntitySearch kind="contact" name="follow_up_contact_id" label="Customer/company PIC to follow up" accountId={project.account_id || undefined} defaultId={project.follow_up_contact_id ?? undefined} defaultName={project.follow_up_contact_name ?? undefined} />
+      <Field label="Products / specifications proposed" htmlFor="product_specification"><Textarea id="product_specification" name="product_specification" rows={3} maxLength={4000} defaultValue={project.product_specification ?? ""} /></Field>
       <Field label="Notes" htmlFor="notes">
         <Textarea id="notes" name="notes" rows={3} defaultValue={project.notes ?? ""} />
       </Field>

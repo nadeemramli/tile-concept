@@ -3,7 +3,7 @@
 import { useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Phone, Plus, UserPlus, UserSearch } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, UserPlus, UserSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,10 +23,11 @@ import { formatMoney, titleCase } from "@/lib/format";
 import { normalizePhone } from "@/lib/identity/normalize";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
-import { createWalkInContactAction, findCandidatesAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
+import { createWalkInContactAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
 import { CUSTOMER_TYPES, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
 import { RENOVATION_AREA_PRESETS } from "@/features/walkins/presets";
 import { EMPTY_MALAYSIA_AREA, formatMalaysiaArea } from "@/lib/location/malaysia";
+import { searchShowroomCustomersAction } from "@/server/commands/showroom-search";
 import { MalaysiaAreaFields } from "./malaysia-area-fields";
 import type { IdentityCandidate } from "@/features/inbox/types";
 import type { OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
@@ -34,7 +35,7 @@ import type { ProfileRef } from "@/server/queries/reference";
 
 const SOURCES = ["walk_in", "tiktok", "meta", "website", "whatsapp", "dm", "call", "email", "referral", "other"] as const;
 const INTEREST_LABEL: Record<string, string> = { wall_panel: "Wall panel", tile: "Tile", cut_tile: "Cut tile", mosaic: "Mosaic", finishing: "Finishing", accessory: "Accessory" };
-const STEPS = ["Phone", "Customer", "Visit", "Purchase", "Review"] as const;
+const STEPS = ["Search", "Customer", "Visit", "Purchase", "Review"] as const;
 
 
 function localNow() {
@@ -51,6 +52,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const retry = useRef<{ payload: string; id: string } | null>(null);
 
   // step 1
+  const [searchQuery, setSearchQuery] = useState("");
+  const [contactCompanies, setContactCompanies] = useState<NonNullable<IdentityCandidate["companies"]>>([]);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
@@ -91,17 +94,20 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const normalizedPhone = normalizePhone(phone);
 
   function search() {
-    if (!normalizedPhone && !email.trim()) {
-      toast.error("Enter a phone number (or email) to search.");
+    if (searchQuery.trim().length < 2) {
+      toast.error("Enter a telephone, company name, PIC name or email (at least two characters).");
       return;
     }
     start(async () => {
-      const r = await findCandidatesAction({ phone: phone, email: email, company });
+      const r = await searchShowroomCustomersAction(searchQuery);
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
       setCandidates(r.data);
+      setCompany(""); setContactCompanies([]);
+      setPhone(/^[+\d\s().-]+$/.test(searchQuery.trim()) && !r.data.some((c) => c.entity_type === "account") ? normalizePhone(searchQuery) ?? "" : "");
+      setEmail(searchQuery.includes("@") ? searchQuery.trim() : "");
       setFromLead(null);
       setContact(null);
       selectedCustomer.current = null;
@@ -112,8 +118,13 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
   function pickCandidate(c: IdentityCandidate) {
     if (c.entity_type === "account") {
-      setAccountId(c.entity_id);
-      toast.info(`Account ${c.display_name} will be linked. Choose or create the person too.`);
+      start(async () => {
+        const result = await searchShowroomCustomersAction("", c.entity_id);
+        if (!result.ok) { toast.error(result.error); return; }
+        setAccountId(c.entity_id); setCompany(c.display_name); setCandidates(result.data);
+        setPhone(""); setEmail(""); setNewName("");
+        toast.info("Choose a linked contact or register a new PIC for this company.");
+      });
       return;
     }
     if (c.entity_type === "lead") {
@@ -126,6 +137,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       toast.info("Register the customer below. The visit will be matched to an earlier inquiry automatically when possible.");
       return;
     }
+    setContactCompanies(c.companies ?? []);
+    if (accountId && !c.companies?.some((a) => a.id === accountId)) { setAccountId(""); setCompany(""); }
     setContact({ id: c.entity_id, name: c.display_name, lifecycle: c.lifecycle_state, isNew: false });
     selectedCustomer.current = c.entity_id;
     setFromLead(null);
@@ -139,7 +152,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
   function createContact(provisional: boolean) {
     start(async () => {
-      const r = await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, provisional });
+      const r = await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, provisional, account_id: accountId || undefined });
       if (!r.ok) {
         toast.error(r.error);
         return;
@@ -148,6 +161,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       setContact({ id: r.data.contact_id, name: newName.trim(), lifecycle: "new", isNew: true });
       selectedCustomer.current = r.data.contact_id;
       setCustomerType(newType);
+      setContactCompanies(accountId ? [{ id: accountId, name: company, role: null }] : []);
       setOpenOpps([]);
       setOppId(""); setOppMode("none");
       setStep(2);
@@ -204,6 +218,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
   function reset() {
     retry.current = null; selectedCustomer.current = null; setFromLead(null);
+    setSearchQuery(""); setContactCompanies([]);
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
     setOccurredAt(localNow()); setCustomerArea(EMPTY_MALAYSIA_AREA); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
     setQuotationFiles([]); setAttachmentsPending(false);
@@ -276,16 +291,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       {/* Step 1 */}
       {step === 0 && (
         <Card className="space-y-4 p-4">
-          <Field label="Customer phone" required hint={normalizedPhone ? `Normalized: ${normalizedPhone}` : "Type or scan. Malaysian numbers assumed."}>
-            <div className="relative">
-              <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input autoFocus inputMode="tel" className="h-12 pl-10 font-mono text-lg tnum" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="012-345 6789" />
-            </div>
+          <Field label="Telephone, company or PIC" htmlFor="showroom-search" hint="Search a customer/PIC number, company telephone, company name, contact name or email.">
+            <Input id="showroom-search" autoFocus className="h-12 text-base" value={searchQuery} maxLength={200} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Telephone / PIC number / company name" />
           </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Email (optional)"><Input type="email" className="h-9" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} /></Field>
-            <Field label="Company (optional)"><Input className="h-9" value={company} onChange={(e) => setCompany(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} /></Field>
-          </div>
           <div className="flex justify-end">
             <Button size="lg" onClick={search} disabled={pending}>
               <UserSearch className="size-4" aria-hidden /> {pending ? "Searching…" : "Find customer"}
@@ -298,9 +306,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       {step === 1 && (
         <Card className="space-y-4 p-4">
           <div>
-            <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Matches for <span className="font-mono">{normalizedPhone ?? email}</span></div>
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{accountId ? "Contacts at" : "Matches for"} <span>{company || searchQuery}</span></div>
             <CandidateList candidates={candidates ?? []} onPick={pickCandidate} pickLabel="Use this" busy={pending} />
-            {accountId && <p className="mt-1 text-[11px] text-muted-foreground">Account selected; now pick the person.</p>}
+            {accountId && <p className="mt-1 text-[11px] text-muted-foreground">Company selected. Choose its contact below, or register a new PIC.</p>}
           </div>
           <div className="rounded-md border border-dashed p-3">
             <div className="mb-2 flex items-center gap-1.5 text-xs font-medium"><UserPlus className="size-3.5" aria-hidden /> {fromLead ? "Register the customer from their enquiry" : "Not listed? Register the customer"}</div>
@@ -314,6 +322,10 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
                 </Button>
               </p>
             )}
+            <div className="mb-2 grid gap-2 sm:grid-cols-2">
+              <Field label="PIC / customer telephone" htmlFor="new-contact-phone" hint={normalizedPhone ? `Normalized: ${normalizedPhone}` : "Enter the person's own number, not the company switchboard."}><Input id="new-contact-phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
+              <Field label="Email (optional)" htmlFor="new-contact-email"><Input id="new-contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+            </div>
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <Input autoFocus={!(candidates && candidates.length)} className="h-9" placeholder="Full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
               <Select value={newType} onValueChange={setNewType}>
@@ -369,6 +381,12 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
                 <SelectContent>{members.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
+            {contactCompanies.length > 0 && <Field label="Company for this visit" hint="Choose the company this person represents for this visit, or keep it personal.">
+              <Select value={accountId || "personal"} onValueChange={(id) => { setAccountId(id === "personal" ? "" : id); setCompany(contactCompanies.find((a) => a.id === id)?.name ?? ""); }}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="personal">Personal visit / no company</SelectItem>{contactCompanies.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>}
             <Field label="Customer type">
               <Select value={customerType} onValueChange={setCustomerType}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -457,6 +475,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
         <Card className="space-y-4 p-4">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
             <Row label="Customer" value={contact.name} />
+            <Row label="Company" value={company || "Personal visit"} />
             <Row label="When" value={occurredAt.replace("T", " ")} />
             <Row label="Location" value={locations.find((l) => l.id === locationId)?.name ?? "—"} />
             <Row label="Staff" value={members.find((m) => m.user_id === staffId)?.full_name ?? "—"} />

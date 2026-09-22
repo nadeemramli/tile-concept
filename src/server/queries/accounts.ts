@@ -28,7 +28,7 @@ export async function listAccounts(opts: { includeMerged?: boolean } = {}): Prom
   const ids = rows.map((a) => a.id!);
   if (ids.length === 0) return [];
   const [{ data: rels }, { data: projects }, { data: opps }] = await Promise.all([
-    supabase.from("account_contact_relationships").select("account_id").in("account_id", ids),
+    supabase.from("account_contact_relationships").select("account_id").in("account_id", ids).is("ended_at", null),
     supabase.from("projects").select("account_id").in("account_id", ids),
     supabase.from("opportunities").select("account_id").eq("status", "open").is("archived_at", null).in("account_id", ids),
   ]);
@@ -55,6 +55,7 @@ export async function listAccounts(opts: { includeMerged?: boolean } = {}): Prom
 }
 
 export interface AccountDetail {
+  telephone: string | null;
   id: string;
   name: string;
   account_type: string | null;
@@ -89,7 +90,7 @@ export async function getAccountDetail(id: string): Promise<AccountDetail | null
   if (!a) return null;
   const [{ data: aliases }, { data: rels }, { data: projects }, opportunities, purchases, { data: ext }, timeline, audit, merged] = await Promise.all([
     supabase.from("account_aliases").select("id, alias, source").eq("account_id", id),
-    supabase.from("account_contact_relationships").select("id, contact_id, role, is_primary, contacts(display_name, customer_type)").eq("account_id", id),
+    supabase.from("account_contact_relationships").select("id, contact_id, role, is_primary, contacts(display_name, customer_type)").eq("account_id", id).is("ended_at", null),
     supabase.from("projects").select("id, name, status, project_type, area, expected_completion").eq("account_id", id).order("created_at", { ascending: false }),
     getOpportunitiesFor({ account_id: id }),
     getPurchasesFor({ account_id: id }),
@@ -108,6 +109,7 @@ export async function getAccountDetail(id: string): Promise<AccountDetail | null
     name: a.name ?? "",
     account_type: a.account_type,
     registration_number: a.registration_number,
+    telephone: a.telephone,
     website: a.website,
     domain: a.domain,
     address: (a.address ?? {}) as Record<string, string>,
