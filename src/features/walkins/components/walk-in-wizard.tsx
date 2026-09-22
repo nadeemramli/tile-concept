@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QuotationFilePicker } from "./quotation-file-picker";
+import { VisitQuotationFiles } from "./visit-quotation-files";
+import type { QueuedQuotation } from "../quotation-files";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
 import { DisabledHint, Hint } from "@/components/patterns/explain";
@@ -75,6 +79,8 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [purpose, setPurpose] = useState<string>("browse");
   const [sqNumber, setSqNumber] = useState("");
   const [quotationAmount, setQuotationAmount] = useState("");
+  const [quotationFiles, setQuotationFiles] = useState<QueuedQuotation[]>([]);
+  const [attachmentsPending, setAttachmentsPending] = useState(false);
   const [notes, setNotes] = useState("");
   const [interest, setInterest] = useState<string[]>([]);
   const [oppMode, setOppMode] = useState<"none" | "create" | "link">("none");
@@ -196,6 +202,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
         const r = await recordWalkInAction(input);
         if (!r.ok) { toast.error(r.error); return; }
         toast.success(r.message);
+        setAttachmentsPending(quotationFiles.length > 0);
         setResult(r.data);
       } catch {
         toast.error("The save result could not be confirmed. Retry with the same details; the visit will not be recorded twice.");
@@ -207,6 +214,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
     retry.current = null; selectedCustomer.current = null; setFromLead(null); setInquiryChoice(EMPTY_INQUIRY_CHOICE);
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
     setOccurredAt(localNow()); setCustomerArea(EMPTY_MALAYSIA_AREA); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
+    setQuotationFiles([]); setAttachmentsPending(false);
     setResult(null);
   }
 
@@ -237,9 +245,10 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           {result.purchase_id && <li><Link href={`/sales/walk-ins?tab=purchases&purchase=${result.purchase_id}`} className="text-info hover:underline">Open purchase</Link></li>}
           <li><Link href={`/sales/walk-ins?visit=${result.visit_id}`} className="text-info hover:underline">Open visit</Link></li>
         </ul>
-        <div className="flex gap-2">
+        <div className="space-y-2"><h2 className="text-sm font-semibold">Quotation files</h2><VisitQuotationFiles key={result.visit_id} visitId={result.visit_id} canWrite initialFiles={quotationFiles} onPendingChange={setAttachmentsPending} /></div>
+        <div className="flex flex-wrap gap-2">
           <Button asChild><Link href={`/sales/record-sale?visit=${result.visit_id}`}>Sales & receipts</Link></Button>
-          <Button onClick={reset}><Plus className="size-3.5" aria-hidden /> Record another walk-in</Button>
+          <DisabledHint reason={attachmentsPending ? "Finish or remove the queued quotation files first." : undefined}><Button onClick={reset} disabled={attachmentsPending}><Plus className="size-3.5" aria-hidden /> Record another walk-in</Button></DisabledHint>
           <Button asChild variant="outline"><Link href={`/sales/contacts/${contact?.id}`}>Go to contact</Link></Button>
           <Button asChild variant="outline"><Link href={`/sales/feedback/new?visit=${result.visit_id}`}>Customer feedback & Google review</Link></Button>
         </div>
@@ -402,10 +411,16 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
           <div className="rounded-md border p-3">
             <div className="mb-2 text-xs font-medium">Quotation (optional)</div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Field label="SQ / quotation no."><Input className="h-9 font-mono" value={sqNumber} onChange={(e) => setSqNumber(e.target.value)} placeholder="QT-000123" /></Field>
-              <Field label="Quotation amount (MYR)"><Input className="h-9 tnum" inputMode="decimal" value={quotationAmount} onChange={(e) => setQuotationAmount(e.target.value)} placeholder="0.00" /></Field>
-            </div>
+            <Tabs defaultValue="details">
+              <TabsList aria-label="Quotation"><TabsTrigger value="details">Details</TabsTrigger><TabsTrigger value="files">Upload file{quotationFiles.length ? ` (${quotationFiles.length})` : ""}</TabsTrigger></TabsList>
+              <TabsContent value="details">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Field label="SQ / quotation no."><Input className="h-9 font-mono" value={sqNumber} onChange={(e) => setSqNumber(e.target.value)} placeholder="QT-000123" /></Field>
+                  <Field label="Quotation amount (MYR)"><Input className="h-9 tnum" inputMode="decimal" value={quotationAmount} onChange={(e) => setQuotationAmount(e.target.value)} placeholder="0.00" /></Field>
+                </div>
+              </TabsContent>
+              <TabsContent value="files"><QuotationFilePicker files={quotationFiles} onChange={setQuotationFiles} /></TabsContent>
+            </Tabs>
           </div>
 
           <div className="rounded-md border p-3">
@@ -460,6 +475,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <Row label="How they heard (reported)" value={statusMeta(SOURCE_CHANNEL, source).label} />
             <Row label="Purpose" value={titleCase(purpose)} />
             <Row label="Quotation" value={sqNumber || quotationAmount ? `${sqNumber || "—"}${quotationAmount ? ` · ${formatMoney(Number(quotationAmount))}` : ""}` : "—"} />
+            <Row label="Quotation files" value={quotationFiles.map((q) => q.file.name).join(", ") || "—"} />
             <Row label="Interest" value={interest.map((i) => INTEREST_LABEL[i]).join(", ") || "—"} />
             <Row label="Opportunity" value={oppMode === "none" ? "None" : oppMode === "create" ? `Create: ${projectName}` : `Link: ${openOpps.find((o) => o.id === oppId)?.name ?? ""}`} />
             <Row label="Sale / payment" value="Record after saving this visit" />

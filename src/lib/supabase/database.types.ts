@@ -10766,6 +10766,67 @@ export type Database = {
           },
         ]
       }
+      visit_quotation_files: {
+        Row: {
+          content_type: string | null
+          created_at: string | null
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string | null
+          object_path: string | null
+          uploaded_at: string | null
+          visit_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          uploaded_at?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string | null
+          object_path?: string | null
+          uploaded_at?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_quotation_files_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quotation_files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "visit_quotation_files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visits: {
         Row: {
           account_id: string | null
@@ -11891,6 +11952,15 @@ export type Database = {
           p_starts_at: string
           p_status?: string
           p_title?: string
+        }
+        Returns: string
+      }
+      visit_quotation_command: {
+        Args: {
+          p_action: string
+          p_file_id: string
+          p_input?: Json
+          p_visit_id: string
         }
         Returns: string
       }
