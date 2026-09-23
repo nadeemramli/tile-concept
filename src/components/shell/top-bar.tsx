@@ -124,6 +124,7 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
           <ModePill />
         </div>
 
+        {can("projects.write") && !can("sales.write") && <Button size="sm" asChild><Link href="/sales/projects?new=1"><Plus className="size-3.5" aria-hidden /> Register project</Link></Button>}
         {can("sales.write") && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -158,7 +159,7 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/sales/projects?new=1">
-                    <FolderKanban className="size-4" aria-hidden /> Project / opportunity
+                    <FolderKanban className="size-4" aria-hidden /> Register project
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>

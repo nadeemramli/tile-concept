@@ -20,7 +20,8 @@ export const metadata: Metadata = { title: "Project" };
 
 export default async function ProjectPage({ params }: PageProps<"/sales/projects/[id]">) {
   const session = await requireSession();
-  if (!hasPermission(session, "sales.read")) return <PermissionDenied permission="sales.read" roleLabel={session.roleLabel} />;
+  if (!hasPermission(session, "projects.read")) return <PermissionDenied permission="projects.read" roleLabel={session.roleLabel} />;
+  const canReadSales = hasPermission(session, "sales.read");
   const { id } = await params;
   const [project, members, stages] = await Promise.all([getProjectDetail(id), getMembers(), getStages()]);
   if (!project) notFound();
@@ -41,12 +42,13 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
             <StatusPill map={PROJECT_STATUS} value={project.status} />
             {project.project_type && <span>{titleCase(project.project_type)}</span>}
             {project.area && <span>· {project.area}</span>}
-            {project.account_id && (
+            {project.account_id && canReadSales && (
               <Link href={`/sales/accounts/${project.account_id}`} className="hover:underline">
                 · {project.account_name}
               </Link>
             )}
-            {project.contact_id && (
+            {!canReadSales && <span>{[project.account_name, project.contact_name].filter(Boolean).join(" · ")}</span>}
+            {project.contact_id && canReadSales && (
               <Link href={`/sales/contacts/${project.contact_id}`} className="hover:underline">
                 · {project.contact_name}
               </Link>
@@ -59,9 +61,27 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <SectionCard title="Opportunities" count={project.opportunities.length}>
-            <OpportunitiesList items={project.opportunities} stageLabels={stageLabels} memberNames={memberNames} />
+          <SectionCard title="Project follow-up">
+            <FactList items={[
+              { label: "Internal project handler", value: memberNames.get(project.owner_id ?? "") ?? "Unassigned — available for pickup" },
+              { label: "Last follow-up by", value: memberNames.get(project.last_follow_up_by ?? "") ?? "No follow-up recorded" },
+              { label: "Last follow-up", value: formatDateTime(project.last_follow_up_at) },
+              { label: "Next action", value: project.next_action ?? "No next action set" },
+              { label: "Next action due", value: formatDateTime(project.next_action_due_at) },
+              { label: "Registered by", value: memberNames.get(project.created_by ?? "") ?? "—" },
+            ]} />
           </SectionCard>
+          <SectionCard title="Follow-up & handover history" count={project.events.length}>
+            {project.events.length === 0 ? <p className="text-sm text-muted-foreground">No project updates recorded yet.</p> : <ul className="divide-y">{project.events.map((event) => <li key={event.id} className="space-y-1 py-3 text-sm">
+              <p className="font-medium">{event.kind === "registered" ? "Project registered" : event.kind === "enriched" ? "Project details updated" : event.kind === "assigned" ? `Handler: ${memberNames.get(event.previous_owner_id ?? "") ?? "Unassigned"} → ${memberNames.get(event.owner_id ?? "") ?? "Unassigned"}` : "Follow-up recorded"}</p>
+              <p className="text-xs text-muted-foreground">{memberNames.get(event.actor_id) ?? "Staff member"} · {formatDateTime(event.created_at)}</p>
+              {event.note && <p className="whitespace-pre-wrap">{event.note}</p>}
+              {event.kind === "follow_up" && event.next_action && <p className="text-xs">Next: {event.next_action}{event.next_action_due_at ? ` · ${formatDateTime(event.next_action_due_at)}` : ""}</p>}
+            </li>)}</ul>}
+          </SectionCard>
+          {canReadSales && <SectionCard title="Opportunities" count={project.opportunities.length}>
+            <OpportunitiesList items={project.opportunities} stageLabels={stageLabels} memberNames={memberNames} />
+          </SectionCard>}
           <SectionCard title="Products / specifications proposed"><p className="whitespace-pre-wrap text-sm">{project.product_specification || "No proposed specifications recorded."}</p></SectionCard>
           <SectionCard title="Sites" count={project.sites.length}>
             {project.sites.length === 0 ? (
@@ -78,9 +98,9 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
               </ul>
             )}
           </SectionCard>
-          <SectionCard title="Sales, invoices & receipts" count={project.purchases.length}>
+          {canReadSales && <SectionCard title="Sales, invoices & receipts" count={project.purchases.length}>
             <PurchasesList items={project.purchases} />
-          </SectionCard>
+          </SectionCard>}
           <SectionCard title="Tasks" count={project.tasks.length}>
             {project.tasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">No tasks.</p>
@@ -108,8 +128,8 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
             <FactList
               className="sm:grid-cols-1"
               items={[
-                { label: "Customer/company PIC", value: project.follow_up_contact_id ? <Link href={`/sales/contacts/${project.follow_up_contact_id}`} className="hover:underline">{project.follow_up_contact_name ?? "Open contact"}</Link> : "—" },
-                { label: "Internal salesperson", value: memberNames.get(project.owner_id ?? "") ?? "—" },
+                { label: "Customer/company PIC", value: project.follow_up_contact_id && canReadSales ? <Link href={`/sales/contacts/${project.follow_up_contact_id}`} className="hover:underline">{project.follow_up_contact_name ?? "Open contact"}</Link> : project.follow_up_contact_name ?? "—" },
+                { label: "Internal project handler", value: memberNames.get(project.owner_id ?? "") ?? "—" },
                 { label: "Expected start", value: formatDate(project.expected_start) },
                 { label: "Expected completion", value: formatDate(project.expected_completion) },
                 { label: "Created by", value: memberNames.get(project.created_by ?? "") ?? "—" },

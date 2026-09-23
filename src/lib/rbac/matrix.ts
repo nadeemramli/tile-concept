@@ -4,6 +4,7 @@
  * every write is re-checked by RLS / SECURITY DEFINER functions server-side.
  */
 export const PERMISSIONS = [
+  "projects.read", "projects.write", "projects.follow_up",
   "sales.read",
   "sales.read_all",
   "sales.leads.read_all",
@@ -66,13 +67,16 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   marketing_coordinator: "Marketing coordinator",
   catalog_pricing: "Catalog / pricing",
   stock_coordinator: "Stock coordinator",
-  analyst: "Analyst (read-only)",
+  analyst: "Analyst",
   guest: "Guest (demo)",
 };
 
 /** What each key lets a person do, in the words used on screen. */
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
-  "sales.read": "See leads, accounts, projects and opportunities",
+  "projects.read": "See the shared company project register",
+  "projects.write": "Register projects and enrich their details",
+  "projects.follow_up": "Claim, assign and follow up shared projects",
+  "sales.read": "See leads, accounts and opportunities",
   "sales.read_all": "See every salesperson's records, not only your own",
   "sales.leads.read_all": "See every Enquiry Box lead",
   "sales.write": "Create and edit sales records, log activity, add tasks",
@@ -113,16 +117,16 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
  * and to render Help & glossary; the database decides.
  */
 export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
-  admin: ["creative.approve", "creative.publish", "creative.self_approve", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "settings.manage", "export.customer"],
-  management: ["marketing.spend.read", "sales.read", "sales.read_all", "sales.leads.read_all", "contact.reveal", "catalog.read", "price.read", "stock.read", "marketing.read", "report.read", "audit.read"],
-  sales_manager: ["marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "report.read", "audit.read", "export.customer"],
-  sales_rep: ["sales.read_all", "review.approve", "report.read", "sales.read", "sales.leads.read_all", "sales.write", "contact.reveal", "purchase.write", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "audit.read"],
-  showroom: ["sales.read", "sales.leads.read_all", "sales.write", "feedback.send", "purchase.write", "catalog.read", "price.read", "stock.read", "audit.read"],
-  marketing_coordinator: ["creative.approve", "creative.publish", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "marketing.read", "marketing.write", "marketing.confirm", "catalog.read", "audit.read"],
-  catalog_pricing: ["catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "source.import", "review.approve", "audit.read"],
-  stock_coordinator: ["catalog.read", "price.read", "stock.read", "stock.write", "audit.read"],
-  analyst: ["marketing.spend.read", "report.read", "catalog.read", "price.read"],
-  guest: ["creative.approve", "creative.publish", "creative.self_approve", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "export.customer"],
+  admin: ["projects.read", "projects.write", "projects.follow_up", "creative.approve", "creative.publish", "creative.self_approve", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "settings.manage", "export.customer"],
+  management: ["projects.read", "projects.write", "marketing.spend.read", "sales.read", "sales.read_all", "sales.leads.read_all", "contact.reveal", "catalog.read", "price.read", "stock.read", "marketing.read", "report.read", "audit.read"],
+  sales_manager: ["projects.read", "projects.write", "projects.follow_up", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "report.read", "audit.read", "export.customer"],
+  sales_rep: ["projects.read", "projects.write", "projects.follow_up", "sales.read_all", "review.approve", "report.read", "sales.read", "sales.leads.read_all", "sales.write", "contact.reveal", "purchase.write", "catalog.read", "price.read", "stock.read", "marketing.read", "marketing.write", "audit.read"],
+  showroom: ["projects.read", "projects.write", "projects.follow_up", "sales.read", "sales.leads.read_all", "sales.write", "feedback.send", "purchase.write", "catalog.read", "price.read", "stock.read", "audit.read"],
+  marketing_coordinator: ["projects.read", "projects.write", "creative.approve", "creative.publish", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "marketing.read", "marketing.write", "marketing.confirm", "catalog.read", "audit.read"],
+  catalog_pricing: ["projects.read", "projects.write", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "source.import", "review.approve", "audit.read"],
+  stock_coordinator: ["projects.read", "projects.write", "catalog.read", "price.read", "stock.read", "stock.write", "audit.read"],
+  analyst: ["projects.read", "projects.write", "marketing.spend.read", "report.read", "catalog.read", "price.read"],
+  guest: ["projects.read", "projects.write", "projects.follow_up", "creative.approve", "creative.publish", "creative.self_approve", "marketing.spend.read", "marketing.spend.write", "marketing.spend.review", "sales.read", "sales.read_all", "sales.leads.read_all", "sales.write", "sales.assign", "contact.reveal", "identity.merge", "purchase.write", "purchase.correct", "catalog.read", "catalog.write", "price.read", "price.publish", "stock.read", "stock.write", "marketing.read", "marketing.write", "marketing.confirm", "source.import", "review.approve", "report.read", "audit.read", "audit.read_all", "export.customer"],
 };
 
 /** Roles that hold a permission, excluding the demo guest. */
@@ -136,7 +140,10 @@ export function rolesWith(permission: PermissionKey): RoleKey[] {
  * role to ask for rather than "you do not have permission".
  */
 export const PERMISSION_EXPLAINERS: Record<PermissionKey, string> = {
-  "sales.read": "Viewing leads, accounts, projects and opportunities needs a sales, showroom, marketing or management role.",
+  "projects.read": "Every company staff member can see shared projects in their workspace.",
+  "projects.write": "Every company staff member can register projects and add details.",
+  "projects.follow_up": "Salespeople and showroom staff can claim, assign and record project follow-ups.",
+  "sales.read": "Viewing leads, accounts and opportunities needs a sales, showroom, marketing or management role.",
   "sales.read_all": "Seeing every salesperson's records is available to sales representatives, sales managers, management and administrators.",
   "sales.leads.read_all": "Sales representatives, sales managers, management and administrators share visibility of every Enquiry Box lead.",
   "sales.write": "Creating or editing sales records needs a sales representative, sales manager or showroom role.",
