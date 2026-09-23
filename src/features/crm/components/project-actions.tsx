@@ -8,10 +8,11 @@ import { useSession } from "@/components/shell/session-context";
 import type { ProjectDetail } from "@/server/queries/projects";
 import type { MemberOption } from "@/features/crm/components/selects";
 import { CreateOpportunityDialog } from "@/features/pipeline/components/create-opportunity-dialog";
+import { AssignProjectDialog, ClaimProjectButton, ProjectFollowUpDialog } from "./project-follow-up";
 import { ActivityDialog, AddSiteDialog, EditProjectDialog, TaskDialog } from "@/features/crm/components/dialogs";
 import { NominateDialog } from "@/features/marketing/components/nominate-dialog";
 
-type Which = "edit" | "activity" | "task" | "site" | "nominate" | "opportunity" | null;
+type Which = "edit" | "activity" | "task" | "site" | "nominate" | "opportunity" | "assign" | "follow_up" | null;
 
 export function ProjectActions({ project, members }: { project: ProjectDetail; members: MemberOption[] }) {
   const { session } = useSession();
@@ -19,6 +20,13 @@ export function ProjectActions({ project, members }: { project: ProjectDetail; m
   const links = { project_id: project.id, contact_id: project.contact_id ?? undefined, account_id: project.account_id ?? undefined };
   return (
     <div className="flex flex-wrap gap-2">
+      {!project.owner_id && <ClaimProjectButton id={project.id} version={project.version} />}
+      <Gated permission="projects.follow_up"><Button size="sm" onClick={() => setOpen("follow_up")}>Log follow-up</Button></Gated>
+      <Gated permission="projects.follow_up"><Button variant="outline" size="sm" onClick={() => setOpen("assign")}>Assign handler</Button></Gated>
+      <Gated permission="projects.write"><Button variant="outline" size="sm" onClick={() => setOpen("edit")}><Pencil className="size-3.5" aria-hidden /> Enrich project</Button></Gated>
+      {open === "assign" && <AssignProjectDialog project={project} members={members} open onOpenChange={() => setOpen(null)} />}
+      {open === "follow_up" && <ProjectFollowUpDialog project={project} open onOpenChange={() => setOpen(null)} />}
+
       <Gated permission="sales.write"><Button variant="outline" size="sm" onClick={() => setOpen("opportunity")}>New opportunity</Button></Gated>
       {open === "opportunity" && <CreateOpportunityDialog open onOpenChange={() => setOpen(null)} members={members} defaults={{ project_id:project.id, contact_id:project.contact_id ?? undefined, contact_name:project.contact_name ?? undefined, account_id:project.account_id ?? undefined, account_name:project.account_name ?? undefined }} />}
       <Gated permission="marketing.write">
@@ -43,12 +51,7 @@ export function ProjectActions({ project, members }: { project: ProjectDetail; m
           <MapPin className="size-3.5" aria-hidden /> Add site
         </Button>
       </Gated>
-      <Gated permission="sales.write">
-        <Button variant="outline" size="sm" onClick={() => setOpen("edit")}>
-          <Pencil className="size-3.5" aria-hidden /> Edit
-        </Button>
-      </Gated>
-      <EditProjectDialog open={open === "edit"} onOpenChange={() => setOpen(null)} project={project} members={members} />
+      {open === "edit" && <EditProjectDialog open onOpenChange={() => setOpen(null)} project={project} members={members} />}
       <ActivityDialog open={open === "activity"} onOpenChange={() => setOpen(null)} links={links} />
       <TaskDialog open={open === "task"} onOpenChange={() => setOpen(null)} members={members} links={links} defaultAssignee={session.userId} />
       <AddSiteDialog open={open === "site"} onOpenChange={() => setOpen(null)} projectId={project.id} />
