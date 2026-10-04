@@ -3,13 +3,14 @@
 import { z } from "zod";
 import { requirePermission } from "@/server/session";
 import { fail, ok, type ActionResult } from "@/server/action-result";
-import { reportBySlug } from "@/features/reports/registry";
+import { reportBySlug, resolveGrain } from "@/features/reports/registry";
 import { runReport } from "@/server/queries/reports";
 
 const exportSchema = z.object({
   slug: z.string().min(1),
   from: z.string().optional().or(z.literal("")),
   to: z.string().optional().or(z.literal("")),
+  grain: z.string().optional().or(z.literal("")),
 });
 
 export interface ExportPreview {
@@ -31,7 +32,8 @@ export async function exportReportAction(input: z.input<typeof exportSchema>): P
     const def = reportBySlug(parsed.data.slug);
     if (!def) return fail("Unknown report");
 
-    const { rows, error } = await runReport(def, parsed.data.from || undefined, parsed.data.to || undefined);
+    const grain = resolveGrain(def, parsed.data.grain || undefined);
+    const { rows, error } = await runReport(def, parsed.data.from || undefined, parsed.data.to || undefined, grain);
     if (error) return fail(error);
 
     const columns = def.columns.map((c) => c.key);
@@ -42,6 +44,7 @@ export async function exportReportAction(input: z.input<typeof exportSchema>): P
     }
     const stamp = new Date().toISOString().slice(0, 10);
     const range = parsed.data.from || parsed.data.to ? `_${parsed.data.from || "start"}_${parsed.data.to || "today"}` : "";
+    const grouping = grain ? `_${grain}` : "";
 
     // Recorded for operators reading server logs. There is no export-audit RPC
     // yet, so the UI does not claim this reaches the audit log.
@@ -49,6 +52,7 @@ export async function exportReportAction(input: z.input<typeof exportSchema>): P
       JSON.stringify({
         event: "report.exported",
         report: def.slug,
+        grain: grain ?? null,
         rows: rows.length,
         actor: session.userId,
         workspace: session.workspaceId,
@@ -57,7 +61,7 @@ export async function exportReportAction(input: z.input<typeof exportSchema>): P
     );
 
     return ok(
-      { filename: `tile-concept_${def.slug}${range}_${stamp}.csv`, csv: lines.join("\r\n"), rowCount: rows.length, columns: header },
+      { filename: `tile-concept_${def.slug}${grouping}${range}_${stamp}.csv`, csv: lines.join("\r\n"), rowCount: rows.length, columns: header },
       `Exported ${rows.length} row${rows.length === 1 ? "" : "s"}`,
     );
   } catch (e) {

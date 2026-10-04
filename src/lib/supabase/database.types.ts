@@ -11859,6 +11859,26 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      report_walkin_collections: {
+        Args: {
+          p_by_person?: boolean
+          p_from?: string
+          p_grain?: string
+          p_to?: string
+        }
+        Returns: {
+          amount: number
+          collections: number
+          new_customers: number
+          period_end: string
+          period_start: string
+          person: string
+          person_id: string
+          purchases: number
+          unreviewed_payments: number
+          visits: number
+        }[]
+      }
       report_walkins: {
         Args: { p_from?: string; p_to?: string }
         Returns: {
