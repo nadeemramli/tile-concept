@@ -1,7 +1,7 @@
 # TILE-3 — Sales reporting baseline, metric dictionary and delivery handoff
 
 **Status:** agent analysis for TILE-3, revision 2. **Not** a Direct record, not human acceptance, not owner approval of any business definition.
-**Prepared:** 2026-10-04 17:51–18:45 UTC (2026-10-05 01:51–02:45 Asia/Kuala_Lumpur) in a cloud session with read-only hosted access.
+**Prepared:** 2026-10-04 17:51–20:40 UTC (2026-10-05 01:51–04:40 Asia/Kuala_Lumpur); hosted aggregates 17:53–17:56 UTC, role-permission read later the same session in a cloud session with read-only hosted access.
 **Supersedes:** revision 1 of this file (commit `c3c2288bf84d36f10982ad7af712709bc2041841`, reconciled in `b70cf2a`). Revision 1's counts are kept below only where re-verified.
 **Companion:** `docs/standard-sales-reporting-plan.md` (proposal merged in PR #17 at `85a048d`). That plan stays a proposal; §7 records where this dictionary overrides it under the coordinator rules.
 
