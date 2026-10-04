@@ -153,3 +153,104 @@ Basis column: **code** = read in the repository at `1d6215e`; **hosted** = the s
 | R5.3 Sold lines | What was actually sold? | Line on a confirmed sale | Draft, voided, legacy-unclassified excluded; credits as negative events | sale event date | qty per unit, net value | stated unit; MYR | Sales without lines shown as "Sale without lines" value | Lines | `purchase_items` (unused) → lines (TILE-6) | Credit of half a line reduces value in credit week |
 | R6.1 Losses | Why were pursuits lost? | Loss event (lead or opportunity) | Genuine lost deals only; qualification rejection, duplicate/spam and deferred are separate | loss effective date / recorded | count per primary reason | — | "Reason not structured (legacy)" | Pursuits | free text → reason code + detail + competitor (TILE-8) | Reopen + lose again → both losses kept in their weeks; competitor Unknown allowed |
 | R6.2 Competitor relationship | Loss to a competitor, with relationship | Loss event with competitor | — | as R6.1 | count by relationship (neutral, provisional) | — | Unknown name allowed | Pursuits | none → (TILE-8) | — |
+
+---
+
+## 6. TILE-1 and TILE-2 overlap
+
+The TILE-1/TILE-2 briefs were not available (see the access limitation above). Findings use only the one-line scope given in the assignment and current code/deployment. Backlog status in Direct proves neither delivery nor absence.
+
+**TILE-1 — shared project registration QC and delivery.**
+- *Delivered in code:* commit `922ad8f` (merged in PR #14, in `ddd3048` and every later main) adds company and PIC search, project registration details, `identity.guard_company_relationship`, `identity.guard_project_registration`, `api.showroom_customer_search`, and redefines `api.opportunity_command` (`supabase/migrations/20260922195741_company_search_project_registration.sql`). pgTAP suite `supabase/tests/021_company_search_project_registration.sql` exists.
+- *Deployed:* migration present on hosted; `opportunity_command` hosted body matches (§1); production app includes it.
+- *Not evidenced here:* that suite's execution result in this session (no local database); any browser/E2E journey (`tests/e2e` holds only `smoke`, `guest`, `route-smoke`); human QC acceptance. Hosted usage is minimal (0 accounts, 4 projects).
+- *Reuse for reporting:* R2.2 should read project use / work type / GLC from the registered project and company, not create a parallel entity. TILE-4 extends this registration with the three independent dimensions; it should not reopen TILE-1's search/registration scope.
+
+**TILE-2 — reconcile the older engineering backlog with later releases.**
+- `docs/Backlog.md` is mostly catalog/corpus work. Two of its items are confirmed still open at runtime and matter to R5: every product is categorised `tile`, and all 19 brands are unreviewed (§2.3). Under rule F neither is a prerequisite for TILE-6; R5 reports them as provisional/unmapped.
+- `docs/reporting-release-qc.md` "Remaining development" lists items re-checked here: the 2,000-opportunity ceiling is **still present** (`src/server/queries/opportunities.ts:85`); export audit is **still console-only**; the hosted migration-readiness check was not evaluated. PR #16's handoff confirms the governed-report date filters previously did not reach the server and now do.
+- Recommendation: TILE-2 should mark these as current-state evidence rather than re-scope them into reporting issues. TILE-10 owns export auditing for the new report; the 2,000 ceiling matters only if a sales screen is reused for counts (it must not be).
+
+---
+
+## 7. Reconciliation with `docs/standard-sales-reporting-plan.md`
+
+The plan remains a proposal. Where it conflicts with the coordinator rules, this dictionary follows the rule, and the downstream issue should too.
+
+| Plan item | Rule | Resolution in this dictionary |
+| --- | --- | --- |
+| §4.1 `customer_sub_segment` = residential / commercial / **glc** / hospitality / fnb | A | Buyer role, project use, work type and GLC involvement are four independent fields; GLC is a party attribute, never a use sub-segment. |
+| §4.1 segment "required to mark a lead qualified, quoted or converted" | A | Unknown stays allowed; missing role is a completeness exception, not a gate. |
+| §4.1 contact ↔ lead copying | A | Contact supplies a default; a confirmed pursuit value is never overwritten without review. |
+| §3 R1 "imports stamp `created_at` with the import time"; add `received_at` | C | Agreed, with a basis/provenance column, and stop rewriting `created_at` (importers currently do). |
+| §3 R1 "is a walk-in a lead?" | B | Walk-ins are not excluded; count genuine new pursuits; the current resolver already separates repeat touches from new needs. |
+| §4.2 "friendly competitor (a competitor we refer work to and from)" | G | Not adopted. Neutral "competitor relationship" with captured detail; both prior interpretations stay provisional. |
+| §4.3 visit creates a quote with `issued_at = visit date`; "sent" = `version_no = 1` and `issued_at` in week | D | Visit creates a *prepared* canonical quote. Sent = first send event of the quotation, any version; later sent versions are revisions; resends/retries count once. |
+| §4.3 inquiry `quoted` action creates opportunity at `quote_sent` | D | Reuse one quoting command from inbox and walk-in; a stage alone is not send evidence. Opportunity creation can follow, but must not require staff to re-enter identity. |
+| §4.4 "might close" = high band or verbal confirmation, or next four weeks | E | Selected-week `expected_close_date`; likelihood labelled staff-assessed; no weights; four-week view may exist only as a separate labelled view. |
+| §4.4 `requires_forecast` blocks entering `quote_sent` | E | Do not block recording a sent quotation; missing forecast becomes an exception queue. |
+| §4.5 `format_label`, `large_format` threshold | F | No invented thresholds; dimensions with units, frozen per line; panels may need type/series/dimensions. |
+| §4.5 catalog hygiene a precondition | F | Not a release prerequisite; reviewed provisional mappings allowed. |
+| §2 / §3 R5 "about 960 of 5,087 variants" carry `dimensions` jsonb | — | Hosted: 0 variants carry `dimensions`; 960 carry width/length attribute values (§2.3). |
+| §6 eight-question gate before PR1 | — | Replaced by §10: only consequential definitions block, and only the work they affect. |
+
+---
+
+## 8. Delivery handoff for TILE-4 … TILE-10
+
+Shared contracts first; each issue keeps its own acceptance and dependencies as exported in Direct.
+
+**Shared contracts (define once, in the first batch that needs them).**
+1. *Effective vs recorded dates* on every reportable fact; KL week helper in SQL (`reporting.kl_week(timestamptz)`) used by all weekly RPCs.
+2. *Pursuit outcome event* (append-only): pursuit id, outcome type (`rejected | duplicate | spam | lost | deferred | won | reopened`), primary reason code, detail, competitor name (nullable/Unknown), relationship detail, effective date, actor. Used by TILE-8 and read by TILE-9.
+3. *Command pattern:* `api.<x>_command(p_action, p_input, p_request_id)` — idempotent, audited, append-only history (as `sale_command`, `opportunity_command`).
+4. *Completeness states:* `captured | unknown | not_captured | incomplete` returned by the report RPC per section, so the UI never renders a false zero.
+
+| Batch | Issues | Scope boundary | Depends on | Integration notes |
+| --- | --- | --- | --- | --- |
+| A | **TILE-4** classification (+ arrival provenance) | `received_at` + basis; pursuit `buyer_role`, `project_use`, `work_type`, `glc_involvement` with Unknown; remove homeowner default; importer changes | — | Extends TILE-1 registration; no reporting UI. Unblocks R1/R2. |
+| A′ | **TILE-8** loss reasons and pursuit outcomes | Outcome event + reason codes from inbox `lost`/`reopen` and stage changes; legacy free text kept as "unstructured" | Shared contract 2; can run in parallel with TILE-4 | Must preserve `work_inquiry` and `change_opportunity_stage` invariants. |
+| B | **TILE-5** canonical quotation and sending | One quote command from inbox, walk-in and pipeline; prepared/uploaded/sent/revised/resent facts; visit quote fields migrate to prepared quotes | TILE-4 pursuit identity (link to lead/visit without an opportunity) | Replaces `addQuoteVersionAction` inserts. |
+| B′ | **TILE-6** structured quoted/sold lines | Lines on canonical quote versions and confirmed sales; FK to variants; frozen attribute snapshot; reviewed provisional mapping; `catalog_finder` picker | TILE-5 for quoted lines; sold lines can start independently | Fix `report_demand` or retire it in favour of TILE-9. |
+| C | **TILE-7** forecast review | Forecast review command + events; exception queue for missing/stale | Opportunities exist (they do); independent of TILE-5 except "never block a sent quote" | — |
+| D | **TILE-9** scoped report calculations | `api.report_weekly_sales` (or per-section RPCs) per §5; owner filter; drilldown = same population; completeness states | Contracts from A/A′/B/B′/C; may ship R1/R2 first behind TILE-4 | A partial preview is not R1–R6 completion. |
+| E | **TILE-10** default dashboard, drilldowns, completeness queues, audited CSV | Default report page; keep the marketing/showroom report; fix the "limited to your scope" label; export audit to `audit.emit` | TILE-9 | No new sidebar item needed (Reports exists). |
+
+---
+
+## 9. Evidence map
+
+TILE-3's exported acceptance criteria were not available; rows follow the coordinator's assignment activities and must be re-mapped in Direct.
+
+| Activity | Evidence | Status |
+| --- | --- | --- |
+| 1 Baseline | §1 (repository, deployed, migration names, 23 function bodies; observation time) | Independently verified this session |
+| 2 Capture paths | §3 matrix with file:line citations | Verified from code at `1d6215e` |
+| 3 Aggregate completeness | §2 (production workspace, demo excluded, counts only) | Verified this session (hosted) |
+| 4 TILE-1/TILE-2 | §6 | Partial — briefs unavailable |
+| 5 Metric dictionary | §5 + shared contract | Proposed; rules A–H applied |
+| 6 Query risks | §4 with basis column | Confirmed by code + hosted body; no synthetic fixture run |
+| 7 Delivery plan | §8 | Proposed |
+| Record in Direct | — | Not possible from cloud; coordinator to submit |
+
+Retained from earlier agent reports and **re-verified** here: lead/visit/quote/purchase counts (unchanged), the 145-lead batch. Taken from the merged plan and **not** independently re-verified: the plan's statement about the demo workspace stage flags (`20260823000002_demo_dataset.sql:74`).
+
+---
+
+## 10. Remaining uncertainties
+
+**Consequential business definitions** (block only the work named).
+
+| # | Question | Evidence | Impact | Options | Recommendation |
+| --- | --- | --- | --- | --- | --- |
+| U1 | What makes a pursuit "valid" (spam, test, wrong-number, out-of-area)? | Only free-text loss reasons exist; 1 disqualified lead | R1.1 numerator | (a) exclude only reviewed spam/test/duplicate; (b) also exclude out-of-area | (a); report others as rejections (R1.2). Blocks TILE-8 code list only. |
+| U2 | How are the 534 legacy per-visit walk-in leads treated? | §2.1 | R1 history before 2026-09-21 | (a) report as-is with a "pre-linkage" flag; (b) reviewed back-classification | (a) now; (b) optional later. Does not block TILE-4. |
+| U3 | "Friendly competitor" meaning | Two conflicting plan readings, neither owner-confirmed | R6.2 labels | neutral relationship + detail; or one of the two readings | Neutral until the owner decides. Blocks only the glossary text in TILE-8. |
+| U4 | GLC involvement — which party roles (owner, developer, main contractor, consultant)? | No field anywhere | R2.2 | yes/no/unknown only; or yes + party role | yes/no/unknown + optional party role. Blocks TILE-4's GLC enum only. |
+| U5 | ID categories | Undefined | R2 drill | configurable list, empty at launch | Configurable; does not block. |
+| U6 | What counts as send evidence (staff-marked WhatsApp send, email, printed handover)? | No send fact exists | R3 | staff-attested send event with channel; or require attachment/message proof | Staff-attested event with channel and optional proof. Blocks TILE-5's send command. |
+| U7 | Quoted value for R5: first-sent or latest-sent version at as-of? | — | R5.2 value | first-sent / latest-sent | Count lines on first send; value at latest sent at as-of, labelled. Blocks TILE-9 R5 only. |
+
+**Routine engineering choices** (decide in the issue, no owner gate): column names; whether R1–R6 is one RPC or six; KL week helper location; event table shapes; CSV layout; whether `report_demand` is fixed or retired; pagination replacement for the 2,000 ceiling.
+
+**Access limits:** Direct export attachment not received; TILE-3 acceptance criteria and TILE-1/2 briefs unread; Obsidian sources unreachable; pgTAP and E2E not run in this session (no Docker); hosted views/policies other than the 23 functions not compared.
