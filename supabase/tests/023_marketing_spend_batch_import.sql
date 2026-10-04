@@ -24,7 +24,8 @@ create function pg_temp.batch(p_sha text,p_entries jsonb,p_extra jsonb default '
 create function pg_temp.three_days() returns jsonb language sql as $$
   select jsonb_build_array(pg_temp.day('2026-08-01',10.10,20.20),pg_temp.day('2026-08-02',5,0),pg_temp.day('2026-08-03',100.05,0.95)) $$;
 create function pg_temp.entries() returns bigint language sql as $$ select count(*) from marketing.spend_entries where platform='tiktok' and incurred_on between '2026-08-01' and '2026-08-31' $$;
-create function pg_temp.batches() returns bigint language sql as $$ select count(*) from marketing.spend_import_batches $$;
+-- Batches created in this test's transaction (now() is the transaction start), not residue from other runs.
+create function pg_temp.batches() returns bigint language sql as $$ select count(*) from marketing.spend_import_batches where imported_at>=now() $$;
 
 -- A read-only analyst of our own.
 insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
@@ -223,5 +224,17 @@ select ok(not has_function_privilege('anon','api.import_marketing_spend_batch(js
 select ok(not has_function_privilege('anon','api.preview_marketing_spend_batch(jsonb)','execute'),'anonymous previews blocked');
 select ok(not has_function_privilege('authenticated','marketing.spend_batch_issues(jsonb)','execute'),'internal validator not callable');
 select ok(not has_table_privilege('authenticated','marketing.spend_import_batches','insert'),'batch rows only through the import command');
+-- The weekly demo reset still works after a guest has imported marketing costs.
+create temp table demo_ws as select core.demo_workspace_id() id,
+  (select user_id from core.memberships where workspace_id=core.demo_workspace_id() and role_key='guest' limit 1) guest;
+grant select on demo_ws to authenticated;
+set local role authenticated;
+select pg_temp.act_as((select guest from demo_ws));
+select lives_ok($$select api.import_marketing_spend_batch(pg_temp.batch('e',pg_temp.three_days()),gen_random_uuid())$$,'demo guest imports a batch in the demo workspace');
+select lives_ok($$select api.record_marketing_spend('coverage','{"platform":"tiktok","date_from":"2026-08-01","date_to":"2026-08-31","reason":"Synthetic guest check","complete":true}',gen_random_uuid())$$,'demo guest confirms coverage');
+reset role;
+select lives_ok($$select core.reset_demo_workspace()$$,'weekly demo reset succeeds with marketing costs, coverage and import batches present');
+select is((select count(*) from marketing.spend_entries where workspace_id=(select id from demo_ws))+(select count(*) from marketing.spend_import_batches where workspace_id=(select id from demo_ws))
+  +(select count(*) from marketing.spend_coverage where workspace_id=(select id from demo_ws)),0::bigint,'the old demo workspace''s marketing-cost rows are gone');
 select * from finish();
 rollback;

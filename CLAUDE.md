@@ -42,7 +42,7 @@ Next.js 16 App Router (React 19, strict TS, `src/proxy.ts` for session refresh),
 - PostgREST expresses an upsert conflict target as column names only, so **any unique index used as one must not be partial or expression-based**.
 
 ## Marketing-cost import
-- Parser and service: `src/features/marketing/spend-import/` (pure, relative imports, shared by server actions and MCP). MCP stdio server: `pnpm mcp:marketing-cost` with `TC_MCP_MEMBER_EMAIL` (acts as that member; never defaulted). `pnpm mcp:marketing-cost:smoke` is local-only.
+- Parser and service: `src/features/marketing/spend-import/` (pure, relative imports, shared by server actions and MCP). MCP stdio server: `pnpm mcp:marketing-cost`, acting as the member who ran `pnpm mcp:marketing-cost:login` (own password or emailed link; session file mode 600). It uses only the publishable key: never give an MCP server the service-role key or mint sessions by email (`TC_MCP_MEMBER_EMAIL` is only a guard). Offline real-file check: `pnpm marketing-cost:check <file> --expect-dates=… --expect-total=…`. `pnpm mcp:marketing-cost:smoke` is local-only.
 
 ## Phase map
 Phase 1 (sales) and Phases 2-6 all have their database layer in `supabase/migrations`: `…008_phase_enablement` (child-table RLS, storage), `…009_phase2_marketing`, `…010_phase4_sources`, `…011_phase5_stock`, `…012_phase6_reports`, `…013_phase3_intake`. Business rules live in the SQL functions those files define — the UI calls them and must not re-implement or bypass a rule (permission gates, required reasons, permission-before-usable, idempotency).

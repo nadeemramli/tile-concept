@@ -1,31 +1,28 @@
 /**
  * MCP server (stdio) for marketing-cost imports.
  *
- *   TC_MCP_MEMBER_EMAIL=<member email> pnpm mcp:marketing-cost [--local]
+ *   pnpm mcp:marketing-cost:login          # once, in a terminal: the member signs in
+ *   pnpm --silent mcp:marketing-cost       # started by Claude Code / Codex
  *
- * The tools act as that workspace member through a one-time-link session,
- * exactly like scripts/import: `auth.uid()`, the role's permissions and the
- * audit trail are the member's. The service-role key is used only to mint
- * that session; it never reads or writes marketing tables. The member is
- * never defaulted: without TC_MCP_MEMBER_EMAIL the server refuses to start.
- * A local Supabase URL is refused unless --local is passed on purpose.
- *
- * Claude Code: claude mcp add tile-marketing-cost -e TC_MCP_MEMBER_EMAIL=… -- pnpm --silent mcp:marketing-cost
+ * The tools act as the member who signed in (see session.mts): their JWT,
+ * workspace and role permissions, enforced by the database. The server needs
+ * only SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (from the
+ * environment or .env.local); it never reads the service-role key, and an
+ * email setting alone cannot select or impersonate a member. A local URL is
+ * refused unless --local is passed on purpose.
  */
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { target, userClient } from "../import/lib.mts";
 import { createMarketingCostServer, type MarketingCostDb } from "./marketing-cost-tools.mts";
+import { mcpTarget, memberFromSession } from "./session.mts";
 
 async function main() {
   const flags = new Set(process.argv.slice(2).filter((a) => a.startsWith("--")));
-  const email = process.env.TC_MCP_MEMBER_EMAIL?.trim();
-  if (!email) throw new Error("Set TC_MCP_MEMBER_EMAIL to the member the tools act as (a marketing coordinator, sales manager or admin to import).");
-  const t = target(flags);
-  const { client } = await userClient(t, email);
-  const server = createMarketingCostServer(client as unknown as MarketingCostDb, email);
+  const t = mcpTarget(flags);
+  const member = await memberFromSession(t);
+  const server = createMarketingCostServer(member.client as unknown as MarketingCostDb, `${member.email} (${member.role}, ${member.workspace})`);
   await server.connect(new StdioServerTransport());
   // stdout is the protocol channel; diagnostics go to stderr.
-  console.error(`tile-concept marketing-cost MCP server · ${t.ref} · acting as ${email}`);
+  console.error(`tile-concept marketing-cost MCP server · ${t.url} · ${member.email} · ${member.role} · ${member.workspace}`);
 }
 
 main().catch((error) => {

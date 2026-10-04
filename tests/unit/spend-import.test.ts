@@ -142,6 +142,60 @@ describe("TikTok trend report parser", () => {
     expect(parse.reportTotal).toBe(12.4);
   });
 
+  // Same sheet name, headers and column order as the TikTok Ads Manager export
+  // (By Day, Campaign ID, Campaign name, Cost per conversion, Conversions, Spend,
+  // Currency). Values are synthetic.
+  function trendWorkbook(numericIds: boolean) {
+    const header = ["By Day", "Campaign ID", "Campaign name", "Cost per conversion", "Conversions", "Spend", "Currency"];
+    const idA = "1800000000000000001"; const idB = "1800000000000000002";
+    const rows: (string | number)[][] = [header];
+    let sen = 0;
+    const zero = new Set([3, 11, 25, 40]);
+    for (let i = 0; i < 50; i++) {
+      const day = new Date(Date.UTC(2026, 6, 1 + i)).toISOString().slice(0, 10);
+      const a = zero.has(i) ? 0 : 5000 + ((i * 41) % 2300);
+      rows.push([day, numericIds ? Number(idA) : idA, "Synthetic Lead Gen", a ? 7.25 : "-", a ? 9 : 0, a / 100, "MYR"]);
+      sen += a;
+      if (day === "2026-08-17") {
+        rows.push([day, numericIds ? Number(idB) : idB, "Synthetic Retargeting", 3.1, 4, 18.65, "MYR"]);
+        sen += 1865;
+      }
+    }
+    // Pad the last day so the synthetic report totals MYR 3,269.40.
+    const last = rows[rows.length - 1];
+    last[5] = (Math.round(Number(last[5]) * 100) + 326940 - sen) / 100;
+    const wb = XLSX.utils.book_new();
+    // A decoy sheet first: the parser must read "Trend", not the first table it finds.
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Date", "Spend"], ["2026-07-01", 99999]]), "Notes");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Trend");
+    return new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer);
+  }
+
+  it("reads the TikTok export layout: Trend sheet, By Day / Spend / Currency, two campaigns on 17 August", async () => {
+    const parse = await parseTikTokTrendReport(trendWorkbook(false), "synthetic-trend.xlsx");
+    expect(parse.errors).toEqual([]);
+    expect(parse.sheet).toBe("Trend");
+    expect(parse.columns).toMatchObject({ date: "By Day", spend: "Spend", currency: "Currency", campaign: "Campaign name", campaignId: "Campaign ID" });
+    expect(parse.currencyBasis).toBe("report_stated");
+    expect(parse.totals).toEqual({ entryCount: 46, cents: 326940, beforeTax: 3269.4 });
+    expect(reconcile(parse, { entryCount: 46, total: "3,269.40" })).toEqual([]);
+    const aug17 = parse.entries.find((e) => e.incurred_on === "2026-08-17")!;
+    expect(aug17.campaigns.map((c) => [c.name, c.campaign_id])).toEqual([["Synthetic Lead Gen", "1800000000000000001"], ["Synthetic Retargeting", "1800000000000000002"]]);
+    expect(aug17.cents).toBe(Math.round(aug17.campaigns[0].spend * 100) + 1865);
+    expect(parse.entries.filter((e) => e.campaigns.length > 1).map((e) => e.incurred_on)).toEqual(["2026-08-17"]);
+    expect(parse.excludedZeroDates).toHaveLength(4);
+    // "Cost per conversion" is never mistaken for spend.
+    expect(parse.entries.some((e) => e.campaigns.some((c) => c.spend === 7.25))).toBe(false);
+  });
+
+  it("keeps campaigns apart when Excel has rounded their 19-digit IDs", async () => {
+    const parse = await parseTikTokTrendReport(trendWorkbook(true), "synthetic-trend.xlsx");
+    expect(parse.errors).toEqual([]);
+    expect(parse.totals.entryCount).toBe(46);
+    expect(parse.entries.find((e) => e.incurred_on === "2026-08-17")!.campaigns).toHaveLength(2);
+    expect(parse.warnings.join(" ")).toMatch(/lost precision/);
+  });
+
   it("parses money and dates without guessing", () => {
     expect(moneyCents("1,234.5")).toBe(123450);
     expect(moneyCents("RM 10")).toBe(1000);

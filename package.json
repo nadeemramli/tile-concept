@@ -22,7 +22,9 @@
     "import:tiktok": "tsx scripts/import/tiktok-leads.mts",
     "import:tracker": "tsx scripts/import/daily-tracker.mts",
     "mcp:marketing-cost": "tsx scripts/mcp/marketing-cost.mts",
-    "mcp:marketing-cost:smoke": "tsx scripts/mcp/smoke-marketing-cost.mts"
+    "mcp:marketing-cost:smoke": "tsx scripts/mcp/smoke-marketing-cost.mts",
+    "mcp:marketing-cost:login": "tsx scripts/mcp/login.mts",
+    "marketing-cost:check": "tsx scripts/import/tiktok-spend-check.mts"
   },
   "dependencies": {
     "@fullcalendar/core": "^7.0.2",

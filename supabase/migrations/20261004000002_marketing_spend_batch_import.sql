@@ -21,9 +21,17 @@ alter table marketing.spend_entries
   add column tax_status text generated always as (case when tax is null then 'unreported' else 'stated' end) stored,
   add constraint spend_entries_credit_tax_check check(tax is not null or entry_mode<>'credit');
 
+-- The weekly demo reset deletes the demo workspace and relies on cascading
+-- foreign keys. The ledger tables did not cascade, so one guest-recorded cost
+-- (popup or import) made core.reset_demo_workspace() fail.
+alter table marketing.spend_entries drop constraint spend_entries_workspace_id_fkey,
+  add constraint spend_entries_workspace_id_fkey foreign key(workspace_id) references core.workspaces(id) on delete cascade;
+alter table marketing.spend_coverage drop constraint spend_coverage_workspace_id_fkey,
+  add constraint spend_coverage_workspace_id_fkey foreign key(workspace_id) references core.workspaces(id) on delete cascade;
+
 create table marketing.spend_import_batches (
   id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references core.workspaces(id),
+  workspace_id uuid not null references core.workspaces(id) on delete cascade,
   request_id uuid not null,
   source_format text not null check(source_format in ('tiktok_trend_report')),
   parser_version text not null check(length(btrim(parser_version)) between 1 and 40),
@@ -60,7 +68,7 @@ create index spend_import_batches_recent_idx on marketing.spend_import_batches(w
 -- What the source said for each date, kept as imported even after a correction.
 create table marketing.spend_import_lines (
   batch_id uuid not null references marketing.spend_import_batches(id),
-  workspace_id uuid not null references core.workspaces(id),
+  workspace_id uuid not null references core.workspaces(id) on delete cascade,
   incurred_on date not null,
   before_tax numeric(14,2) not null check(before_tax>0),
   campaigns jsonb not null check(jsonb_typeof(campaigns)='array' and jsonb_array_length(campaigns)>0),

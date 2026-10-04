@@ -224,7 +224,9 @@ export async function parseTikTokTrendReport(bytes: Uint8Array, sourceName: stri
 
   let sheets: Sheet[];
   try { sheets = readSheets(bytes, sourceName); } catch { errors.push("The file could not be read as a CSV or Excel workbook."); return result; }
+  // TikTok names the export's data sheet "Trend"; look there first.
   if (options.sheet) sheets = sheets.filter((s) => s.name === options.sheet);
+  else sheets = [...sheets.filter((s) => s.name?.toLowerCase() === "trend"), ...sheets.filter((s) => s.name?.toLowerCase() !== "trend")];
   const found = sheets.map((s) => ({ sheet: s, header: findHeader(s.rows) })).find((x) => x.header);
   if (!found?.header) {
     errors.push("No header row with a date column (Date / By Day) and a Spend (or Cost) column was found.");
@@ -259,6 +261,7 @@ export async function parseTikTokTrendReport(bytes: Uint8Array, sourceName: stri
   const campaigns = new Set<string>();
   const badDates: number[] = []; const badSpend: number[] = []; const negative: number[] = []; const dupes: string[] = [];
   let totalRowCents: number[] = [];
+  let lossyIds = false;
   const allDates = new Set<string>();
 
   for (let r = header.index + 1; r < sheet.rows.length; r++) {
@@ -282,11 +285,16 @@ export async function parseTikTokTrendReport(bytes: Uint8Array, sourceName: stri
     if (spend === null) { result.blankSpendRows.push(rowNo); continue; }
     if (spend < 0) { negative.push(rowNo); continue; }
     const name = campaignRaw || "All campaigns (report row)";
-    const campaignId = clean(col(row, "campaignId")) || null;
-    const key = [day, campaignId ?? name.toLowerCase(), clean(col(row, "adGroup")).toLowerCase(), clean(col(row, "ad")).toLowerCase()].join("\u0000");
+    const idCell = col(row, "campaignId");
+    // TikTok campaign IDs have 19 digits; stored as an Excel number they lose
+    // precision, so two campaigns could share a rounded ID. ID and name
+    // together tell campaigns apart, and the loss is reported.
+    if (typeof idCell === "number" && !Number.isSafeInteger(idCell)) lossyIds = true;
+    const campaignId = typeof idCell === "number" ? idCell.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 0 }) : clean(idCell) || null;
+    const campaignKey = `${campaignId ?? ""}\u0000${name.toLowerCase()}`;
+    const key = [day, campaignKey, clean(col(row, "adGroup")).toLowerCase(), clean(col(row, "ad")).toLowerCase()].join("\u0000");
     if (seen.has(key)) { dupes.push(`${seen.get(key)} and ${rowNo}`); continue; }
     seen.set(key, rowNo);
-    const campaignKey = campaignId ?? name.toLowerCase();
     campaigns.add(campaignKey);
     const day_ = byDate.get(day) ?? new Map<string, CampaignSpend>();
     const c = day_.get(campaignKey) ?? { name, campaign_id: campaignId, spend: 0, rows: [] };
@@ -300,6 +308,7 @@ export async function parseTikTokTrendReport(bytes: Uint8Array, sourceName: stri
   if (badSpend.length) errors.push(`The spend on ${onRows(badSpend)} is not a MYR amount with at most two decimals.`);
   if (negative.length) errors.push(`Negative spend on ${onRows(negative)}; record credits separately.`);
   if (dupes.length) errors.push(`The same campaign appears twice on one date (rows ${dupes.slice(0, 5).join("; ")}${dupes.length > 5 ? "; …" : ""}); summing would double count it.`);
+  if (lossyIds) warnings.push("Campaign IDs are stored as numbers and have lost precision past 15 digits; campaigns are told apart by ID and name together.");
   if (result.blankSpendRows.length) warnings.push(`No spend reported ("-" or blank) on ${onRows(result.blankSpendRows)}; left out.`);
 
   if (stated.size > 1) errors.push(`The report states more than one currency (${[...stated].join(", ")}).`);
