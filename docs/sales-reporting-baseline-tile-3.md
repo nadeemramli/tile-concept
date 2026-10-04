@@ -7,13 +7,13 @@ Prepared 2026-10-04 by an agent session for TILE-3. This file is the evidence fo
 | Item | Value | How verified |
 | --- | --- | --- |
 | Static-audit commit | `ddd304851709e3d29468b8f4e7a755e2b68e55d6` | Given in the assignment |
-| Current `origin/main` | `ddd304851709e3d29468b8f4e7a755e2b68e55d6` | `git fetch origin main` on 2026-10-04 |
-| Vercel production (project `tile-concept`) | `dpl_82gET9Nu3UfQPCLhRUB1crWhYnyt`, READY, from `main` @ `ddd3048…` | Vercel deployments API |
+| Current `origin/main` | `85a048d78e152a755458ea04b90a59bf0258a8d0`, the audit commit plus one docs-only commit that adds `docs/standard-sales-reporting-plan.md` (#17). It changes no code or migrations. | `git log`/`git diff --stat ddd3048..origin/main`, re-checked 2026-10-04 after PR #18 opened |
+| Vercel production (project `tile-concept`) | `dpl_Av7kUQUzkzpDhbu6hNY7wbT7jZzC`, READY, from `main` @ `85a048d…` (previously `dpl_82gET9Nu3UfQPCLhRUB1crWhYnyt` @ `ddd3048…`) | Vercel deployments API |
 | Repo migrations | 53 files, last `20260922195741_company_search_project_registration` | `ls supabase/migrations` |
 | Hosted migrations (`ewyiiematuuojlhpioqh`) | 53 rows, versions and names identical to the repo | Supabase `list_migrations` plus a line diff |
 | Hosted report SQL | `api.report_demand`, `report_quotes`, `report_pipeline` and `report_lead_source` match the latest repo definitions word for word (`report_pipeline`/`report_quotes` from `…20260921045534_opportunity_workflow.sql`) | `pg_proc.prosrc` read and compared |
 
-The repository, deployed build and hosted migrations all match. The static audit's commit is still current, so its code findings apply unchanged. Matching migration names does not prove every function body matches; only the four report functions above were compared word for word.
+The repository, deployed build and hosted migrations all match. Application code and migrations are identical to the static audit's commit, so its code findings apply unchanged. Matching migration names does not prove every function body matches; only the four report functions above were compared word for word.
 
 ## 2. Aggregate coverage, production workspace (counts only, no rows exported)
 
@@ -97,3 +97,18 @@ The live TILE-3 acceptance criteria could not be read. The rows below map to the
 - **Obsidian**: the two staging notes are on a local Windows path (`C:/Users/Nadeem/Desktop/Obsidian/...`) and are not in Google Drive. They were not read. Nothing here relies on their contents.
 - No `AGENTS.md`, Development Operating System or E2E guidance exists in the repository. `CLAUDE.md` was followed.
 - Matching migration names does not prove every function body matches; only four report functions were compared in full.
+
+## 8. Reconciliation with `docs/standard-sales-reporting-plan.md` (#17)
+
+`main` gained a gap analysis and four-PR delivery plan after this pack was drafted. Its hosted counts agree with §2: 721 leads, 525 typed contacts, 58/8/1 visit quotations, 0 quotes, 3 opportunities and 64 purchases with 0 items. It is not known whether it is the same content as the Obsidian "Gap Assessment and Delivery Plan" note. Overlapping points are not repeated here. Where it conflicts with TILE-3's stated constraints, the conflict is recorded below so downstream issues inherit the constraint rather than the plan's wording. None of this edits the plan; the owner decides.
+
+| Plan item | Conflict with a TILE-3 constraint | Required correction to downstream scope |
+| --- | --- | --- |
+| §4.1 `customer_sub_segment`: `residential \| commercial \| glc \| …` | GLC involvement must be **separate** from residential/commercial use. A single sub-segment column cannot hold "commercial **and** GLC". | Model project use and GLC involvement (yes/no/unknown) as independent fields, as in M3. Keep the definition of GLC involvement open (U3). |
+| §4.2 glossary: friendly competitor = "a competitor we refer work to and from" | The provisional definition is **an existing competitor relationship**. The two are not equivalent. | Keep the code, but leave its glossary text provisional until the owner decides (U2). |
+| §4.3 `record_showroom_visit` creates a quote with `issued_at = visit date`. "Quotations sent" = `version_no = 1` with `issued_at` in the week. | Preparation or upload must be kept apart from **sending**. A visit's SQ number, amount or file proves a quote was prepared, not sent. | Add an explicit send event (timestamp, channel, actor), and count M4 only from it. Visit-created quotes count as *prepared* until a send is recorded. |
+| §4.4 "Might close" = high probability or `expected_close_date` within the next four weeks | The question is "might close **in the selected week**", and estimates must be separate from actuals. | M5: expected close date within the selected week, as known at as-of. Never added to wins or sales. |
+| §3 R1: "`intake_events.occurred_at` … is not always set" | Not observed: all 185 intake events have `occurred_at`. The gap is walk-in and manual leads, which have no intake event. | Keep the plan's `received_at`, and backfill it from `intake_events.occurred_at` (TikTok) and the visit's `occurred_at` (walk-ins). |
+| Not covered by the plan | §4 risks: stage aging on `updated_at`, duplicate leads (0 marked vs 74 shared-phone groups), `report_quotes` counting drafts, and as-of/back-entry behaviour | Add to whichever downstream issue owns the weekly report RPC (plan PR4). |
+
+The plan's sequence (decisions → segments/loss codes → quotation record → product lines → weekly report) agrees with this pack's dependency order: data must be recorded before reports can count it. Its section 6 (business decisions) overlaps U1–U8 and should be resolved as one list.
