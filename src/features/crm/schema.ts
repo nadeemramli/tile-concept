@@ -109,10 +109,15 @@ export const addSiteSchema = z.object({
 });
 
 export const updateProjectSchema = z.object({
+  request_id: uuid(),
+  version: z.coerce.number().int().positive(),
+  account_id: optionalUuid,
+  contact_id: optionalUuid,
+  site_address: z.string().trim().max(1000).optional(),
   follow_up_contact_id: optionalUuid,
   product_specification: z.string().trim().max(4000).optional(),
   id: uuid(),
-  name: z.string().trim().min(2),
+  name: z.string().trim().min(2).max(200),
   project_type: z.enum(PROJECT_TYPES),
   status: z.enum(PROJECT_STATUSES),
   area: optionalStr,
@@ -120,4 +125,21 @@ export const updateProjectSchema = z.object({
   expected_start: optionalStr,
   expected_completion: optionalStr,
   notes: optionalStr,
+});
+
+export const registerProjectSchema = z.object({
+  request_id: uuid(), name: z.string().trim().min(2, "Project title is required").max(200),
+  project_type: z.enum(PROJECT_TYPES).default("other"), area: optionalStr,
+  account_id: optionalUuid, contact_id: optionalUuid, follow_up_contact_id: optionalUuid, owner_id: optionalUuid,
+  site_address: z.string().trim().max(1000).optional(), product_specification: z.string().trim().max(4000).optional(),
+  expected_start: optionalStr, expected_completion: optionalStr, notes: z.string().trim().max(4000).optional(),
+});
+export const assignProjectSchema = z.object({
+  id: uuid(), version: z.coerce.number().int().positive(), request_id: uuid(), owner_id: optionalUuid,
+  note: z.string().trim().max(4000).optional(),
+});
+export const followUpProjectSchema = z.object({
+  id: uuid(), version: z.coerce.number().int().positive(), request_id: uuid(),
+  note: z.string().trim().min(1, "Describe the follow-up").max(4000),
+  next_action: z.string().trim().max(1000).optional(), next_action_due_at: optionalStr,
 });

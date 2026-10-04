@@ -73,8 +73,8 @@ export const ROUTES: RouteDef[] = [
     description: "What needs attention now: aging leads, overdue follow-ups, data health.",
   },
   // Sales
+  { key: "projects", label: "Project registration", path: "/sales/projects", icon: FolderKanban, group: "Sales", status: "live", permission: "projects.read", description: "Shared projects: register, enrich, assign and follow up." },
   { key: "pipeline", label: "Pipeline", path: "/sales/pipeline", icon: KanbanSquare, group: "Sales", status: "live", permission: "sales.read" },
-  { key: "projects", label: "Projects", path: "/sales/projects", icon: FolderKanban, group: "Sales", status: "live", permission: "sales.read" },
   { key: "walkins", label: "Walk-ins & Purchases", path: "/sales/walk-ins", icon: Store, group: "Sales", status: "live", permission: "sales.read" },
   { key: "feedback", label: "Customer Feedback", path: "/sales/feedback", icon: MessageSquareText, group: "Sales", status: "live", permission: "sales.read" },
   { key: "tasks", label: "Tasks", path: "/sales/tasks", icon: ListTodo, group: "Sales", status: "live", permission: "sales.read", placement: "top-bar" },

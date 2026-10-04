@@ -12,11 +12,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field } from "@/components/patterns/field";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
 import { EntitySearch } from "@/features/crm/components/entity-search";
-import { EnumSelect, MemberSelect, clean, type MemberOption } from "@/features/crm/components/selects";
-import { ACCOUNT_TYPES, ACTIVITY_KINDS, CUSTOMER_TYPES, PRODUCT_INTERESTS, PROJECT_STATUSES, PROJECT_TYPES, SOURCE_CHANNELS } from "@/features/crm/schema";
+import { EnumSelect, MemberSelect, projectHandlers, clean, type MemberOption } from "@/features/crm/components/selects";
+import { ACCOUNT_TYPES, ACTIVITY_KINDS, CUSTOMER_TYPES, PROJECT_STATUSES, PROJECT_TYPES, SOURCE_CHANNELS } from "@/features/crm/schema";
 import { addActivityAction, addConsentAction, addContactPointAction, addTaskAction, createContactAction, linkContactAccountAction, revealContactPointsAction, updateContactAction } from "@/server/commands/contacts";
 import { addAccountAliasAction, createAccountAction, updateAccountAction } from "@/server/commands/accounts";
-import { addProjectSiteAction, createProjectOpportunityAction, updateProjectAction } from "@/server/commands/projects";
+import { addProjectSiteAction, registerProjectAction, updateProjectAction } from "@/server/commands/projects";
 import type { ContactDetail } from "@/server/queries/contacts";
 import type { AccountDetail } from "@/server/queries/accounts";
 import type { ProjectDetail } from "@/server/queries/projects";
@@ -359,126 +359,60 @@ export function TaskDialog({ open, onOpenChange, members, links, defaultAssignee
 
 export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults }: DialogProps & { members: MemberOption[]; defaults?: { contact_id?: string; contact_name?: string; account_id?: string; account_name?: string } }) {
   const router = useRouter();
-  const [withOpp, setWithOpp] = useState(true);
-  const [projectAccountId, setProjectAccountId] = useState(defaults?.account_id ?? "");
+  const [accountId, setAccountId] = useState(defaults?.account_id ?? "");
   const request = useRef<string | null>(null);
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="New project / opportunity"
-      description="A project is the physical job; an opportunity is the sales pursuit for it. One customer can have many of each."
-      submitLabel="Create"
-      className="sm:max-w-xl"
-      action={async (fd) => {
-        const o = clean(formToObject(fd));
-        request.current ??= crypto.randomUUID();
-        o.request_id = request.current;
-        o.create_opportunity = withOpp;
-        o.product_interest = fd.getAll("product_interest[]");
-        return createProjectOpportunityAction(o);
-      }}
-      onSuccess={(d) => { request.current = null; router.push(d.opportunity_id ? `/sales/pipeline?opportunity=${d.opportunity_id}` : `/sales/projects/${d.project_id}`); }}
-    >
-      <Field label="Project title" htmlFor="project_name" required>
-        <Input id="project_name" name="project_name" required autoFocus placeholder="Condo renovation — Cheras" />
-      </Field>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Type">
-          <EnumSelect name="project_type" options={PROJECT_TYPES} defaultValue="renovation" allowEmpty={false} />
-        </Field>
-        <Field label="Area" htmlFor="area">
-          <Input id="area" name="area" placeholder="Cheras" />
-        </Field>
-        <Field label="Internal salesperson">
-          <MemberSelect name="owner_id" members={members} placeholder="Me" />
-        </Field>
-      </div>
-      <EntitySearch kind="account" name="account_id" label="Company (optional for personal customers)" defaultId={defaults?.account_id} defaultName={defaults?.account_name} onSelect={(hit) => setProjectAccountId(hit?.id ?? "")} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <EntitySearch kind="contact" name="contact_id" label="Customer / project owner" defaultId={defaults?.contact_id} defaultName={defaults?.contact_name} />
-        <EntitySearch key={projectAccountId} kind="contact" name="follow_up_contact_id" label="Customer/company PIC to follow up" accountId={projectAccountId || undefined} />
-      </div>
-      <p className="text-xs text-muted-foreground">For company projects, choose a linked company contact as PIC. Link additional contacts from the company or contact page.</p>
-      <Field label="Site location / address" htmlFor="site_address"><Textarea id="site_address" name="site_address" maxLength={1000} rows={2} placeholder="Site address, town, state and postcode" /></Field>
-      <Field label="Products / specifications proposed" htmlFor="product_specification"><Textarea id="product_specification" name="product_specification" maxLength={4000} rows={3} placeholder="Product or model, size, finish, application and proposed quantity" /></Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Expected start" htmlFor="expected_start">
-          <Input id="expected_start" name="expected_start" type="date" />
-        </Field>
-        <Field label="Expected completion" htmlFor="expected_completion">
-          <Input id="expected_completion" name="expected_completion" type="date" />
-        </Field>
-      </div>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox checked={withOpp} onCheckedChange={(v) => setWithOpp(!!v)} /> Also create an opportunity
-      </label>
-      {withOpp && (
-        <div className="space-y-3 rounded-md border p-3">
-          <Field label="Opportunity name" htmlFor="opportunity_name" hint="Defaults to project name">
-            <Input id="opportunity_name" name="opportunity_name" />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Est. value (MYR)" htmlFor="estimated_value">
-              <Input id="estimated_value" name="estimated_value" type="number" step="0.01" min="0" className="tnum" />
-            </Field>
-            <Field label="Next action" htmlFor="next_action">
-              <Input id="next_action" name="next_action" defaultValue="Follow up" />
-            </Field>
-          </div>
-          <Field label="Source">
-            <EnumSelect name="source_channel" options={SOURCE_CHANNELS} />
-          </Field>
-          <Field label="Product interest">
-            <div className="flex flex-wrap gap-3">
-              {PRODUCT_INTERESTS.map((p) => (
-                <label key={p} className="flex items-center gap-1.5 text-xs">
-                  <Checkbox name="product_interest[]" value={p} /> {titleCase(p)}
-                </label>
-              ))}
-            </div>
-          </Field>
+  return <FormDialog open={open} onOpenChange={onOpenChange} title="Register project" submitLabel="Register project" closeOnSuccess={false}
+    description="Start with a title. Everyone in the company can add details later; salespeople can pick up the follow-up."
+    className="sm:max-w-xl"
+    action={async (fd) => { request.current ??= crypto.randomUUID(); return registerProjectAction({ ...clean(formToObject(fd)), request_id: request.current }); }}
+    onSuccess={(data) => router.push(`/sales/projects/${data.project_id}`)}>
+    <Field label="Project title" htmlFor="project-name" required><Input id="project-name" name="name" required autoFocus maxLength={200} placeholder="e.g. New shop renovation in Cheras" /></Field>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Area / town" htmlFor="project-area"><Input id="project-area" name="area" placeholder="Optional" /></Field>
+      <Field label="Internal project handler" htmlFor="project-handler" hint="Leave unassigned for a salesperson to claim."><MemberSelect id="project-handler" name="owner_id" members={projectHandlers(members)} /></Field>
+    </div>
+    <Field label="What the customer wants" htmlFor="project-notes"><Textarea id="project-notes" name="notes" rows={2} maxLength={4000} placeholder="Add anything known so far (optional)" /></Field>
+    <details className="rounded-md border p-3" open={defaults?.account_id || defaults?.contact_id ? true : undefined}>
+      <summary className="cursor-pointer text-sm font-medium">Add contacts, site and specifications</summary>
+      <div className="mt-3 space-y-3">
+        <EntitySearch project kind="account" name="account_id" label="Company" defaultId={defaults?.account_id} defaultName={defaults?.account_name} onSelect={(hit) => setAccountId(hit?.id ?? "")} />
+        <EntitySearch project kind="contact" name="contact_id" label="Customer / project owner" defaultId={defaults?.contact_id} defaultName={defaults?.contact_name} />
+        <EntitySearch project key={accountId} kind="contact" name="follow_up_contact_id" label="Customer/company PIC" accountId={accountId || undefined} />
+        <Field label="Site location / address" htmlFor="project-site"><Textarea id="project-site" name="site_address" rows={2} maxLength={1000} /></Field>
+        <Field label="Products / specifications proposed" htmlFor="project-spec"><Textarea id="project-spec" name="product_specification" rows={3} maxLength={4000} placeholder="Product, size, finish, quantity or application" /></Field>
+        <Field label="Project type"><EnumSelect name="project_type" options={PROJECT_TYPES} defaultValue="other" allowEmpty={false} /></Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Expected start" htmlFor="expected_start"><Input id="expected_start" name="expected_start" type="date" /></Field>
+          <Field label="Expected completion" htmlFor="expected_completion"><Input id="expected_completion" name="expected_completion" type="date" /></Field>
         </div>
-      )}
-    </FormDialog>
-  );
+      </div>
+    </details>
+  </FormDialog>;
 }
 
-export function EditProjectDialog({ open, onOpenChange, project, members }: DialogProps & { project: ProjectDetail; members: MemberOption[] }) {
-  return (
-    <FormDialog open={open} onOpenChange={onOpenChange} title="Edit project" action={async (fd) => updateProjectAction({ id: project.id, ...clean(formToObject(fd)) })}>
-      <Field label="Name" htmlFor="name" required>
-        <Input id="name" name="name" required defaultValue={project.name} />
-      </Field>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Type">
-          <EnumSelect name="project_type" options={PROJECT_TYPES} defaultValue={project.project_type ?? "other"} allowEmpty={false} />
-        </Field>
-        <Field label="Status">
-          <EnumSelect name="status" options={PROJECT_STATUSES} defaultValue={project.status} allowEmpty={false} />
-        </Field>
-        <Field label="Area" htmlFor="area">
-          <Input id="area" name="area" defaultValue={project.area ?? ""} />
-        </Field>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Internal salesperson">
-          <MemberSelect name="owner_id" members={members} defaultValue={project.owner_id} />
-        </Field>
-        <Field label="Expected start" htmlFor="expected_start">
-          <Input id="expected_start" name="expected_start" type="date" defaultValue={project.expected_start ?? ""} />
-        </Field>
-        <Field label="Expected completion" htmlFor="expected_completion">
-          <Input id="expected_completion" name="expected_completion" type="date" defaultValue={project.expected_completion ?? ""} />
-        </Field>
-      </div>
-      <EntitySearch kind="contact" name="follow_up_contact_id" label="Customer/company PIC to follow up" accountId={project.account_id || undefined} defaultId={project.follow_up_contact_id ?? undefined} defaultName={project.follow_up_contact_name ?? undefined} />
-      <Field label="Products / specifications proposed" htmlFor="product_specification"><Textarea id="product_specification" name="product_specification" rows={3} maxLength={4000} defaultValue={project.product_specification ?? ""} /></Field>
-      <Field label="Notes" htmlFor="notes">
-        <Textarea id="notes" name="notes" rows={3} defaultValue={project.notes ?? ""} />
-      </Field>
-    </FormDialog>
-  );
+export function EditProjectDialog({ open, onOpenChange, project }: DialogProps & { project: ProjectDetail; members: MemberOption[] }) {
+  const [accountId, setAccountId] = useState(project.account_id ?? "");
+  const request = useRef<string | null>(null);
+  return <FormDialog open={open} onOpenChange={onOpenChange} title="Enrich project" className="sm:max-w-xl"
+    description="Add what you know. The project remains visible to the whole company."
+    action={async (fd) => { request.current ??= crypto.randomUUID(); return updateProjectAction({ ...clean(formToObject(fd)), id: project.id, version: project.version, request_id: request.current }); }}>
+    <Field label="Project title" htmlFor="name" required><Input id="name" name="name" required maxLength={200} defaultValue={project.name} /></Field>
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Field label="Type"><EnumSelect name="project_type" options={PROJECT_TYPES} defaultValue={project.project_type ?? "other"} allowEmpty={false} /></Field>
+      <Field label="Status"><EnumSelect name="status" options={PROJECT_STATUSES} defaultValue={project.status} allowEmpty={false} /></Field>
+      <Field label="Area / town" htmlFor="area"><Input id="area" name="area" defaultValue={project.area ?? ""} /></Field>
+    </div>
+    <EntitySearch project kind="account" name="account_id" label="Company" defaultId={project.account_id ?? undefined} defaultName={project.account_name ?? undefined} onSelect={(hit) => setAccountId(hit?.id ?? "")} />
+    <EntitySearch project kind="contact" name="contact_id" label="Customer / project owner" defaultId={project.contact_id ?? undefined} defaultName={project.contact_name ?? undefined} />
+    <EntitySearch project key={accountId} kind="contact" name="follow_up_contact_id" label="Customer/company PIC" accountId={accountId || undefined} defaultId={accountId === (project.account_id ?? "") ? project.follow_up_contact_id ?? undefined : undefined} defaultName={accountId === (project.account_id ?? "") ? project.follow_up_contact_name ?? undefined : undefined} />
+    <Field label="Site location / address" htmlFor="site_address"><Textarea id="site_address" name="site_address" maxLength={1000} rows={2} defaultValue={project.sites[0]?.address.line1 ?? ""} /></Field>
+    <Field label="Products / specifications proposed" htmlFor="product_specification"><Textarea id="product_specification" name="product_specification" rows={3} maxLength={4000} defaultValue={project.product_specification ?? ""} /></Field>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Expected start" htmlFor="expected_start"><Input id="expected_start" name="expected_start" type="date" defaultValue={project.expected_start ?? ""} /></Field>
+      <Field label="Expected completion" htmlFor="expected_completion"><Input id="expected_completion" name="expected_completion" type="date" defaultValue={project.expected_completion ?? ""} /></Field>
+    </div>
+    <Field label="What the customer wants / notes" htmlFor="notes"><Textarea id="notes" name="notes" rows={3} maxLength={4000} defaultValue={project.notes ?? ""} /></Field>
+  </FormDialog>;
 }
 
 export function AddSiteDialog({ open, onOpenChange, projectId }: DialogProps & { projectId: string }) {

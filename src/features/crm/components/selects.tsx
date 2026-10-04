@@ -25,6 +25,7 @@ export function EnumSelect({ name, options, defaultValue, placeholder = "Selectâ
 export interface MemberOption {
   user_id: string;
   full_name: string;
+  role_key?: string;
 }
 
 export function MemberSelect({ name, members, defaultValue, placeholder = "Unassigned", id }: { name: string; members: MemberOption[]; defaultValue?: string | null; placeholder?: string; id?: string }) {
@@ -49,4 +50,9 @@ export function MemberSelect({ name, members, defaultValue, placeholder = "Unass
 export function clean(obj: Record<string, unknown>) {
   for (const k of Object.keys(obj)) if (obj[k] === "__none__") obj[k] = "";
   return obj;
+}
+
+/** Only active members with a sales role can handle a project. */
+export function projectHandlers(members: MemberOption[]) {
+  return members.filter((m) => ["admin", "sales_manager", "sales_rep", "showroom", "guest"].includes(m.role_key ?? ""));
 }
