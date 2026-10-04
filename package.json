@@ -20,7 +20,9 @@
     "corpus:local": "tsx scripts/corpus/run.mts --local",
     "corpus:linked": "tsx scripts/corpus/run.mts --linked",
     "import:tiktok": "tsx scripts/import/tiktok-leads.mts",
-    "import:tracker": "tsx scripts/import/daily-tracker.mts"
+    "import:tracker": "tsx scripts/import/daily-tracker.mts",
+    "mcp:marketing-cost": "tsx scripts/mcp/marketing-cost.mts",
+    "mcp:marketing-cost:smoke": "tsx scripts/mcp/smoke-marketing-cost.mts"
   },
   "dependencies": {
     "@fullcalendar/core": "^7.0.2",
@@ -62,6 +64,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",

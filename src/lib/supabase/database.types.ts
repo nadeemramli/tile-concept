@@ -9673,6 +9673,7 @@ export type Database = {
           entry_key: string | null
           entry_mode: string | null
           id: string | null
+          import_batch_id: string | null
           incurred_on: string | null
           original_amount: number | null
           original_currency: string | null
@@ -9680,6 +9681,7 @@ export type Database = {
           reference: string | null
           status: string | null
           tax: number | null
+          tax_status: string | null
           updated_at: string | null
           vendor: string | null
           version: number | null
@@ -9697,6 +9699,7 @@ export type Database = {
           entry_key?: string | null
           entry_mode?: string | null
           id?: string | null
+          import_batch_id?: string | null
           incurred_on?: string | null
           original_amount?: number | null
           original_currency?: string | null
@@ -9704,6 +9707,7 @@ export type Database = {
           reference?: string | null
           status?: string | null
           tax?: number | null
+          tax_status?: string | null
           updated_at?: string | null
           vendor?: string | null
           version?: number | null
@@ -9721,6 +9725,7 @@ export type Database = {
           entry_key?: string | null
           entry_mode?: string | null
           id?: string | null
+          import_batch_id?: string | null
           incurred_on?: string | null
           original_amount?: number | null
           original_currency?: string | null
@@ -9728,6 +9733,7 @@ export type Database = {
           reference?: string | null
           status?: string | null
           tax?: number | null
+          tax_status?: string | null
           updated_at?: string | null
           vendor?: string | null
           version?: number | null
@@ -9742,6 +9748,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "spend_entries_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "spend_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "spend_entries_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -9750,6 +9763,170 @@ export type Database = {
           },
           {
             foreignKeyName: "spend_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spend_import_batches: {
+        Row: {
+          campaign_count: number | null
+          category: string | null
+          currency: string | null
+          currency_basis: string | null
+          entry_count: number | null
+          entry_mode: string | null
+          excluded_zero_dates: string[] | null
+          id: string | null
+          imported_at: string | null
+          imported_by: string | null
+          parser_version: string | null
+          platform: string | null
+          report_date_from: string | null
+          report_date_to: string | null
+          request_id: string | null
+          source_format: string | null
+          source_name: string | null
+          source_row_count: number | null
+          source_sha256: string | null
+          status: string | null
+          tax_status: string | null
+          total_before_tax: number | null
+          vendor: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          campaign_count?: number | null
+          category?: string | null
+          currency?: string | null
+          currency_basis?: string | null
+          entry_count?: number | null
+          entry_mode?: string | null
+          excluded_zero_dates?: string[] | null
+          id?: string | null
+          imported_at?: string | null
+          imported_by?: string | null
+          parser_version?: string | null
+          platform?: string | null
+          report_date_from?: string | null
+          report_date_to?: string | null
+          request_id?: string | null
+          source_format?: string | null
+          source_name?: string | null
+          source_row_count?: number | null
+          source_sha256?: string | null
+          status?: string | null
+          tax_status?: string | null
+          total_before_tax?: number | null
+          vendor?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          campaign_count?: number | null
+          category?: string | null
+          currency?: string | null
+          currency_basis?: string | null
+          entry_count?: number | null
+          entry_mode?: string | null
+          excluded_zero_dates?: string[] | null
+          id?: string | null
+          imported_at?: string | null
+          imported_by?: string | null
+          parser_version?: string | null
+          platform?: string | null
+          report_date_from?: string | null
+          report_date_to?: string | null
+          request_id?: string | null
+          source_format?: string | null
+          source_name?: string | null
+          source_row_count?: number | null
+          source_sha256?: string | null
+          status?: string | null
+          tax_status?: string | null
+          total_before_tax?: number | null
+          vendor?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spend_import_batches_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "spend_import_batches_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spend_import_lines: {
+        Row: {
+          batch_id: string | null
+          before_tax: number | null
+          campaigns: Json | null
+          incurred_on: string | null
+          source_rows: number[] | null
+          spend_entry_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          before_tax?: number | null
+          campaigns?: Json | null
+          incurred_on?: string | null
+          source_rows?: number[] | null
+          spend_entry_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          before_tax?: number | null
+          campaigns?: Json | null
+          incurred_on?: string | null
+          source_rows?: number[] | null
+          spend_entry_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spend_import_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "spend_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spend_import_lines_spend_entry_id_fkey"
+            columns: ["spend_entry_id"]
+            isOneToOne: true
+            referencedRelation: "spend_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spend_import_lines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "spend_import_lines_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -11416,6 +11593,10 @@ export type Database = {
           title: string
         }[]
       }
+      import_marketing_spend_batch: {
+        Args: { p_input: Json; p_request_id: string }
+        Returns: string
+      }
       inquiry_page: {
         Args: {
           p_owner?: string
@@ -11572,6 +11753,7 @@ export type Database = {
         Returns: string
       }
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
+      preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
       publish_price: {
         Args: {
           p_override?: boolean
@@ -11998,6 +12180,10 @@ export type Database = {
         }
         Returns: string
       }
+      verify_marketing_spend_batch: {
+        Args: { p_batch_id: string }
+        Returns: Json
+      }
       visit_quotation_command: {
         Args: {
           p_action: string
@@ -12005,6 +12191,10 @@ export type Database = {
           p_input?: Json
           p_visit_id: string
         }
+        Returns: string
+      }
+      void_marketing_spend_batch: {
+        Args: { p_batch_id: string; p_reason: string; p_request_id: string }
         Returns: string
       }
       walk_in_inquiries: {
