@@ -7,8 +7,9 @@
  *
  * Proof of identity is the member's own password, or the one-time link sent
  * to their own inbox. The session file (default
- * ~/.config/tile-concept/mcp-session.json, or TC_MCP_SESSION_FILE) is written
- * with mode 600. No service-role key is read or needed.
+ * ~/.config/tile-concept/mcp-session.json, %APPDATA%\tile-concept on Windows,
+ * or TC_MCP_SESSION_FILE) is readable only by its owner: mode 600, or an
+ * owner-only ACL on Windows. No service-role key is read or needed.
  */
 import readline from "node:readline";
 import { Writable } from "node:stream";

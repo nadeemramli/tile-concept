@@ -5,7 +5,8 @@
  * a named email. A member signs in once with `pnpm mcp:marketing-cost:login`,
  * using their own password or a magic link sent to their own inbox, and the
  * resulting Supabase session (refresh token) is kept in a file only they can
- * read. The server uses only the project URL and the publishable key, so every
+ * read (mode 600, or an owner-only ACL on Windows; see file-protection.mts).
+ * The server uses only the project URL and the publishable key, so every
  * call is that member's: their JWT, their workspace (core.current_workspace_id)
  * and their role's permissions, checked by the database.
  *
@@ -17,6 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "../import/lib.mts";
+import { assertPrivate, ensurePrivateDir, protectFile } from "./file-protection.mts";
 
 export interface PublicTarget { url: string; publishableKey: string }
 
@@ -30,8 +32,10 @@ export function mcpTarget(flags: Set<string>): PublicTarget {
   return { url: url.replace(/\/$/, ""), publishableKey };
 }
 
+/** ~/.config/tile-concept/mcp-session.json, or %APPDATA%\tile-concept\mcp-session.json on Windows. */
 export function sessionFilePath(): string {
-  return path.resolve(process.env.TC_MCP_SESSION_FILE ?? path.join(os.homedir(), ".config", "tile-concept", "mcp-session.json"));
+  const base = process.platform === "win32" && process.env.APPDATA ? process.env.APPDATA : path.join(os.homedir(), ".config");
+  return path.resolve(process.env.TC_MCP_SESSION_FILE ?? path.join(base, "tile-concept", "mcp-session.json"));
 }
 
 interface SessionFile { url: string; items: Record<string, string> }
@@ -39,20 +43,21 @@ const STORAGE_KEY = "tc-mcp-session";
 
 function readFile(file: string): SessionFile | null {
   if (!fs.existsSync(file)) return null;
-  if (process.platform !== "win32" && (fs.statSync(file).mode & 0o077) !== 0) {
-    throw new Error(`${file} is readable by other users. Run: chmod 600 "${file}"`);
-  }
+  assertPrivate(file);
   const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as SessionFile;
   if (typeof parsed?.url !== "string" || typeof parsed.items !== "object") throw new Error(`${file} is not a Tile Concept MCP session file.`);
   return parsed;
 }
 
 function writeFile(file: string, data: SessionFile) {
-  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  ensurePrivateDir(path.dirname(file));
   const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data), { mode: 0o600 });
+  // Restrict the file before the tokens are written into it.
+  fs.writeFileSync(tmp, "", { mode: 0o600 });
+  protectFile(tmp);
+  fs.writeFileSync(tmp, JSON.stringify(data));
   fs.renameSync(tmp, file);
-  if (process.platform !== "win32") fs.chmodSync(file, 0o600);
+  protectFile(file);
 }
 
 /** supabase-js storage backed by the session file, so refresh-token rotation is persisted. */

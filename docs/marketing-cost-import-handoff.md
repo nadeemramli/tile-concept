@@ -47,7 +47,7 @@ It exits 1 on any error or mismatch. The real export is read from sheet `Trend` 
 ### How a member is authenticated
 
 - **The member signs in once, as themselves.** In a terminal at the repository: `pnpm mcp:marketing-cost:login`. They give their email, then either their own password or the one-time sign-in link that Supabase emails to their own inbox. They paste the link instead of opening it: it works once.
-- **The session is a normal Supabase session.** It is stored in `~/.config/tile-concept/mcp-session.json` (or `TC_MCP_SESSION_FILE`) with mode 600. The server refuses a file other users can read. Refresh-token rotation is written back to the same file.
+- **The session is a normal Supabase session.** It is stored in `~/.config/tile-concept/mcp-session.json` (on Windows `%APPDATA%\tile-concept\mcp-session.json`; override with `TC_MCP_SESSION_FILE`) and readable only by its owner: mode 600 on macOS/Linux, an owner-only ACL on Windows (see below). The server refuses a file anyone else can read. Refresh-token rotation is written back to the same file.
 - **The server holds no privileged key.** `pnpm mcp:marketing-cost` needs only `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`) and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and it never reads `SUPABASE_SECRET_KEY`. At start it asks Supabase Auth to validate the session (`getUser`), then requires an active membership (`api.my_membership`). Otherwise it exits before speaking MCP.
 - **`TC_MCP_MEMBER_EMAIL` is a guard, not a credential.** If set, the server refuses to start unless the signed-in member has that email. Setting an email alone, with no session, cannot select or impersonate anyone.
 - **Every tool call is the member's.** Each call is a PostgREST request carrying the member's JWT, so `auth.uid()`, `core.current_workspace_id()`, RLS and `core.has_permission(...)` decide exactly as in the app:
@@ -89,6 +89,47 @@ startup_timeout_sec = 30
 ```
 
 Or use the CLI: `codex mcp add tile-marketing-cost --env SUPABASE_URL=… --env NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=… --env TC_MCP_MEMBER_EMAIL=… -- pnpm --dir /path/to/tile-concept --silent mcp:marketing-cost`. If Codex and Claude Code both run the server, give each its own `TC_MCP_SESSION_FILE` and sign in once per file (`TC_MCP_SESSION_FILE=… pnpm mcp:marketing-cost:login`).
+
+### Windows
+
+The commands above are for macOS/Linux shells. On native Windows (PowerShell), with Node 24 and pnpm installed:
+
+```powershell
+cd C:\path\to\tile-concept
+pnpm install
+$env:SUPABASE_URL = "https://ewyiiematuuojlhpioqh.supabase.co"
+$env:NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "<publishable key>"
+pnpm mcp:marketing-cost:login
+icacls "$env:APPDATA\tile-concept\mcp-session.json"
+```
+
+Instead of the two `$env:` lines, you can put these two values in the repository's `.env.local`.
+
+- **How the file is protected.** Windows ignores mode 600, so the server uses `icacls` instead. It removes inherited permissions and grants access only to your account, on the folder (inherited by new files) and on the file after every write.
+- **What `icacls` should list.** Your account (`<PC or domain>\<you>:(F)`), and possibly `NT AUTHORITY\SYSTEM` or `BUILTIN\Administrators`. Those two are tolerated because they can read any file anyway.
+- **What makes the server refuse to start.** Any other entry, such as `Everyone`, `BUILTIN\Users`, `Authenticated Users` or another account. The error prints the `icacls` command that fixes it.
+- **Not yet run on Windows.** This ACL handling is unit-tested against `icacls` output shapes but has not been run on a Windows machine. After the first sign-in, check the `icacls` output yourself.
+
+`pnpm` on Windows is a `.cmd` shim, so MCP clients that start processes directly need `cmd /c` in front of it:
+
+```powershell
+claude mcp add --scope user --transport stdio `
+  --env SUPABASE_URL=https://ewyiiematuuojlhpioqh.supabase.co `
+  --env NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key> `
+  --env TC_MCP_MEMBER_EMAIL=<your email> `
+  tile-marketing-cost -- cmd /c pnpm --dir C:\path\to\tile-concept --silent mcp:marketing-cost
+```
+
+```toml
+# %USERPROFILE%\.codex\config.toml
+[mcp_servers.tile-marketing-cost]
+command = "cmd"
+args = ["/c", "pnpm", "--dir", "C:\\path\\to\\tile-concept", "--silent", "mcp:marketing-cost"]
+env = { SUPABASE_URL = "https://ewyiiematuuojlhpioqh.supabase.co", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "<publishable key>", TC_MCP_MEMBER_EMAIL = "<your email>" }
+startup_timeout_sec = 30
+```
+
+None of this is needed to use the app's *Import TikTok report* button.
 
 Then ask the agent to preview the report with the expected figures 46 and 3,269.40. Import only after reviewing the preview, then verify.
 
