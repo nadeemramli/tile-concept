@@ -148,19 +148,22 @@ Then ask the agent to preview the report with the expected figures 46 and 3,269.
 - Browser check of the import dialog, duplicate/overlap blockers, the ledger table, stating tax through the popup, verification and the funnel's unreported-tax hints.
 - `supabase db lint` reports no finding in the new or changed functions.
 
-**Real report: pending.** The real XLSX was not received in this session: the upload and attachment folders were empty, and it is not in Drive or Gmail. Its layout (sheet `Trend`; `By Day`, `Campaign ID`, `Campaign name`, `Cost per conversion`, `Conversions`, `Spend`, `Currency`) is replicated with synthetic values in `tests/unit/spend-import.test.ts`, which tests:
+**Real report: verified (5 October 2026).** The original export `View Report-Trend-2026-08-01-2026-10-05.xlsx` (12,290 bytes, SHA-256 `325550d2852ac00ba71f22bfd28e4d3fe626a611a870bbe43e5272afd33177ff`) was retrieved from the owner's Drive and checked. It was never committed, and no copy of its rows is in the repository or the tests.
 
-- `Trend` is read rather than a decoy sheet;
-- `Cost per conversion` is never read as spend;
-- two campaigns on 17 August are summed into one daily total;
-- 46 dates / MYR 3,269.40;
-- rounded numeric campaign IDs.
-
-That proves the parser handles the layout, not the real values. Run `pnpm marketing-cost:check` on the real file before deployment (step 1 below).
+- **First run found a real difference.** The export ends with a **summary row**: `-` in By Day, Campaign ID, Campaign name and Currency, with the report's total Spend. The parser had only recognised "Total…" rows, so it refused the file ("No readable date on row 200"). The parser now treats a final all-dashed row as the report total. It isn't imported, but the dated rows must sum to it exactly. A dashed row anywhere else is still refused.
+- **Campaign lists.** The export lists every campaign on every day, including zero spend. A date's campaigns are now the ones that spent; zero rows stay in the date's source rows as provenance.
+- **`pnpm marketing-cost:check` result:**
+  - **OK:** sheet `Trend`, header row 1, currency MYR (stated by the report);
+  - 198 dated rows, 3 campaigns;
+  - **46 dates with spend, MYR 3,269.40**, equal to the report's own summary row;
+  - 20 zero-spend dates excluded;
+  - 17 August is the only date that sums more than one campaign (two campaigns).
+- **Through the database (local stack, real MCP server, member session):** the preview was importable with no blockers. The import reconciled 46/46 lines (ledger MYR 3,269.40, tax "not reported" on all 46), verify-by-file matched every date, and a second import was refused (23505). The local database was then reset.
+- **Regression test.** `tests/unit/spend-import.test.ts` covers the summary row (accepted at the end, reconciled, refused mid-file) and the spending-campaign list, with synthetic values in the export's shape.
 
 ## Before importing live records
 
-1. Run `pnpm marketing-cost:check "<report>.xlsx" --expect-dates=46 --expect-total=3269.40` on the real report and confirm that it prints OK and that 17 August lists two campaigns.
+1. ~~Run `pnpm marketing-cost:check` on the real report~~: done, OK (see above). Re-run it on any newer export before importing that one.
 2. Apply `supabase/migrations/20261004000002_marketing_spend_batch_import.sql` to hosted (dry run first) **before** deploying the code: the spend page reads the new view columns and functions. Never use the local reset command on hosted data.
 3. Deploy the app.
 4. Preview the real report with the expected figures 46 / 3,269.40, in the app or with the MCP preview tool. Check the currency basis, the excluded zero-spend dates and that there are no blockers.

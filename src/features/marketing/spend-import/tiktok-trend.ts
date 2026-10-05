@@ -264,6 +264,14 @@ export async function parseTikTokTrendReport(bytes: Uint8Array, sourceName: stri
   let lossyIds = false;
   const allDates = new Set<string>();
 
+  // TikTok ends the export with a summary row: "-" in every dimension column
+  // (By Day, Campaign ID, Campaign name, Currency) and the report's totals.
+  // Only the last row may be read that way; a dashed row anywhere else is an
+  // undated data row and stays an error.
+  const placeholder = (v: Cell) => { const t = clean(v); return t === "" || t === "-" || t === "--"; };
+  let lastRow = -1;
+  for (let r = sheet.rows.length - 1; r > header.index; r--) if (sheet.rows[r].some((c) => clean(c) !== "")) { lastRow = r; break; }
+
   for (let r = header.index + 1; r < sheet.rows.length; r++) {
     const row = sheet.rows[r];
     const rowNo = r + 1;
@@ -271,7 +279,8 @@ export async function parseTikTokTrendReport(bytes: Uint8Array, sourceName: stri
     const dateRaw = col(row, "date");
     const campaignRaw = clean(col(row, "campaign"));
     const spend = moneyCents(col(row, "spend"));
-    if (/^total\b/i.test(clean(dateRaw)) || /^total\b/i.test(campaignRaw) || (clean(dateRaw) === "" && /\btotal\b/i.test(campaignRaw))) {
+    const summaryRow = r === lastRow && (["date", "campaign", "campaignId", "adGroup", "ad"] as ColumnKey[]).every((k) => placeholder(col(row, k)));
+    if (summaryRow || /^total\b/i.test(clean(dateRaw)) || /^total\b/i.test(campaignRaw) || (clean(dateRaw) === "" && /\btotal\b/i.test(campaignRaw))) {
       if (typeof spend === "number") totalRowCents = [...totalRowCents, spend];
       continue;
     }
@@ -327,9 +336,11 @@ export async function parseTikTokTrendReport(bytes: Uint8Array, sourceName: stri
     const list = [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
     const cents = list.reduce((s, c) => s + c.spend, 0);
     if (cents === 0) { result.excludedZeroDates.push(day); continue; }
+    // The export lists every campaign on every day. A date's campaigns are the
+    // ones that spent; the zero rows stay in its source rows as provenance.
     result.entries.push({
       incurred_on: day, cents, before_tax: cents / 100,
-      campaigns: list.map((c) => ({ ...c, spend: c.spend / 100 })),
+      campaigns: list.filter((c) => c.spend > 0).map((c) => ({ ...c, spend: c.spend / 100 })),
       source_rows: list.flatMap((c) => c.rows).sort((a, b) => a - b),
     });
   }

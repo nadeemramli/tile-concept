@@ -196,6 +196,45 @@ describe("TikTok trend report parser", () => {
     expect(parse.warnings.join(" ")).toMatch(/lost precision/);
   });
 
+  // The real export (verified against the actual report) lists every campaign on
+  // every day, stores numbers as text and ends with a summary row of "-" cells.
+  // Synthetic values in that exact shape:
+  it("reads TikTok's dashed summary row as the report total and reconciles against it", async () => {
+    const header = ["By Day", "Campaign ID", "Campaign name", "Cost per conversion", "Conversions", "Spend", "Currency"];
+    const rows: (string | number)[][] = [header,
+      ["2026-08-16", "1800000000000001", "Synthetic A", "0.00", 0, "0.00", "MYR"],
+      ["2026-08-16", "1800000000000002", "Synthetic B", "0.00", 0, "0.00", "MYR"],
+      ["2026-08-17", "1800000000000001", "Synthetic A", "0.00", 0, "1.20", "MYR"],
+      ["2026-08-17", "1800000000000002", "Synthetic B", "0.00", 0, "3.40", "MYR"],
+      ["2026-08-17", "1800000000000003", "Synthetic C", "0.00", 0, "0.00", "MYR"],
+      ["2026-08-18", "1800000000000002", "Synthetic B", "9.99", 1, "9.99", "MYR"],
+      ["-", "-", "-", "4.86", 1, "14.59", "-"]];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Trend");
+    const bytes = new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer);
+    const parse = await parseTikTokTrendReport(bytes, "synthetic-trend.xlsx");
+    expect(parse.errors).toEqual([]);
+    expect(parse.reportTotal).toBe(14.59);
+    expect(parse.sourceRowCount).toBe(6);
+    expect(parse.totals).toEqual({ entryCount: 2, cents: 1459, beforeTax: 14.59 });
+    expect(parse.excludedZeroDates).toEqual(["2026-08-16"]);
+    const aug17 = parse.entries[0];
+    // Only campaigns that spent are listed; the zero row stays in the provenance.
+    expect(aug17.campaigns.map((c) => [c.name, c.spend])).toEqual([["Synthetic A", 1.2], ["Synthetic B", 3.4]]);
+    expect(aug17.source_rows).toEqual([4, 5, 6]);
+
+    // A summary row that disagrees with the dated rows is refused.
+    rows[rows.length - 1][5] = "14.60";
+    const wb2 = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(rows), "Trend");
+    const off = await parseTikTokTrendReport(new Uint8Array(XLSX.write(wb2, { type: "array", bookType: "xlsx" }) as ArrayBuffer), "synthetic-trend.xlsx");
+    expect(off.errors).toEqual(["The report's total row says MYR 14.60, but its dated rows sum to MYR 14.59."]);
+
+    // A dashed row that is not the last row is an undated data row, not a total.
+    const mid = await parseTikTokTrendReport(csv([header, ["-", "-", "-", "0", 0, "5.00", "-"], ["2026-08-17", "1", "Synthetic A", "0", 0, "1.00", "MYR"]]), "mid.csv");
+    expect(mid.errors.join(" ")).toMatch(/No readable date on row 2\./);
+  });
+
   it("parses money and dates without guessing", () => {
     expect(moneyCents("1,234.5")).toBe(123450);
     expect(moneyCents("RM 10")).toBe(1000);
