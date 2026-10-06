@@ -18,10 +18,10 @@ export function periodInput(params: Record<string, string | string[] | undefined
 }
 const n = z.number();
 export const funnelSchema = z.object({ computed_at: z.string(), summary: z.object({
-  revenue: n, collections: n, spend: n, spend_complete: z.boolean(), mer: n.nullable(), leads: n, closed_leads: n,
+  revenue: n, collections: n, spend: n, spend_tax_unreported: n, spend_complete: z.boolean(), mer: n.nullable(), leads: n, closed_leads: n,
   online_leads: n, closed_online_leads: n, visits: n, identified_visitors: n, unidentified_visits: n, converted_visits: n,
   linked_visits: n, unclassified_sales: n, unreviewed_payments: n, foreign_sales: n,
-}), channels: z.array(z.object({ platform: z.string(), spend: n, covered_days: n, expected_days: n, leads: n,
+}), channels: z.array(z.object({ platform: z.string(), spend: n, spend_tax_unreported: n, covered_days: n, expected_days: n, leads: n,
   whatsapp_sent: n, whatsapp_replied: n, showroom: n, closed: n, replied_and_closed: n, cohort_revenue: n })),
 staff: z.array(z.object({ id: z.string().nullable(), name: z.string(), visits: n, customers: n, converted_visits: n, revenue: n, activities: n })), });
 export const historySchema = z.object({ total: n, rows: z.array(z.object({ id: z.string(), at_time: z.string(), contact_id: z.string().nullable(), customer: z.string().nullable(), staff: z.string(), staff_id: z.string().nullable(), label: z.string().nullable(), state: z.string(), notes: z.string().nullable(), location: z.string().nullable(), source: z.string().nullable(), sale_count: n, net_sales: n, collections: n })) });
