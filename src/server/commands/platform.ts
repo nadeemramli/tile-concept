@@ -159,6 +159,12 @@ export async function inviteUserAction(input: z.input<typeof inviteSchema>): Pro
       });
       if (invErr) {
         revalidatePath("/platform/settings");
+        // Auth refuses to invite an address that already has an account. The
+        // recorded invite still applies: api.claim_my_invites() accepts it the
+        // next time that account signs in.
+        if (invErr.code === "email_exists" || /already been registered/i.test(invErr.message)) {
+          return { ok: true, data: { emailSent: false }, message: `${d.email} already has an account, so no email was sent. They get this role the next time they sign in (or choose Check again on their no-access screen).` };
+        }
         return { ok: true, data: { emailSent: false }, message: `Invite recorded, but the email could not be sent: ${invErr.message}. The user can also sign in via an email link once their account exists.` };
       }
       emailSent = true;

@@ -20,10 +20,28 @@ export interface AppSession {
   permissions: string[];
 }
 
+/** Where a signed-in account without an active membership is sent. Never /login: it bounces signed-in users to /. */
+export const NO_ACCESS_PATH = "/no-access";
+
+type ServerSupabase = Awaited<ReturnType<typeof createServerSupabase>>;
+
+function loadMembership(supabase: ServerSupabase, userId: string) {
+  return Promise.all([
+    supabase.rpc("my_membership").maybeSingle(),
+    supabase.rpc("my_permissions"),
+    supabase.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
+  ]);
+}
+
 /**
  * Resolves the signed-in user plus their workspace membership and permissions.
  * Cached per request. Returns null when there is no valid session or no
  * active membership (invite-only workspace).
+ *
+ * With no membership it first claims any pending invite for the account's
+ * confirmed email. The auth trigger only does that when the account is
+ * created, so an invite recorded for an existing account would otherwise never
+ * take effect.
  */
 export const getSession = cache(async (): Promise<AppSession | null> => {
   const supabase = await createServerSupabase();
@@ -32,12 +50,13 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: membership }, { data: perms }, { data: profile }] = await Promise.all([
-    supabase.rpc("my_membership").maybeSingle(),
-    supabase.rpc("my_permissions"),
-    supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle(),
-  ]);
-  if (!membership) return null;
+  let [{ data: membership }, { data: perms }, { data: profile }] = await loadMembership(supabase, user.id);
+  if (!membership) {
+    const { data: claim } = await supabase.rpc("claim_my_invites").maybeSingle();
+    if (claim?.access !== "active" || !claim.claimed) return null;
+    [{ data: membership }, { data: perms }, { data: profile }] = await loadMembership(supabase, user.id);
+    if (!membership) return null;
+  }
 
   return {
     userId: user.id,
@@ -57,7 +76,7 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
 
 export async function requireSession(): Promise<AppSession> {
   const session = await getSession();
-  if (!session) redirect("/login?reason=no-membership");
+  if (!session) redirect(NO_ACCESS_PATH);
   return session;
 }
 

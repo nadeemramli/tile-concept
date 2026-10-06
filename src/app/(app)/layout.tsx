@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/server/session";
+import { getSession, NO_ACCESS_PATH } from "@/server/session";
 import { SessionProvider } from "@/components/shell/session-context";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
@@ -7,7 +7,7 @@ import { getAttentionItems } from "@/server/queries/command-centre";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const session = await getSession();
-  if (!session) redirect("/login?reason=no-membership");
+  if (!session) redirect(NO_ACCESS_PATH);
   // Not awaited: the shell renders immediately and the bell streams in once
   // the command-centre counters are ready (see TopBar).
   const notifications = getAttentionItems(session).catch(() => []);

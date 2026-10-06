@@ -180,7 +180,7 @@ function InvitesTab({ data }: { data: SettingsData }) {
             <Mail className="size-3.5" aria-hidden /> {invite.pending ? "Inviting…" : "Invite user"}
           </Button>
         </form>
-        <p className="mt-2 text-[11px] text-muted-foreground">Sends a Supabase Auth invitation. Membership is created automatically with this role when the invitee accepts. Invite-only: there is no public signup.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">Sends a Supabase Auth invitation. Membership is created automatically with this role when the invitee accepts — or, if the account already exists, the next time they sign in. Invite-only: there is no public signup.</p>
       </Card>
       {data.invites.length === 0 ? (
         <EmptyState title="No invitations yet" description="Invite staff by email; they receive a link to set a password." />

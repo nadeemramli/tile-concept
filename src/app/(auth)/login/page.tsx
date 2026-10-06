@@ -6,7 +6,6 @@ import { LogoLockup } from "@/components/brand/logo";
 export const metadata: Metadata = { title: "Sign in" };
 
 const REASONS: Record<string, string> = {
-  "no-membership": "Your account is signed in but has no workspace membership. Ask an administrator for an invitation.",
   "auth-callback-failed": "That sign-in link could not be verified. Request a new one.",
   "invalid-link": "That link is invalid or has expired. Request a new one.",
 };

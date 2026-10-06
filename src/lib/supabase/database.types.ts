@@ -11352,6 +11352,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      claim_my_invites: {
+        Args: never
+        Returns: {
+          access: string
+          claimed: number
+        }[]
+      }
       command_centre_summary: { Args: never; Returns: Json }
       complete_sales_task: {
         Args: { p_outcome?: string; p_task_id: string }
