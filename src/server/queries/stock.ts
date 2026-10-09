@@ -2,6 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/database.types";
+import { humanizeDbError } from "@/server/action-result";
 import { getMemberMap, getUnits } from "@/server/queries/reference";
 import { getSuppliers } from "@/server/queries/catalog";
 
@@ -65,6 +67,40 @@ export interface StockFilters {
   q?: string;
 }
 
+type AvailabilityViewRow = Database["api"]["Views"]["stock_availability"]["Row"];
+
+function toAvailabilityRow(r: AvailabilityViewRow, i: number, meta?: { brand_id: string | null; category_id: string | null }): AvailabilityRow {
+  const state = toState(r.availability);
+  return {
+    key: `${r.source_kind}-${r.variant_id ?? r.product_id ?? i}-${r.supplier_id ?? r.location_name ?? i}`,
+    source_kind: r.source_kind === "in_house" ? "in_house" : "supplier",
+    variant_id: r.variant_id,
+    product_id: r.product_id,
+    product_code: r.product_code,
+    product_name: r.product_name ?? "Unknown product",
+    source_name: r.source_name ?? "—",
+    location_name: r.location_name,
+    supplier_id: r.supplier_id,
+    supplier_name: r.supplier_name,
+    availability: state,
+    // The view can carry a number alongside a non-numeric state; drop it so
+    // "out" or "ask supplier" can never render as a quantity.
+    quantity: hasNumericQuantity(state) && r.quantity !== null ? Number(r.quantity) : null,
+    on_hand: r.on_hand === null ? null : Number(r.on_hand),
+    allocated: r.allocated === null ? null : Number(r.allocated),
+    unit_code: r.unit_code,
+    as_of: r.as_of,
+    expected_replenishment: r.expected_replenishment,
+    source_channel: r.source_channel,
+    sla_minutes: r.sla_minutes ?? 4320,
+    is_authoritative: !!r.is_authoritative,
+    evidence_storage_path: r.evidence_storage_path,
+    notes: r.notes,
+    brand_id: meta?.brand_id ?? null,
+    category_id: meta?.category_id ?? null,
+  };
+}
+
 export async function listAvailability(filters: StockFilters = {}): Promise<AvailabilityRow[]> {
   const supabase = await createServerSupabase();
   const [{ data }, { data: products }] = await Promise.all([
@@ -73,38 +109,7 @@ export async function listAvailability(filters: StockFilters = {}): Promise<Avai
   ]);
   const productMeta = new Map((products ?? []).map((p) => [p.id!, { brand_id: p.brand_id, category_id: p.category_id }]));
 
-  let rows: AvailabilityRow[] = (data ?? []).map((r, i) => {
-    const state = toState(r.availability);
-    const meta = r.product_id ? productMeta.get(r.product_id) : undefined;
-    return {
-      key: `${r.source_kind}-${r.variant_id ?? r.product_id ?? i}-${r.supplier_id ?? r.location_name ?? i}`,
-      source_kind: r.source_kind === "in_house" ? "in_house" : "supplier",
-      variant_id: r.variant_id,
-      product_id: r.product_id,
-      product_code: r.product_code,
-      product_name: r.product_name ?? "Unknown product",
-      source_name: r.source_name ?? "—",
-      location_name: r.location_name,
-      supplier_id: r.supplier_id,
-      supplier_name: r.supplier_name,
-      availability: state,
-      // The view can carry a number alongside a non-numeric state; drop it so
-      // "out" or "ask supplier" can never render as a quantity.
-      quantity: hasNumericQuantity(state) && r.quantity !== null ? Number(r.quantity) : null,
-      on_hand: r.on_hand === null ? null : Number(r.on_hand),
-      allocated: r.allocated === null ? null : Number(r.allocated),
-      unit_code: r.unit_code,
-      as_of: r.as_of,
-      expected_replenishment: r.expected_replenishment,
-      source_channel: r.source_channel,
-      sla_minutes: r.sla_minutes ?? 4320,
-      is_authoritative: !!r.is_authoritative,
-      evidence_storage_path: r.evidence_storage_path,
-      notes: r.notes,
-      brand_id: meta?.brand_id ?? null,
-      category_id: meta?.category_id ?? null,
-    };
-  });
+  let rows: AvailabilityRow[] = (data ?? []).map((r, i) => toAvailabilityRow(r, i, r.product_id ? productMeta.get(r.product_id) : undefined));
 
   if (filters.category) rows = rows.filter((r) => r.category_id === filters.category);
   if (filters.brand) rows = rows.filter((r) => r.brand_id === filters.brand);
@@ -117,6 +122,22 @@ export async function listAvailability(filters: StockFilters = {}): Promise<Avai
     rows = rows.filter((r) => `${r.product_code ?? ""} ${r.product_name} ${r.supplier_name ?? ""} ${r.source_name}`.toLowerCase().includes(term));
   }
   return rows.sort((a, b) => (a.product_name ?? "").localeCompare(b.product_name ?? "") || a.source_kind.localeCompare(b.source_kind));
+}
+
+export type ProductStockResult = { ok: true; rows: AvailabilityRow[] } | { ok: false; error: string };
+
+/**
+ * One product's lines from the same read model as the Stock module: the latest
+ * in-house snapshot per variant × location plus supplier evidence. RLS
+ * (stock.read, workspace) decides what is visible. A failure is returned as a
+ * value so the product page can show it instead of an empty, "no stock" table.
+ */
+export async function getProductStock(productId: string): Promise<ProductStockResult> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.from("stock_availability").select("*").eq("product_id", productId).limit(500);
+  if (error) return { ok: false, error: humanizeDbError(error.message) };
+  const rows = (data ?? []).map((r, i) => toAvailabilityRow(r, i));
+  return { ok: true, rows: rows.sort((a, b) => a.source_kind.localeCompare(b.source_kind) || (a.location_name ?? a.supplier_name ?? "").localeCompare(b.location_name ?? b.supplier_name ?? "")) };
 }
 
 /** Mirrors freshnessOf() in the FreshnessBadge so filtering and display agree. */

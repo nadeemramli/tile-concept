@@ -22,6 +22,8 @@ import { formatDateTime } from "@/lib/format";
 import type { ProductDetail } from "@/server/queries/catalog";
 import { addAliasAction, addPackagingAction, addVariantAction, markProductReviewedAction, setProductStatusAction, upsertAttributeValueAction } from "@/server/commands/catalog";
 import { ProductMedia } from "@/features/catalog/components/product-media";
+import { ProductStock } from "@/features/catalog/components/product-stock";
+import type { ProductStockResult } from "@/server/queries/stock";
 import { ProductFormDialog } from "@/features/catalog/components/product-form-dialog";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { fieldError, useAction } from "@/features/catalog/use-action";
@@ -34,10 +36,12 @@ interface Props {
   canWrite: boolean;
   canPublish: boolean;
   canReadPrice: boolean;
+  /** Null when the role lacks stock.read; otherwise streamed into the Stock tab. */
+  stock: Promise<ProductStockResult> | null;
   rulesByCategory: Record<string, { attribute_definition_id: string; key: string; label: string; data_type: string; unit: string | null; is_required: boolean; options?: unknown }[]>;
 }
 
-export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, rulesByCategory }: Props) {
+export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, stock, rulesByCategory }: Props) {
   const { product, specs, variants, prices, aliases, media, catalogEntries, audit, duplicates, reference } = detail;
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -204,11 +208,7 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
         </TabsContent>
 
         <TabsContent value="stock" className="mt-3">
-          <EmptyState
-            title="No stock source connected — Phase 5"
-            description="In-house stock will mirror SQL Account (read-only, with source timestamp and sync status). Supplier availability will appear as time-stamped snapshots with supplier, age, and evidence. Unknown, stale, low, out and ask-supplier states are never collapsed into zero."
-            action={{ label: "About the Stock module", href: "/merchandise/stock" }}
-          />
+          <ProductStock stock={stock} variants={variants} productCode={product.code} />
         </TabsContent>
 
         <TabsContent value="refs" className="mt-3">
