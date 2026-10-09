@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -107,6 +108,7 @@ export function CatalogTable({ result, categories, brands, facets, views }: Prop
 
   const columns = useMemo<ColumnDef<CatalogRow, unknown>[]>(
     () => [
+      { id: "image", header: "Image", cell: ({ row }) => row.original.image_url ? <Image src={row.original.image_url} alt={row.original.image_alt ?? row.original.name} width={48} height={48} unoptimized className="size-12 rounded object-contain" /> : <ImageIcon className="size-5 text-muted-foreground" aria-label="No primary image" /> },
       { accessorKey: "code", header: "Code", cell: ({ row }) => <MonoCell value={row.original.code} /> },
       {
         accessorKey: "name",
@@ -216,7 +218,7 @@ export function CatalogTable({ result, categories, brands, facets, views }: Prop
             {result.rows.map((row) => (
               <Link key={row.id} href={`/merchandise/catalog/${row.id}`} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Card className="h-full gap-2 p-3 transition-colors hover:bg-accent/40">
-                  <div className="flex aspect-[4/3] items-center justify-center rounded-md bg-muted text-muted-foreground"><ImageIcon className="size-6" aria-hidden /></div>
+                  <div className="flex aspect-[4/3] items-center justify-center rounded-md bg-muted text-muted-foreground">{row.image_url ? <Image src={row.image_url} alt={row.image_alt ?? row.name} width={640} height={480} unoptimized className="aspect-[4/3] w-full rounded-md object-contain" /> : <ImageIcon className="size-6" aria-hidden />}</div>
                   <div className="min-w-0">
                     <div className="truncate font-mono text-[11px] text-muted-foreground">{row.code ?? "—"}</div>
                     <div className="truncate text-sm font-medium">{row.name}</div>
