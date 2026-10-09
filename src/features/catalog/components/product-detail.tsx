@@ -119,6 +119,13 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
         )}
       </PageHeader>
 
+      {product.merged_into_product_id && (
+        <div role="status" className="rounded-md border border-info/30 bg-info/10 px-3 py-2 text-sm">
+          Merged into <Link href={`/merchandise/catalog/${product.merged_into_product_id}`} className="font-medium underline">the surviving product</Link>
+          {product.merged_at ? ` on ${formatDateTime(product.merged_at)}` : ""}. Its variants, prices, stock, media and sales history now live there; this record is kept for provenance.
+        </div>
+      )}
+
       {/* Provenance strip */}
       <Card className="px-4 py-3">
         <FactList
@@ -161,10 +168,17 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
                   <span>{d.name}</span>
                   <span className="text-muted-foreground">{d.brand}</span>
                   <TonePill tone="warning" label={d.reason} hint="Why the two products look alike: a shared code, alias or name. A person decides; nothing is merged automatically." />
+                  {canWrite ? (
+                    <Link href={`/merchandise/catalog/merge?survivor=${product.id}&merged=${d.id}`} className="underline">
+                      Review merge
+                    </Link>
+                  ) : null}
                 </li>
               ))}
             </ul>
-            <p className="mt-1 text-[11px] text-muted-foreground">Human confirmation required; product merge is not available in this release.</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {canWrite ? "Review merge compares both products and previews every record that would move. Nothing merges until you confirm." : "A catalog/pricing operator decides whether these are the same product."}
+            </p>
           </div>
         </div>
       )}

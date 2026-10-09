@@ -297,7 +297,7 @@ export async function getProductDetail(id: string) {
 
   // possible duplicates: same code_key / alias key, or same brand + name prefix
   const nameWords = (p.name ?? "").split(/\s+/).slice(0, 2).join(" ");
-  const dupQ = supabase.from("products").select("id, code, name, brand_id, status").neq("id", id).limit(8);
+  const dupQ = supabase.from("products").select("id, code, name, brand_id, status").neq("id", id).is("merged_into_product_id", null).limit(8);
   const ors: string[] = [];
   if (p.code_key) ors.push(`code_key.eq.${p.code_key}`);
   if (nameWords) ors.push(`name.ilike.${nameWords}%`);
@@ -305,7 +305,7 @@ export async function getProductDetail(id: string) {
   const aliasKeys = (aliases ?? []).map((a) => a.alias_key).filter(Boolean) as string[];
   const { data: aliasDups } = aliasKeys.length ? await supabase.from("product_aliases").select("product_id, alias").in("alias_key", aliasKeys).neq("product_id", id) : { data: [] as { product_id: string | null; alias: string | null }[] };
   const aliasDupIds = (aliasDups ?? []).map((a) => a.product_id!).filter(Boolean);
-  const { data: aliasDupProducts } = aliasDupIds.length ? await supabase.from("products").select("id, code, name, brand_id, status").in("id", aliasDupIds) : { data: [] as typeof dupCandidates };
+  const { data: aliasDupProducts } = aliasDupIds.length ? await supabase.from("products").select("id, code, name, brand_id, status").in("id", aliasDupIds).is("merged_into_product_id", null) : { data: [] as typeof dupCandidates };
   const dupMap = new Map<string, { id: string; code: string | null; name: string; brand: string | null; status: string; reason: string }>();
   const brandMap = new Map(brands.map((b) => [b.id, b.name]));
   for (const d of dupCandidates ?? []) {

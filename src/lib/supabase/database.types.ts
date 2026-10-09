@@ -7078,6 +7078,102 @@ export type Database = {
           },
         ]
       }
+      product_merges: {
+        Row: {
+          id: string | null
+          impact: Json | null
+          merged_at: string | null
+          merged_by: string | null
+          merged_product_id: string | null
+          reason: string | null
+          removed_duplicates: Json | null
+          survivor_product_id: string | null
+          variant_map: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          impact?: Json | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_product_id?: string | null
+          reason?: string | null
+          removed_duplicates?: Json | null
+          survivor_product_id?: string | null
+          variant_map?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          impact?: Json | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_product_id?: string | null
+          reason?: string | null
+          removed_duplicates?: Json | null
+          survivor_product_id?: string | null
+          variant_map?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merges_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "product_merges_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_status_history: {
         Row: {
           created_at: string | null
@@ -7318,6 +7414,8 @@ export type Database = {
           id: string | null
           material: string | null
           material_code: string | null
+          merged_at: string | null
+          merged_into_product_id: string | null
           name: string | null
           normalized_name: string | null
           published_version: number | null
@@ -7352,6 +7450,8 @@ export type Database = {
           id?: string | null
           material?: string | null
           material_code?: string | null
+          merged_at?: string | null
+          merged_into_product_id?: string | null
           name?: string | null
           normalized_name?: string | null
           published_version?: number | null
@@ -7386,6 +7486,8 @@ export type Database = {
           id?: string | null
           material?: string | null
           material_code?: string | null
+          merged_at?: string | null
+          merged_into_product_id?: string | null
           name?: string | null
           normalized_name?: string | null
           published_version?: number | null
@@ -7417,6 +7519,27 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
@@ -11997,6 +12120,17 @@ export type Database = {
         }
         Returns: string
       }
+      merge_products: {
+        Args: {
+          p_confirmed: boolean
+          p_expected_fingerprint: string
+          p_merged: string
+          p_reason: string
+          p_survivor: string
+          p_variant_map: Json
+        }
+        Returns: string
+      }
       my_membership: {
         Args: never
         Returns: {
@@ -12074,6 +12208,10 @@ export type Database = {
       }
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
       preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
+      preview_product_merge: {
+        Args: { p_merged: string; p_survivor: string; p_variant_map?: Json }
+        Returns: Json
+      }
       publish_price: {
         Args: {
           p_override?: boolean
