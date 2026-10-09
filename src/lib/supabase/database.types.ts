@@ -6706,63 +6706,81 @@ export type Database = {
       product_media: {
         Row: {
           alt_text: string | null
+          archived_at: string | null
           caption: string | null
+          checksum: string | null
           created_at: string | null
           id: string | null
           is_primary: boolean | null
           kind: string | null
           media_asset_id: string | null
           media_asset_variant_link_id: string | null
+          mime_type: string | null
+          original_filename: string | null
           product_id: string | null
           review_state: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          size_bytes: number | null
           sort_order: number | null
           source_ref: string | null
           storage_bucket: string | null
           storage_path: string | null
+          uploaded_by: string | null
           usage_rights_state: string | null
           variant_id: string | null
           workspace_id: string | null
         }
         Insert: {
           alt_text?: string | null
+          archived_at?: string | null
           caption?: string | null
+          checksum?: string | null
           created_at?: string | null
           id?: string | null
           is_primary?: boolean | null
           kind?: string | null
           media_asset_id?: string | null
           media_asset_variant_link_id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
           product_id?: string | null
           review_state?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          size_bytes?: number | null
           sort_order?: number | null
           source_ref?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          uploaded_by?: string | null
           usage_rights_state?: string | null
           variant_id?: string | null
           workspace_id?: string | null
         }
         Update: {
           alt_text?: string | null
+          archived_at?: string | null
           caption?: string | null
+          checksum?: string | null
           created_at?: string | null
           id?: string | null
           is_primary?: boolean | null
           kind?: string | null
           media_asset_id?: string | null
           media_asset_variant_link_id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
           product_id?: string | null
           review_state?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          size_bytes?: number | null
           sort_order?: number | null
           source_ref?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          uploaded_by?: string | null
           usage_rights_state?: string | null
           variant_id?: string | null
           workspace_id?: string | null
@@ -11932,6 +11950,10 @@ export type Database = {
         Args: { p_reason: string; p_review_item_id: string }
         Returns: undefined
       }
+      replace_catalog_media: {
+        Args: { p_new_id: string; p_old_id: string }
+        Returns: undefined
+      }
       replay_intake_event: {
         Args: { p_fields?: Json; p_intake_event_id: string }
         Returns: Json
@@ -12113,6 +12135,10 @@ export type Database = {
           p_reason?: string
           p_status: string
         }
+        Returns: undefined
+      }
+      set_primary_catalog_media: {
+        Args: { p_media_id: string; p_product_id: string }
         Returns: undefined
       }
       set_project_readiness: {
