@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
-const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json", ...(process.env.E2E_SUPABASE_WORKDIR ? ["--workdir", process.env.E2E_SUPABASE_WORKDIR] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 const url = status.API_URL;
 assert(["127.0.0.1", "localhost"].includes(new URL(url).hostname), "This test refuses hosted targets");
 const anonKey = status.ANON_KEY ?? status.PUBLISHABLE_KEY;
@@ -20,7 +20,7 @@ const email = `catalog-media-${randomUUID()}@example.test`;
 const password = randomUUID() + randomUUID();
 let userId: string | undefined;
 let objectPath: string | undefined;
-function sql(query: string) { return execFileSync("docker", ["exec", "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
+function sql(query: string) { return execFileSync("docker", ["exec", process.env.E2E_DB_CONTAINER ?? "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
 try {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   assert.ifError(created.error); userId = created.data.user?.id; assert(userId);
