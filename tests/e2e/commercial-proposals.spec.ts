@@ -70,5 +70,6 @@ test("operator approves a stated price only after naming the tax basis, and reje
 test("a sales role without review access cannot approve", async ({ page }) => {
   await login(page, "demo.showroom@tileconcept.test");
   await page.goto("/sources/review");
-  await expect(page.getByText(/^Not available/)).toBeVisible();
+  // The denial heading can render twice during the route transition; one is enough.
+  await expect(page.getByRole("heading", { name: /^Not available/ }).first()).toBeVisible();
 });

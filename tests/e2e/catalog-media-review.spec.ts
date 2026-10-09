@@ -167,7 +167,8 @@ test("sales sees only the published image and cannot open the review queue", asy
   await page.goto("/merchandise/catalog");
   await expect(page.getByRole("link", { name: "Imported media review" })).toHaveCount(0);
   await page.goto("/merchandise/catalog/media-review");
-  await expect(page.getByText(/^Not available/)).toBeVisible();
+  // The denial heading can render twice during the route transition; one is enough.
+  await expect(page.getByRole("heading", { name: /^Not available/ }).first()).toBeVisible();
   await expect(page.getByRole("row")).toHaveCount(0);
 });
 

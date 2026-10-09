@@ -129,7 +129,9 @@ test("a conflicting merge is blocked with the reason, and nothing moves", async 
 test("sales cannot open or start a merge", async ({ page }) => {
   await login(page, "demo.rep1@tileconcept.test");
   await page.goto(`/merchandise/catalog/merge?survivor=${c1}&merged=${c2}`);
-  await expect(page.getByText(/^Not available/)).toBeVisible();
+  // The denial heading can render twice during the route transition; one is enough.
+  await expect(page.getByRole("heading", { name: /^Not available/ }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Merge products" })).toHaveCount(0);
   await page.goto(`/merchandise/catalog/${c1}`);
   await expect(page.getByRole("link", { name: "Review merge" })).toHaveCount(0);
 });
