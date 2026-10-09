@@ -14,6 +14,7 @@ import {
   registerAssetSchema,
   rejectSchema,
   signedUrlSchema,
+  isSignableSourceObject,
   type ApproveInput,
   type RegisterAssetInput,
   type RejectInput,
@@ -135,11 +136,14 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
 /** Short-lived signed URL for a private original (never exposes the key). */
 export async function signedSourceUrlAction(input: { bucket: string; path: string }): Promise<ActionResult<{ url: string | null }>> {
   try {
-    await requirePermission("source.import");
+    const session = await requirePermission("source.import");
     const parsed = signedUrlSchema.safeParse(input);
     if (!parsed.success) return fail("Invalid file reference");
-    const admin = createAdminSupabase();
-    const { data, error } = await admin.storage.from(parsed.data.bucket).createSignedUrl(parsed.data.path, 60);
+    // Only source evidence, only in the caller's own workspace, and signed with
+    // the caller's own client so the bucket's storage policy still applies.
+    if (!isSignableSourceObject(parsed.data.bucket, parsed.data.path, session.workspaceId)) return fail("Invalid file reference");
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.storage.from(parsed.data.bucket).createSignedUrl(parsed.data.path, 60);
     // A missing object is expected in the demo workspace; say so plainly.
     if (error || !data?.signedUrl) return ok({ url: null }, undefined);
     return ok({ url: data.signedUrl });

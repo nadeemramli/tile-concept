@@ -24,6 +24,17 @@ export const signedUrlSchema = z.object({
   path: z.string().trim().min(1).max(500),
 });
 
+const SOURCE_BUCKETS = new Set(["source-assets", "product-media", "ingest-artifacts"]);
+
+/**
+ * Source evidence may be signed only from the source buckets and only inside
+ * the caller's own workspace folder. Storage policies are still applied on
+ * top, because the link is signed with the caller's own session.
+ */
+export function isSignableSourceObject(bucket: string, path: string, workspaceId: string): boolean {
+  return SOURCE_BUCKETS.has(bucket) && path.startsWith(`${workspaceId}/`) && !path.split("/").includes("..");
+}
+
 export const approveSchema = z.object({
   review_item_id: uuid(),
   corrections: z.record(z.string(), z.unknown()).optional(),

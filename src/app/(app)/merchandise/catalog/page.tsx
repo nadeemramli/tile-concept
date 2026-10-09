@@ -58,6 +58,11 @@ export default async function CatalogPage({ searchParams }: PageProps<"/merchand
         <Button asChild size="sm" variant="outline">
           <Link href="/merchandise/pricing">Manage price lists</Link>
         </Button>
+        {canWrite && (
+          <Button asChild size="sm" variant="outline">
+            <Link href="/merchandise/catalog/media-review">Imported media review</Link>
+          </Button>
+        )}
         {canWrite && <NewProductButton refs={{ brands, suppliers, categories, units, rulesByCategory }} />}
       </PageHeader>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">

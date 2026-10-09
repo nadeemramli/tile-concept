@@ -11,6 +11,9 @@ import {
   ISSUE_TYPE,
   LEAD_STATUS,
   LIFECYCLE_STATE,
+  MEDIA_EVIDENCE_STATE,
+  MEDIA_LINK_BASIS,
+  MEDIA_LINK_STATE,
   MEMBER_STATUS,
   OPPORTUNITY_STATUS,
   PRICE_LIST_STATUS,
@@ -21,6 +24,7 @@ import {
   SOURCE_CHANNEL,
   TASK_PRIORITY,
   TASK_STATUS,
+  USAGE_RIGHTS_STATE,
   type StatusMap,
 } from "@/lib/domain/status-maps";
 import {
@@ -118,6 +122,10 @@ export const GLOSSARY: GlossaryGroup[] = [
     entries: [
       { id: "product-status", title: "Product status", map: PRODUCT_STATUS },
       { id: "review-state", title: "Review state", intro: "Whether a person has confirmed a product's attributes and source. Trust is earned by review, not by import.", map: REVIEW_STATE },
+      { id: "media-link-state", title: "Imported image association", intro: "Which product or variant an imported image shows. An importer proposes; a catalogue operator confirms or rejects.", map: MEDIA_LINK_STATE },
+      { id: "media-link-basis", title: "Association basis", map: MEDIA_LINK_BASIS },
+      { id: "media-evidence-state", title: "Imported image evidence", map: MEDIA_EVIDENCE_STATE },
+      { id: "usage-rights", title: "Image usage rights", intro: "Whether we may use an image is decided separately from whether it is correct, and unknown is never treated as permission.", map: USAGE_RIGHTS_STATE },
       { id: "price-state", title: "Price state", intro: "A price is a versioned fact with a validity window, never a field edited in place.", map: PRICE_STATE },
       { id: "price-list-status", title: "Price list status", map: PRICE_LIST_STATUS },
       { id: "approval-action", title: "Price approval actions", map: APPROVAL_ACTION },
