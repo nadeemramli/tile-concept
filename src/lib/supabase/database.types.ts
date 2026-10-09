@@ -756,6 +756,13 @@ export type Database = {
             foreignKeyName: "candidate_records_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "candidate_records_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -858,6 +865,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "candidate_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_edition_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "catalog_edition_candidates_source_asset_id_fkey"
@@ -972,6 +986,13 @@ export type Database = {
             foreignKeyName: "catalog_editions_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -1077,8 +1098,22 @@ export type Database = {
             foreignKeyName: "catalog_entries_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "catalog_entries_source_asset_fk"
@@ -1378,6 +1413,13 @@ export type Database = {
             foreignKeyName: "certificate_candidates_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "certificate_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -1506,6 +1548,13 @@ export type Database = {
             foreignKeyName: "certificate_scopes_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1622,6 +1671,13 @@ export type Database = {
             foreignKeyName: "certificates_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "certificates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -1730,6 +1786,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "candidate_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_amount_observations_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "commercial_amount_observations_source_asset_id_fkey"
@@ -1976,6 +2039,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_sheet_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
           },
           {
             foreignKeyName: "contact_sheet_items_workspace_id_fkey"
@@ -2486,6 +2556,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "corpus_validation_issues_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
           {
             foreignKeyName: "corpus_validation_issues_source_asset_id_fkey"
             columns: ["source_asset_id"]
@@ -3011,6 +3088,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
             referencedColumns: ["product_id"]
           },
           {
@@ -4040,6 +4124,13 @@ export type Database = {
             foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -4941,6 +5032,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "media_asset_variant_links_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
             foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
             columns: ["product_variant_id"]
             isOneToOne: false
@@ -5069,6 +5167,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_parent_media_asset_id_fkey"
+            columns: ["parent_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
+            foreignKeyName: "media_assets_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "media_assets_source_asset_id_fkey"
@@ -5206,6 +5318,79 @@ export type Database = {
           },
           {
             foreignKeyName: "media_permission_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_review_queue: {
+        Row: {
+          asset_kind: string | null
+          asset_state: string | null
+          brand_hint: string | null
+          confidence: number | null
+          created_at: string | null
+          document_class: string | null
+          height_px: number | null
+          link_basis: string | null
+          link_basis_raw: string | null
+          link_id: string | null
+          link_reviewed_at: string | null
+          link_reviewed_by: string | null
+          link_state: string | null
+          media_asset_id: string | null
+          mime_type: string | null
+          object_path: string | null
+          page_bucket: string | null
+          page_number: number | null
+          page_object_path: string | null
+          parent_page_number: number | null
+          product_code: string | null
+          product_id: string | null
+          product_name: string | null
+          product_variant_id: string | null
+          published_is_primary: boolean | null
+          published_media_id: string | null
+          rights_basis: string | null
+          source_asset_id: string | null
+          source_code_raw: string | null
+          source_name: string | null
+          source_path: string | null
+          source_web_url: string | null
+          storage_bucket: string | null
+          usage_rights_state: string | null
+          variant_candidate_key: string | null
+          variant_name: string | null
+          variant_sku: string | null
+          width_px: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
+            columns: ["product_variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
+            columns: ["product_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -6205,6 +6390,13 @@ export type Database = {
             foreignKeyName: "price_candidates_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "price_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -6322,6 +6514,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "price_lists"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "price_list_versions_source_asset_id_fkey"
@@ -6517,6 +6716,13 @@ export type Database = {
             foreignKeyName: "product_aliases_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_aliases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -6598,6 +6804,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
             referencedColumns: ["product_id"]
           },
           {
@@ -6794,6 +7007,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_media_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
             foreignKeyName: "product_media_media_asset_variant_link_id_fkey"
             columns: ["media_asset_variant_link_id"]
             isOneToOne: false
@@ -6801,10 +7021,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_media_media_asset_variant_link_id_fkey"
+            columns: ["media_asset_variant_link_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["link_id"]
+          },
+          {
             foreignKeyName: "product_media_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
             referencedColumns: ["product_id"]
           },
           {
@@ -6837,6 +7071,102 @@ export type Database = {
           },
           {
             foreignKeyName: "product_media_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_merges: {
+        Row: {
+          id: string | null
+          impact: Json | null
+          merged_at: string | null
+          merged_by: string | null
+          merged_product_id: string | null
+          reason: string | null
+          removed_duplicates: Json | null
+          survivor_product_id: string | null
+          variant_map: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          impact?: Json | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_product_id?: string | null
+          reason?: string | null
+          removed_duplicates?: Json | null
+          survivor_product_id?: string | null
+          variant_map?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          impact?: Json | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_product_id?: string | null
+          reason?: string | null
+          removed_duplicates?: Json | null
+          survivor_product_id?: string | null
+          variant_map?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merges_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "product_merges_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -7020,6 +7350,13 @@ export type Database = {
             foreignKeyName: "product_variants_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -7077,6 +7414,8 @@ export type Database = {
           id: string | null
           material: string | null
           material_code: string | null
+          merged_at: string | null
+          merged_into_product_id: string | null
           name: string | null
           normalized_name: string | null
           published_version: number | null
@@ -7111,6 +7450,8 @@ export type Database = {
           id?: string | null
           material?: string | null
           material_code?: string | null
+          merged_at?: string | null
+          merged_into_product_id?: string | null
           name?: string | null
           normalized_name?: string | null
           published_version?: number | null
@@ -7145,6 +7486,8 @@ export type Database = {
           id?: string | null
           material?: string | null
           material_code?: string | null
+          merged_at?: string | null
+          merged_into_product_id?: string | null
           name?: string | null
           normalized_name?: string | null
           published_version?: number | null
@@ -7177,6 +7520,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "products_source_asset_fk"
@@ -8073,6 +8444,13 @@ export type Database = {
             foreignKeyName: "review_items_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "review_items_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -8694,6 +9072,13 @@ export type Database = {
             foreignKeyName: "shape_profiles_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "shape_profiles_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -9272,6 +9657,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "source_asset_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
           {
             foreignKeyName: "source_asset_versions_source_asset_id_fkey"
             columns: ["source_asset_id"]
@@ -10212,6 +10604,13 @@ export type Database = {
             foreignKeyName: "supplier_availability_snapshots_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -10766,6 +11165,13 @@ export type Database = {
             foreignKeyName: "variant_candidates_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -10914,6 +11320,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "variant_prices_source_asset_fk"
@@ -11252,6 +11665,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "visual_observations_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
             foreignKeyName: "visual_observations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -11359,6 +11779,7 @@ export type Database = {
         }
         Returns: string
       }
+      catalog_media_coverage: { Args: never; Returns: Json }
       change_opportunity_stage: {
         Args: {
           p_next_action?: string
@@ -11378,6 +11799,10 @@ export type Database = {
       confirm_feedback_by_token: {
         Args: { p_customer_text: string; p_token_hash: string }
         Returns: boolean
+      }
+      confirm_media_association: {
+        Args: { p_link_id: string; p_note?: string; p_variant_id: string }
+        Returns: string
       }
       convert_lead: {
         Args: {
@@ -11695,6 +12120,17 @@ export type Database = {
         }
         Returns: string
       }
+      merge_products: {
+        Args: {
+          p_confirmed: boolean
+          p_expected_fingerprint: string
+          p_merged: string
+          p_reason: string
+          p_survivor: string
+          p_variant_map: Json
+        }
+        Returns: string
+      }
       my_membership: {
         Args: never
         Returns: {
@@ -11772,6 +12208,10 @@ export type Database = {
       }
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
       preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
+      preview_product_merge: {
+        Args: { p_merged: string; p_survivor: string; p_variant_map?: Json }
+        Returns: Json
+      }
       publish_price: {
         Args: {
           p_override?: boolean
@@ -11946,6 +12386,10 @@ export type Database = {
         Args: { p_candidate_id: string; p_note?: string }
         Returns: undefined
       }
+      reject_media_association: {
+        Args: { p_link_id: string; p_reason: string }
+        Returns: undefined
+      }
       reject_review_item: {
         Args: { p_reason: string; p_review_item_id: string }
         Returns: undefined
@@ -12118,6 +12562,18 @@ export type Database = {
           normalized_value: string
           raw_value: string
         }[]
+      }
+      review_media_asset: {
+        Args: { p_decision: string; p_media_asset_id: string; p_note?: string }
+        Returns: number
+      }
+      review_media_rights: {
+        Args: {
+          p_media_asset_id: string
+          p_reason: string
+          p_rights_state: string
+        }
+        Returns: number
       }
       review_shoot_output: {
         Args: { p_decision: string; p_output_id: string; p_reason?: string }

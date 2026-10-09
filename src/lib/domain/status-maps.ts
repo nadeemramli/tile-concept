@@ -85,6 +85,41 @@ export const REVIEW_STATE: StatusMap = {
   rejected: { label: "Rejected", tone: "neutral", hint: "Reviewed and refused, with a reason. Kept as evidence, not used." },
 };
 
+/** Imported image → variant association (ingest.media_asset_variant_links). */
+export const MEDIA_LINK_STATE: StatusMap = {
+  pending_review: { label: "Needs review", tone: "warning", hint: "The importer proposed this match. Nobody has confirmed which product or variant the image shows." },
+  needs_correction: { label: "Needs correction", tone: "warning", hint: "A reviewer said the proposed match is wrong. Choose the right variant or reject it." },
+  approved: { label: "Confirmed", tone: "success", hint: "A catalogue operator confirmed which variant this image shows. Publishing still needs reviewed evidence and accepted usage rights." },
+  rejected: { label: "Rejected", tone: "neutral", hint: "Reviewed and refused with a reason. The evidence is kept; it is never published from this association." },
+  superseded: { label: "Superseded", tone: "neutral", hint: "Replaced by a newer, human-confirmed association. Kept for provenance." },
+};
+
+/** Whether the imported image itself is usable evidence (ingest.media_assets.review_state). */
+export const MEDIA_EVIDENCE_STATE: StatusMap = {
+  pending_review: { label: "Evidence unreviewed", tone: "warning", hint: "Nobody has checked that this image or page is legible, complete and the right one. It cannot be published yet." },
+  needs_correction: { label: "Evidence needs work", tone: "warning", hint: "A reviewer flagged the image (wrong crop, illegible, wrong page). Fix the source, then review again." },
+  approved: { label: "Evidence reviewed", tone: "success", hint: "A catalogue operator checked the image itself. Publishing also needs a confirmed variant and accepted usage rights." },
+  rejected: { label: "Evidence rejected", tone: "neutral", hint: "Not usable as catalogue media. Any image published from it was withdrawn and archived." },
+  superseded: { label: "Superseded", tone: "neutral", hint: "A newer import replaced this evidence." },
+};
+
+/** Usage rights for an image — a separate decision from whether it is correct. */
+export const USAGE_RIGHTS_STATE: StatusMap = {
+  unreviewed: { label: "Rights unknown", tone: "warning", hint: "Nobody has recorded whether we may use this image. Unknown is not permission: it cannot be published or made primary." },
+  accepted: { label: "Rights accepted", tone: "success", hint: "A catalogue operator recorded the basis for using this image in the internal catalogue." },
+  restricted: { label: "Rights restricted", tone: "destructive", hint: "Use is limited (for example, reference only). It is not published, and anything already published from it was withdrawn." },
+  denied: { label: "Rights denied", tone: "destructive", hint: "We may not use this image. Anything published from it was withdrawn; the original is kept as evidence." },
+};
+
+/** How the importer arrived at an image → variant association. */
+export const MEDIA_LINK_BASIS: StatusMap = {
+  exact_supplier_code: { label: "Supplier code", tone: "info", hint: "The supplier's code printed with the image matched a variant exactly." },
+  exact_ocr_code: { label: "OCR code", tone: "ai", hint: "A code read by OCR matched a variant. OCR can misread characters, so check the page." },
+  same_catalog_page: { label: "Same page", tone: "ai", hint: "The image and the code appear on the same catalogue page. Several products often share a page, so confirm which one." },
+  same_source_document: { label: "Same document", tone: "neutral", hint: "Only known to come from the same PDF. Discovery context, never a match: confirming it records a new human match." },
+  manual_match: { label: "Human match", tone: "success", hint: "A person chose the variant." },
+};
+
 export const PRICE_STATE: StatusMap = {
   draft: { label: "Draft", tone: "neutral", hint: "Entered but not in force. Only drafts can be edited; publishing makes a new version." },
   scheduled: { label: "Scheduled", tone: "info", hint: "Published with a future start date. Becomes current on that date." },

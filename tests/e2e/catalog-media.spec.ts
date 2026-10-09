@@ -84,7 +84,8 @@ async function imageLoaded(img: Locator) {
 
 test("catalogue operator uploads every supported type, edits, sets primary, replaces and archives", async ({ page }) => {
   test.setTimeout(180_000);
-  await login(page, "demo.catalog@tileconcept.test");
+  // Any catalog.write role; E2E_MEDIA_OPERATOR=demo.admin@tileconcept.test runs it as an administrator.
+  await login(page, process.env.E2E_MEDIA_OPERATOR ?? "demo.catalog@tileconcept.test");
   await openMedia(page);
   await expect(page.getByRole("tab", { name: "Media (1)" })).toBeVisible(); // the unreviewed import
 
