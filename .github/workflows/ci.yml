@@ -89,6 +89,11 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${PUBLISHABLE_KEY}" >> "$GITHUB_ENV"
           echo "SUPABASE_SECRET_KEY=${SECRET_KEY}" >> "$GITHUB_ENV"
       - run: pnpm exec playwright install --with-deps chromium
+      # The catalogue media spec renders real JPEG/PNG/WebP/MP4/WebM files with
+      # ffmpeg so the server's signature checks and the browser's decoders see
+      # genuine media. Without it the spec fails at import and no test runs.
+      - name: Install ffmpeg for media fixtures
+        run: sudo apt-get install -y --no-install-recommends ffmpeg
       - run: pnpm exec playwright test --reporter=list
       - uses: actions/upload-artifact@v5
         if: failure()
