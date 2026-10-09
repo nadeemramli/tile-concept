@@ -51,7 +51,7 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000003","role":"authenticated"}', true);
 select throws_ok($$select api.preview_product_merge('ca7a3000-0000-4000-8000-000000000001','ca7a3000-0000-4000-8000-000000000002')$$, '42501', 'permission denied: catalog.write', 'sales cannot preview a merge');
 select throws_ok($$select api.merge_products('ca7a3000-0000-4000-8000-000000000001','ca7a3000-0000-4000-8000-000000000002','{}','x','x',true)$$, '42501', 'permission denied: catalog.write', 'sales cannot merge');
-select is((select count(*) from api.product_merges), 0::bigint, 'nothing merged yet');
+select is((select count(*) from api.product_merges where merged_product_id::text like 'ca7a3000%'), 0::bigint, 'nothing merged yet');
 
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000006","role":"authenticated"}', true);
 select throws_ok($$select api.preview_product_merge('ca7a3000-0000-4000-8000-000000000001','ca7a3000-0000-4000-8000-000000000005')$$, '42501', 'workspace access denied', 'cross-workspace preview refused');

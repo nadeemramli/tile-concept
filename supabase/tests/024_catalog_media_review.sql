@@ -125,8 +125,11 @@ select ok(not pg_temp.visible('sources/syn/images/b.jpg'), 'sales loses object a
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000006","role":"authenticated"}', true);
 select ok((select (c->'media_assets'->'by_rights_state'->>'unreviewed')::int >= 1 and c ? 'generated_at' and c ? 'source'
   and (c->'catalogue_media'->>'archived')::int >= 2 from api.catalog_media_coverage() c), 'coverage reports live counts with time, source and unknown rights');
+-- Scoped to this file's fixtures (keys 'syn:…'): decisions are append-only, so
+-- other runs against the same database leave theirs behind.
 select is((select count(*) from api.review_decisions where workspace_id = '11111111-1111-1111-1111-111111111111'
   and review_target_type in ('media_asset','media_asset_usage_rights','media_asset_variant_link')
+  and review_target_key like 'syn:%'
   and reviewed_by is distinct from 'aaaaaaaa-0000-0000-0000-000000000006'), 0::bigint, 'every media decision is attributed to the reviewer');
 reset role;
 select ok((select count(*) >= 6 from ingest.review_decisions where review_target_id::text like 'ca7a2000%'), 'decisions persisted append-only');
