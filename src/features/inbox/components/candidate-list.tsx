@@ -10,6 +10,9 @@ import type { CandidateReason, IdentityCandidate } from "@/features/inbox/types"
 import { cn } from "@/lib/utils";
 
 const REASON_LABEL: Record<string, string> = {
+  company_match: "Company name or telephone",
+  number_match: "Telephone / email match",
+  contact_match: "Contact name or linked company",
   exact_phone: "Same phone",
   exact_email: "Same email",
   similar_name: "Similar name",
@@ -20,6 +23,9 @@ const REASON_LABEL: Record<string, string> = {
 
 /** Why the record was suggested, one sentence each. Shared wording with Identity Review. */
 export const REASON_HINT: Record<string, string> = {
+  company_match: "Company name, alias or company telephone matches the search. Choose a person from its contacts next.",
+  number_match: "This contact has a telephone or email matching your search. Confirm the person before selecting.",
+  contact_match: "The contact name or an active company relationship matches your search.",
   exact_phone: "The same normalised phone number is on both records. Strong evidence; still confirm with the customer.",
   exact_email: "The same email address is on both records. Strong evidence.",
   similar_name: "The names are close after normalising spelling and spacing. Never enough on its own.",
@@ -94,6 +100,7 @@ export function CandidateList({
                 {c.lifecycle_state && <StatusPill map={LIFECYCLE_STATE} value={c.lifecycle_state} />}
                 {enquiry && <EnquiredBefore reason={enquiry} unlinked={isLead} />}
               </div>
+              {c.companies?.length ? <p className="text-xs text-muted-foreground">{c.companies.map((company) => company.name + (company.role ? ` · ${company.role}` : "")).join("; ")}</p> : null}
               <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-muted-foreground tnum">
                 {c.masked_phone && <span className="font-mono">{c.masked_phone}</span>}
                 {c.masked_email && <span className="font-mono">{c.masked_email}</span>}

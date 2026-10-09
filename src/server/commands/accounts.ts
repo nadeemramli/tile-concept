@@ -17,6 +17,7 @@ export async function createAccountAction(input: unknown): Promise<ActionResult<
     .insert({
       workspace_id: session.workspaceId,
       name: v.name,
+      telephone: v.telephone || null,
       account_type: v.account_type ?? null,
       registration_number: v.registration_number ?? null,
       website: v.website ?? null,
@@ -43,7 +44,7 @@ export async function updateAccountAction(input: unknown): Promise<ActionResult>
   const supabase = await createServerSupabase();
   const { error } = await supabase
     .from("accounts")
-    .update({ name: v.name, account_type: v.account_type ?? null, registration_number: v.registration_number ?? null, website: v.website ?? null, address: { city: v.city ?? "", state: v.state ?? "", country: "MY" }, owner_id: v.owner_id ?? null, notes: v.notes ?? null, updated_by: session.userId })
+    .update({ name: v.name, telephone: v.telephone || null, account_type: v.account_type ?? null, registration_number: v.registration_number ?? null, website: v.website ?? null, address: { city: v.city ?? "", state: v.state ?? "", country: "MY" }, owner_id: v.owner_id ?? null, notes: v.notes ?? null, updated_by: session.userId })
     .eq("id", v.id);
   if (error) return fail(error);
   revalidatePath(`/sales/accounts/${v.id}`);

@@ -25,6 +25,7 @@ import type { ContentOpportunityDetail, SchedulableOpportunity } from "@/server/
 import type { ProfileRef } from "@/server/queries/reference";
 import { formatDate, formatDateTime, titleCase } from "@/lib/format";
 import { timeRangeLabel } from "@/features/marketing/lib/time";
+import { RelatedCreatives } from "@/features/creative/components/related-creatives";
 
 const CONTENT_TYPE_LABELS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.label]));
 const CONTENT_TYPE_HINTS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.hint]));
@@ -216,8 +217,10 @@ export function OpportunityDrawer({
         )}
       </DrawerSection>
 
+      <RelatedCreatives sourceId={detail.id} createDisabledReason={["accepted", "scheduled", "completed"].includes(detail.status) ? null : "Accept this content opportunity before creating a creative from it."} />
+
       <DrawerSection title={`Assets (${detail.outputs.length})`}>
-        <OutputsList outputs={detail.outputs} permissionStatus={detail.permission?.status ?? null} permissionExpiresAt={detail.permission?.expires_at ?? null} />
+        <OutputsList outputs={detail.outputs} contentOpportunityId={detail.id} permissionStatus={detail.permission?.status ?? null} permissionExpiresAt={detail.permission?.expires_at ?? null} />
       </DrawerSection>
 
       <DrawerSection title={`Status history (${detail.status_events.length})`}>

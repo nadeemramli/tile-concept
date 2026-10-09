@@ -53,7 +53,7 @@ export function ProjectsView({ projects, members }: { projects: ProjectListRow[]
         </Gated>
       </div>
       <DataTable columns={cols} data={projects} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => router.push(`/sales/projects/${r.id}`)} emptyTitle="No projects" emptyDescription="Projects keep one customer's multiple jobs separate." />
-      <ProjectOpportunityDialog open={newParam === "1"} onOpenChange={(o) => !o && setNewParam(null)} members={members} />
+      {newParam === "1" && <ProjectOpportunityDialog open onOpenChange={(o) => !o && setNewParam(null)} members={members} />}
     </div>
   );
 }

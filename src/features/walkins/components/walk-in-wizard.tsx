@@ -1,14 +1,18 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Phone, Plus, UserPlus, UserSearch } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, UserPlus, UserSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QuotationFilePicker } from "./quotation-file-picker";
+import { VisitQuotationFiles } from "./visit-quotation-files";
+import type { QueuedQuotation } from "../quotation-files";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/patterns/field";
 import { DisabledHint, Hint } from "@/components/patterns/explain";
@@ -19,16 +23,19 @@ import { formatMoney, titleCase } from "@/lib/format";
 import { normalizePhone } from "@/lib/identity/normalize";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
-import { createWalkInContactAction, findCandidatesAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
-import { EMPTY_INQUIRY_CHOICE, InquiryLinkChoice } from "./inquiry-link-choice";
+import { createWalkInContactAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
 import { CUSTOMER_TYPES, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
+import { RENOVATION_AREA_PRESETS } from "@/features/walkins/presets";
+import { EMPTY_MALAYSIA_AREA, formatMalaysiaArea } from "@/lib/location/malaysia";
+import { searchShowroomCustomersAction } from "@/server/commands/showroom-search";
+import { MalaysiaAreaFields } from "./malaysia-area-fields";
 import type { IdentityCandidate } from "@/features/inbox/types";
-import type { InquiryChoice, OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
+import type { OpenOpportunityRef, WalkInResult } from "@/features/walkins/types";
 import type { ProfileRef } from "@/server/queries/reference";
 
 const SOURCES = ["walk_in", "tiktok", "meta", "website", "whatsapp", "dm", "call", "email", "referral", "other"] as const;
 const INTEREST_LABEL: Record<string, string> = { wall_panel: "Wall panel", tile: "Tile", cut_tile: "Cut tile", mosaic: "Mosaic", finishing: "Finishing", accessory: "Accessory" };
-const STEPS = ["Phone", "Customer", "Visit", "Purchase", "Review"] as const;
+const STEPS = ["Search", "Customer", "Visit", "Purchase", "Review"] as const;
 
 
 function localNow() {
@@ -37,14 +44,16 @@ function localNow() {
 
 export function WalkInWizard({ locations, members }: { locations: { id: string; name: string }[]; members: ProfileRef[] }) {
   const { session } = useSession();
+  const renovationInputId = useId();
   const [step, setStep] = useState(0);
   const [pending, start] = useTransition();
   const saving = useRef(false);
   const selectedCustomer = useRef<string | null>(null);
   const retry = useRef<{ payload: string; id: string } | null>(null);
-  const [inquiryChoice, setInquiryChoice] = useState<InquiryChoice>(EMPTY_INQUIRY_CHOICE);
 
   // step 1
+  const [searchQuery, setSearchQuery] = useState("");
+  const [contactCompanies, setContactCompanies] = useState<NonNullable<IdentityCandidate["companies"]>>([]);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
@@ -64,12 +73,15 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [locationId, setLocationId] = useState(session.defaultLocationId ?? locations[0]?.id ?? "");
   const [staffId, setStaffId] = useState(session.userId);
   const [customerType, setCustomerType] = useState<string>("homeowner");
-  const [area, setArea] = useState("");
+  const [customerArea, setCustomerArea] = useState(EMPTY_MALAYSIA_AREA);
+  const area = formatMalaysiaArea(customerArea);
   const [renovationArea, setRenovationArea] = useState("");
   const [source, setSource] = useState<string>("walk_in");
   const [purpose, setPurpose] = useState<string>("browse");
   const [sqNumber, setSqNumber] = useState("");
   const [quotationAmount, setQuotationAmount] = useState("");
+  const [quotationFiles, setQuotationFiles] = useState<QueuedQuotation[]>([]);
+  const [attachmentsPending, setAttachmentsPending] = useState(false);
   const [notes, setNotes] = useState("");
   const [interest, setInterest] = useState<string[]>([]);
   const [oppMode, setOppMode] = useState<"none" | "create" | "link">("none");
@@ -82,47 +94,54 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const normalizedPhone = normalizePhone(phone);
 
   function search() {
-    if (!normalizedPhone && !email.trim()) {
-      toast.error("Enter a phone number (or email) to search.");
+    if (searchQuery.trim().length < 2) {
+      toast.error("Enter a telephone, company name, PIC name or email (at least two characters).");
       return;
     }
     start(async () => {
-      const r = await findCandidatesAction({ phone: phone, email: email, company });
+      const r = await searchShowroomCustomersAction(searchQuery);
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
       setCandidates(r.data);
+      setCompany(""); setContactCompanies([]);
+      setPhone(/^[+\d\s().-]+$/.test(searchQuery.trim()) && !r.data.some((c) => c.entity_type === "account") ? normalizePhone(searchQuery) ?? "" : "");
+      setEmail(searchQuery.includes("@") ? searchQuery.trim() : "");
       setFromLead(null);
       setContact(null);
       selectedCustomer.current = null;
       setAccountId("");
-      setInquiryChoice(EMPTY_INQUIRY_CHOICE);
       setStep(1);
     });
   }
 
   function pickCandidate(c: IdentityCandidate) {
     if (c.entity_type === "account") {
-      setAccountId(c.entity_id);
-      toast.info(`Account ${c.display_name} will be linked. Choose or create the person too.`);
+      start(async () => {
+        const result = await searchShowroomCustomersAction("", c.entity_id);
+        if (!result.ok) { toast.error(result.error); return; }
+        setAccountId(c.entity_id); setCompany(c.display_name); setCandidates(result.data);
+        setPhone(""); setEmail(""); setNewName("");
+        toast.info("Choose a linked contact or register a new PIC for this company.");
+      });
       return;
     }
     if (c.entity_type === "lead") {
       // They enquired before but were never registered: register them now from
-      // the enquiry so its phone, email, history and salesperson stay attached.
+      // the enquiry; saving uses the same safe automatic matching as other visits.
       setFromLead(c);
       setContact(null); selectedCustomer.current = null;
-      setInquiryChoice(EMPTY_INQUIRY_CHOICE);
       setOppId(""); setOppMode("none"); setOpenOpps([]);
       if (c.display_name && c.display_name !== "Enquiry") setNewName(c.display_name);
-      toast.info("Register the customer below, then confirm the original inquiry with the visit.");
+      toast.info("Register the customer below. The visit will be matched to an earlier inquiry automatically when possible.");
       return;
     }
+    setContactCompanies(c.companies ?? []);
+    if (accountId && !c.companies?.some((a) => a.id === accountId)) { setAccountId(""); setCompany(""); }
     setContact({ id: c.entity_id, name: c.display_name, lifecycle: c.lifecycle_state, isNew: false });
     selectedCustomer.current = c.entity_id;
     setFromLead(null);
-    setInquiryChoice(EMPTY_INQUIRY_CHOICE);
     setOppId(""); setOppMode("none"); setOpenOpps([]);
     start(async () => {
       const r = await getOpenOpportunitiesAction(c.entity_id);
@@ -133,7 +152,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
   function createContact(provisional: boolean) {
     start(async () => {
-      const r = await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, provisional });
+      const r = await createWalkInContactAction({ display_name: newName, phone, email, customer_type: newType, provisional, account_id: accountId || undefined });
       if (!r.ok) {
         toast.error(r.error);
         return;
@@ -142,9 +161,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       setContact({ id: r.data.contact_id, name: newName.trim(), lifecycle: "new", isNew: true });
       selectedCustomer.current = r.data.contact_id;
       setCustomerType(newType);
+      setContactCompanies(accountId ? [{ id: accountId, name: company, role: null }] : []);
       setOpenOpps([]);
       setOppId(""); setOppMode("none");
-      setInquiryChoice(fromLead ? { mode: "choose", leadId: fromLead.entity_id, reason: "" } : EMPTY_INQUIRY_CHOICE);
       setStep(2);
     });
   }
@@ -153,9 +172,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
     if (!contact || saving.current) return;
     const input: WalkInInput = {
       request_id: retry.current?.id ?? crypto.randomUUID(),
-      inquiry_mode: inquiryChoice.mode,
-      inquiry_lead_id: inquiryChoice.leadId,
-      inquiry_reason: inquiryChoice.reason,
+      inquiry_mode: "automatic",
       contact_id: contact.id,
       account_id: accountId,
       occurred_at: `${occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt}+08:00`,
@@ -191,6 +208,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
         const r = await recordWalkInAction(input);
         if (!r.ok) { toast.error(r.error); return; }
         toast.success(r.message);
+        setAttachmentsPending(quotationFiles.length > 0);
         setResult(r.data);
       } catch {
         toast.error("The save result could not be confirmed. Retry with the same details; the visit will not be recorded twice.");
@@ -199,9 +217,11 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   }
 
   function reset() {
-    retry.current = null; selectedCustomer.current = null; setFromLead(null); setInquiryChoice(EMPTY_INQUIRY_CHOICE);
+    retry.current = null; selectedCustomer.current = null; setFromLead(null);
+    setSearchQuery(""); setContactCompanies([]);
     setStep(0); setPhone(""); setEmail(""); setCompany(""); setCandidates(null); setContact(null); setNewName(""); setAccountId(""); setOpenOpps([]);
-    setOccurredAt(localNow()); setArea(""); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
+    setOccurredAt(localNow()); setCustomerArea(EMPTY_MALAYSIA_AREA); setRenovationArea(""); setSource("walk_in"); setPurpose("browse"); setSqNumber(""); setQuotationAmount(""); setNotes(""); setInterest([]); setOppMode("none"); setOppId(""); setProjectName(""); setOppName("");
+    setQuotationFiles([]); setAttachmentsPending(false);
     setResult(null);
   }
 
@@ -232,9 +252,10 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
           {result.purchase_id && <li><Link href={`/sales/walk-ins?tab=purchases&purchase=${result.purchase_id}`} className="text-info hover:underline">Open purchase</Link></li>}
           <li><Link href={`/sales/walk-ins?visit=${result.visit_id}`} className="text-info hover:underline">Open visit</Link></li>
         </ul>
-        <div className="flex gap-2">
+        <div className="space-y-2"><h2 className="text-sm font-semibold">Quotation files</h2><VisitQuotationFiles key={result.visit_id} visitId={result.visit_id} canWrite initialFiles={quotationFiles} onPendingChange={setAttachmentsPending} /></div>
+        <div className="flex flex-wrap gap-2">
           <Button asChild><Link href={`/sales/record-sale?visit=${result.visit_id}`}>Sales & receipts</Link></Button>
-          <Button onClick={reset}><Plus className="size-3.5" aria-hidden /> Record another walk-in</Button>
+          <DisabledHint reason={attachmentsPending ? "Finish or remove the queued quotation files first." : undefined}><Button onClick={reset} disabled={attachmentsPending}><Plus className="size-3.5" aria-hidden /> Record another walk-in</Button></DisabledHint>
           <Button asChild variant="outline"><Link href={`/sales/contacts/${contact?.id}`}>Go to contact</Link></Button>
           <Button asChild variant="outline"><Link href={`/sales/feedback/new?visit=${result.visit_id}`}>Customer feedback & Google review</Link></Button>
         </div>
@@ -270,16 +291,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       {/* Step 1 */}
       {step === 0 && (
         <Card className="space-y-4 p-4">
-          <Field label="Customer phone" required hint={normalizedPhone ? `Normalized: ${normalizedPhone}` : "Type or scan. Malaysian numbers assumed."}>
-            <div className="relative">
-              <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input autoFocus inputMode="tel" className="h-12 pl-10 font-mono text-lg tnum" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="012-345 6789" />
-            </div>
+          <Field label="Telephone, company or PIC" htmlFor="showroom-search" hint="Search a customer/PIC number, company telephone, company name, contact name or email.">
+            <Input id="showroom-search" autoFocus className="h-12 text-base" value={searchQuery} maxLength={200} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="Telephone / PIC number / company name" />
           </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Email (optional)"><Input type="email" className="h-9" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} /></Field>
-            <Field label="Company (optional)"><Input className="h-9" value={company} onChange={(e) => setCompany(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} /></Field>
-          </div>
           <div className="flex justify-end">
             <Button size="lg" onClick={search} disabled={pending}>
               <UserSearch className="size-4" aria-hidden /> {pending ? "Searching…" : "Find customer"}
@@ -292,22 +306,26 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
       {step === 1 && (
         <Card className="space-y-4 p-4">
           <div>
-            <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Matches for <span className="font-mono">{normalizedPhone ?? email}</span></div>
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{accountId ? "Contacts at" : "Matches for"} <span>{company || searchQuery}</span></div>
             <CandidateList candidates={candidates ?? []} onPick={pickCandidate} pickLabel="Use this" busy={pending} />
-            {accountId && <p className="mt-1 text-[11px] text-muted-foreground">Account selected; now pick the person.</p>}
+            {accountId && <p className="mt-1 text-[11px] text-muted-foreground">Company selected. Choose its contact below, or register a new PIC.</p>}
           </div>
           <div className="rounded-md border border-dashed p-3">
             <div className="mb-2 flex items-center gap-1.5 text-xs font-medium"><UserPlus className="size-3.5" aria-hidden /> {fromLead ? "Register the customer from their enquiry" : "Not listed? Register the customer"}</div>
             {fromLead && (
               <p className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-ai/25 bg-ai/5 px-2 py-1.5 text-xs">
                 <span>
-                  Creates a customer with the phone and email you entered. Confirm the inquiry on the Review step; its source and salesperson are preserved when the visit is saved.
+                  Creates a customer with the phone and email you entered. Earlier inquiries are matched automatically when the visit is saved; uncertain matches are kept for later review.
                 </span>
                 <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setFromLead(null)}>
                   Register without the enquiry
                 </Button>
               </p>
             )}
+            <div className="mb-2 grid gap-2 sm:grid-cols-2">
+              <Field label="PIC / customer telephone" htmlFor="new-contact-phone" hint={normalizedPhone ? `Normalized: ${normalizedPhone}` : "Enter the person's own number, not the company switchboard."}><Input id="new-contact-phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
+              <Field label="Email (optional)" htmlFor="new-contact-email"><Input id="new-contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+            </div>
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <Input autoFocus={!(candidates && candidates.length)} className="h-9" placeholder="Full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
               <Select value={newType} onValueChange={setNewType}>
@@ -363,14 +381,25 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
                 <SelectContent>{members.map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
+            {contactCompanies.length > 0 && <Field label="Company for this visit" hint="Choose the company this person represents for this visit, or keep it personal.">
+              <Select value={accountId || "personal"} onValueChange={(id) => { setAccountId(id === "personal" ? "" : id); setCompany(contactCompanies.find((a) => a.id === id)?.name ?? ""); }}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="personal">Personal visit / no company</SelectItem>{contactCompanies.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>}
             <Field label="Customer type">
               <Select value={customerType} onValueChange={setCustomerType}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>{CUSTOMER_TYPES.map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="From (customer's area)"><Input className="h-9" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Cheras, Puchong" /></Field>
-            <Field label="Area / renovation"><Input className="h-9" value={renovationArea} onChange={(e) => setRenovationArea(e.target.value)} placeholder="e.g. Wet kitchen, Master bath" /></Field>
+            <MalaysiaAreaFields value={customerArea} onChange={setCustomerArea} />
+            <Field label="Area / renovation" htmlFor={renovationInputId} hint="Choose a preset or type another renovation area.">
+              <Input id={renovationInputId} list={`${renovationInputId}-presets`} aria-describedby={`${renovationInputId}-hint`} className="h-9" value={renovationArea} onChange={(e) => setRenovationArea(e.target.value)} placeholder="Select or type a renovation area" maxLength={200} autoComplete="off" />
+              <datalist id={`${renovationInputId}-presets`}>
+                {RENOVATION_AREA_PRESETS.map((option) => <option key={option} value={option} />)}
+              </datalist>
+            </Field>
             <Field label="How did they hear of us?">
               <Select value={source} onValueChange={setSource}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -392,10 +421,16 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
           <div className="rounded-md border p-3">
             <div className="mb-2 text-xs font-medium">Quotation (optional)</div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Field label="SQ / quotation no."><Input className="h-9 font-mono" value={sqNumber} onChange={(e) => setSqNumber(e.target.value)} placeholder="QT-000123" /></Field>
-              <Field label="Quotation amount (MYR)"><Input className="h-9 tnum" inputMode="decimal" value={quotationAmount} onChange={(e) => setQuotationAmount(e.target.value)} placeholder="0.00" /></Field>
-            </div>
+            <Tabs defaultValue="details">
+              <TabsList aria-label="Quotation"><TabsTrigger value="details">Details</TabsTrigger><TabsTrigger value="files">Upload file{quotationFiles.length ? ` (${quotationFiles.length})` : ""}</TabsTrigger></TabsList>
+              <TabsContent value="details">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Field label="SQ / quotation no."><Input className="h-9 font-mono" value={sqNumber} onChange={(e) => setSqNumber(e.target.value)} placeholder="QT-000123" /></Field>
+                  <Field label="Quotation amount (MYR)"><Input className="h-9 tnum" inputMode="decimal" value={quotationAmount} onChange={(e) => setQuotationAmount(e.target.value)} placeholder="0.00" /></Field>
+                </div>
+              </TabsContent>
+              <TabsContent value="files"><QuotationFilePicker files={quotationFiles} onChange={setQuotationFiles} /></TabsContent>
+            </Tabs>
           </div>
 
           <div className="rounded-md border p-3">
@@ -438,9 +473,9 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
 
       {step === 4 && contact && (
         <Card className="space-y-4 p-4">
-          <InquiryLinkChoice key={`${contact.id}:${occurredAt}`} contactId={contact.id} occurredAt={`${occurredAt.length === 16 ? `${occurredAt}:00` : occurredAt}+08:00`} value={inquiryChoice} onChange={setInquiryChoice} />
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
             <Row label="Customer" value={contact.name} />
+            <Row label="Company" value={company || "Personal visit"} />
             <Row label="When" value={occurredAt.replace("T", " ")} />
             <Row label="Location" value={locations.find((l) => l.id === locationId)?.name ?? "—"} />
             <Row label="Staff" value={members.find((m) => m.user_id === staffId)?.full_name ?? "—"} />
@@ -450,6 +485,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <Row label="How they heard (reported)" value={statusMeta(SOURCE_CHANNEL, source).label} />
             <Row label="Purpose" value={titleCase(purpose)} />
             <Row label="Quotation" value={sqNumber || quotationAmount ? `${sqNumber || "—"}${quotationAmount ? ` · ${formatMoney(Number(quotationAmount))}` : ""}` : "—"} />
+            <Row label="Quotation files" value={quotationFiles.map((q) => q.file.name).join(", ") || "—"} />
             <Row label="Interest" value={interest.map((i) => INTEREST_LABEL[i]).join(", ") || "—"} />
             <Row label="Opportunity" value={oppMode === "none" ? "None" : oppMode === "create" ? `Create: ${projectName}` : `Link: ${openOpps.find((o) => o.id === oppId)?.name ?? ""}`} />
             <Row label="Sale / payment" value="Record after saving this visit" />

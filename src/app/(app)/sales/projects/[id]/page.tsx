@@ -62,6 +62,7 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
           <SectionCard title="Opportunities" count={project.opportunities.length}>
             <OpportunitiesList items={project.opportunities} stageLabels={stageLabels} memberNames={memberNames} />
           </SectionCard>
+          <SectionCard title="Products / specifications proposed"><p className="whitespace-pre-wrap text-sm">{project.product_specification || "No proposed specifications recorded."}</p></SectionCard>
           <SectionCard title="Sites" count={project.sites.length}>
             {project.sites.length === 0 ? (
               <p className="text-sm text-muted-foreground">No site recorded.</p>
@@ -77,7 +78,7 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
               </ul>
             )}
           </SectionCard>
-          <SectionCard title="Purchases" count={project.purchases.length}>
+          <SectionCard title="Sales, invoices & receipts" count={project.purchases.length}>
             <PurchasesList items={project.purchases} />
           </SectionCard>
           <SectionCard title="Tasks" count={project.tasks.length}>
@@ -107,7 +108,8 @@ export default async function ProjectPage({ params }: PageProps<"/sales/projects
             <FactList
               className="sm:grid-cols-1"
               items={[
-                { label: "Owner", value: memberNames.get(project.owner_id ?? "") ?? "—" },
+                { label: "Customer/company PIC", value: project.follow_up_contact_id ? <Link href={`/sales/contacts/${project.follow_up_contact_id}`} className="hover:underline">{project.follow_up_contact_name ?? "Open contact"}</Link> : "—" },
+                { label: "Internal salesperson", value: memberNames.get(project.owner_id ?? "") ?? "—" },
                 { label: "Expected start", value: formatDate(project.expected_start) },
                 { label: "Expected completion", value: formatDate(project.expected_completion) },
                 { label: "Created by", value: memberNames.get(project.created_by ?? "") ?? "—" },

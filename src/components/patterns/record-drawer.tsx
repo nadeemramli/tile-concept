@@ -21,9 +21,9 @@ export function RecordDrawer({ open, onOpenChange, title, description, children,
   const titleRef = useRef<HTMLHeadingElement>(null);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent onOpenAutoFocus={(event) => { if (autoFocusTitle) { event.preventDefault(); titleRef.current?.focus(); } }} className={cn("flex w-full flex-col gap-0 overflow-y-auto p-0", width === "md" && "data-[side=right]:sm:max-w-xl", width === "lg" && "data-[side=right]:sm:max-w-2xl", width === "xl" && "data-[side=right]:sm:max-w-4xl", className)}>
+      <SheetContent onOpenAutoFocus={(event) => { if (autoFocusTitle) { event.preventDefault(); titleRef.current?.focus(); } }} className={cn("flex flex-col gap-0 overflow-y-auto p-0 data-[side=right]:w-full", width === "md" && "data-[side=right]:sm:max-w-xl", width === "lg" && "data-[side=right]:sm:max-w-2xl", width === "xl" && "data-[side=right]:sm:max-w-4xl", className)}>
         <SheetHeader className="border-b px-5 py-4">
-          <div className="flex items-start justify-between gap-3 pr-8">
+          <div className="flex flex-wrap items-start justify-between gap-3 pr-8">
             <div className="min-w-0">
               <SheetTitle ref={titleRef} tabIndex={autoFocusTitle ? -1 : undefined} className="text-base outline-none">{title}</SheetTitle>
               {description && <SheetDescription className="mt-0.5">{description}</SheetDescription>}
@@ -40,7 +40,7 @@ export function RecordDrawer({ open, onOpenChange, title, description, children,
 export function DrawerSection({ title, children, className, action }: { title: string; children: React.ReactNode; className?: string; action?: React.ReactNode }) {
   return (
     <section className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{title}</h3>
         {action}
       </div>

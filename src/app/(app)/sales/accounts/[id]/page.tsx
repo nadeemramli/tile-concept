@@ -75,7 +75,7 @@ export default async function AccountPage({ params }: PageProps<"/sales/accounts
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <SectionCard title="Contacts" count={account.contacts.length}>
+          <SectionCard title="Company contacts / PICs" count={account.contacts.length}>
             {account.contacts.length === 0 ? (
               <p className="text-sm text-muted-foreground">No contacts linked yet.</p>
             ) : (
@@ -123,7 +123,7 @@ export default async function AccountPage({ params }: PageProps<"/sales/accounts
             )}
           </SectionCard>
 
-          <SectionCard title="Purchases" count={account.purchases.length}>
+          <SectionCard title="Sales, invoices & receipts" count={account.purchases.length}>
             <PurchasesList items={account.purchases} />
           </SectionCard>
 
@@ -142,6 +142,7 @@ export default async function AccountPage({ params }: PageProps<"/sales/accounts
               className="sm:grid-cols-1"
               items={[
                 { label: "Registration number", value: account.registration_number ?? "—", mono: true },
+                { label: "Company telephone", value: account.telephone ?? "—", mono: true },
                 { label: "Website", value: account.website ?? "—" },
                 { label: "Address", value: [account.address.city, account.address.state].filter(Boolean).join(", ") || "—" },
                 { label: "Owner", value: memberNames.get(account.owner_id ?? "") ?? "—" },

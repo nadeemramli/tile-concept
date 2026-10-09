@@ -31,7 +31,7 @@ export async function updateProjectAction(input: unknown): Promise<ActionResult>
   const supabase = await createServerSupabase();
   const { error } = await supabase
     .from("projects")
-    .update({ name: v.name, project_type: v.project_type, status: v.status, area: v.area ?? null, owner_id: v.owner_id ?? null, expected_start: v.expected_start ?? null, expected_completion: v.expected_completion ?? null, notes: v.notes ?? null })
+    .update({ name: v.name, project_type: v.project_type, status: v.status, follow_up_contact_id: v.follow_up_contact_id ?? null, product_specification: v.product_specification || null, area: v.area ?? null, owner_id: v.owner_id ?? null, expected_start: v.expected_start ?? null, expected_completion: v.expected_completion ?? null, notes: v.notes ?? null })
     .eq("id", v.id);
   if (error) return fail(error);
   revalidatePath(`/sales/projects/${v.id}`);

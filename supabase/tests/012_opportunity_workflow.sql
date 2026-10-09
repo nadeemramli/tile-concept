@@ -32,9 +32,11 @@ select throws_ok($$select api.opportunity_photo_command('finish',(select id from
 select throws_ok($$select api.opportunity_photo_command('prepare',(select id from results),gen_random_uuid(),'{"file_name":"bad.svg","content_type":"image/svg+xml","file_size":100,"remark":"Bad type"}')$$,'23514','Choose a JPG, PNG or WebP up to 5 MB and enter a remark','active upload types rejected');
 select throws_ok($$select api.opportunity_photo_command('prepare',(select id from results),gen_random_uuid(),'{"file_name":"huge.png","content_type":"image/png","file_size":5242881,"remark":"Huge file"}')$$,'23514','Choose a JPG, PNG or WebP up to 5 MB and enter a remark','oversize image rejected');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000004');
-select is((select count(*) from api.opportunity_photos where id='eeeeeeee-3412-0000-0000-000000000001'),0::bigint,'another salesperson cannot read private photo metadata');
-select throws_ok($$select api.opportunity_command('archive',jsonb_build_object('id',(select id from results),'version',2,'reason','Unauthorized'),gen_random_uuid())$$,'42501','Only the owner or a sales manager can change this opportunity','another salesperson cannot archive');
-select throws_ok($$select api.opportunity_photo_command('finish',(select id from results),'eeeeeeee-3412-0000-0000-000000000001')$$,'42501','Opportunity not found or owned by another salesperson','another salesperson cannot finish upload');
+select is((select count(*) from api.opportunity_photos where id='eeeeeeee-3412-0000-0000-000000000001'),1::bigint,'shared salesperson can read private workspace photo metadata');
+select lives_ok($$select pg_temp.cmd('archive','{"reason":"Shared teammate archive"}')$$,'shared salesperson can archive a teammate opportunity');
+select ok((select archived_at is not null from api.opportunities o join results using(id)),'teammate archive persists');
+select lives_ok($$select pg_temp.cmd('restore','{"reason":"Continue synthetic workflow"}')$$,'shared salesperson can restore the teammate opportunity');
+select throws_ok($$select api.opportunity_photo_command('finish',(select id from results),'eeeeeeee-3412-0000-0000-000000000001')$$,'42501','Only the uploader can finish this upload','shared editor cannot finalize another staff member''s upload');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
 select lives_ok($$insert into storage.objects(bucket_id,name,metadata) select 'opportunity-photos',object_path,'{"size":100,"mimetype":"image/png"}' from api.opportunity_photos where id='eeeeeeee-3412-0000-0000-000000000001'$$,'authenticated uploader can insert at the reserved photo path');
 select lives_ok($$select api.opportunity_photo_command('finish',(select id from results),'eeeeeeee-3412-0000-0000-000000000001')$$,'actual upload can be finalized');

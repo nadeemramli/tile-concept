@@ -125,7 +125,7 @@ export async function linkContactAccountAction(input: unknown): Promise<ActionRe
   const session = await requireSession();
   const v = parsed.data;
   const supabase = await createServerSupabase();
-  const { error } = await supabase.from("account_contact_relationships").insert({ workspace_id: session.workspaceId, contact_id: v.contact_id, account_id: v.account_id, role: v.role ?? null, is_primary: v.is_primary });
+  const { error } = await supabase.from("account_contact_relationships").upsert({ workspace_id: session.workspaceId, contact_id: v.contact_id, account_id: v.account_id, role: v.role ?? null, is_primary: v.is_primary, ended_at: null }, { onConflict: "account_id,contact_id" });
   if (error) return fail(error);
   revalidatePath(`/sales/contacts/${v.contact_id}`);
   revalidatePath(`/sales/accounts/${v.account_id}`);
@@ -158,9 +158,9 @@ export async function searchAccountsAction(q: string) {
   return searchAccounts(q.trim());
 }
 
-export async function searchContactsAction(q: string) {
-  if (q.trim().length < 1) return [];
-  return searchContacts(q.trim());
+export async function searchContactsAction(q: string, accountId?: string) {
+  if (q.trim().length < 2 && !accountId) return [];
+  return searchContacts(q.trim(), 20, accountId);
 }
 
 function revalidateLinked(v: { contact_id?: string; account_id?: string; project_id?: string; opportunity_id?: string }) {

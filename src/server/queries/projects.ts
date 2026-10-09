@@ -22,7 +22,7 @@ export interface ProjectListRow {
 
 export async function listProjects(): Promise<ProjectListRow[]> {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("projects").select("id, name, project_type, status, area, account_id, primary_contact_id, owner_id, expected_completion, created_at, accounts(name), contacts(display_name)").order("created_at", { ascending: false }).limit(1000);
+  const { data } = await supabase.from("projects").select("id, name, project_type, status, area, account_id, primary_contact_id, owner_id, expected_completion, created_at, accounts(name), contacts!projects_primary_contact_id_fkey(display_name)").order("created_at", { ascending: false }).limit(1000);
   const rows = data ?? [];
   const ids = rows.map((p) => p.id!);
   const { data: opps } = ids.length ? await supabase.from("opportunities").select("project_id").is("archived_at", null).in("project_id", ids) : { data: [] };
@@ -46,6 +46,9 @@ export async function listProjects(): Promise<ProjectListRow[]> {
 }
 
 export interface ProjectDetail {
+  follow_up_contact_id: string | null;
+  follow_up_contact_name: string | null;
+  product_specification: string | null;
   id: string;
   name: string;
   project_type: string | null;
@@ -71,17 +74,21 @@ export interface ProjectDetail {
 
 export async function getProjectDetail(id: string): Promise<ProjectDetail | null> {
   const supabase = await createServerSupabase();
-  const { data: p } = await supabase.from("projects").select("*, accounts(name), contacts(display_name)").eq("id", id).maybeSingle();
+  const { data: p } = await supabase.from("projects").select("*, accounts(name), contacts!projects_primary_contact_id_fkey(display_name)").eq("id", id).maybeSingle();
   if (!p) return null;
-  const [{ data: sites }, opportunities, purchases, { data: tasks }, timeline, audit] = await Promise.all([
+  const [{ data: sites }, opportunities, purchases, { data: tasks }, timeline, audit, { data: pic }] = await Promise.all([
     supabase.from("project_sites").select("id, label, address, access_notes").eq("project_id", id).order("created_at"),
     getOpportunitiesFor({ project_id: id }),
     getPurchasesFor({ project_id: id }),
     supabase.from("tasks").select("id, title, status, due_at, assignee_id, priority").eq("project_id", id).order("due_at", { ascending: true, nullsFirst: false }).limit(50),
     getTimeline("project", id),
     getAuditFor([id]),
+    p.follow_up_contact_id ? supabase.from("contacts").select("display_name").eq("id", p.follow_up_contact_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   return {
+    follow_up_contact_id: p.follow_up_contact_id,
+    follow_up_contact_name: pic?.display_name ?? null,
+    product_specification: p.product_specification,
     id: p.id!,
     name: p.name ?? "",
     project_type: p.project_type,

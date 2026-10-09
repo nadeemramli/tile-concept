@@ -77,7 +77,8 @@ export async function findCandidatesAction(input: { phone?: string; email?: stri
   }
 }
 
-export async function createWalkInContactAction(input: { display_name: string; phone?: string; email?: string; customer_type?: string; source?: string; provisional?: boolean }): Promise<ActionResult<{ contact_id: string; duplicates: number }>> {
+export async function createWalkInContactAction(input: { display_name: string; phone?: string; email?: string; customer_type?: string; source?: string; provisional?: boolean; account_id?: string }): Promise<ActionResult<{ contact_id: string; duplicates: number }>> {
+  if (input.account_id && !uuid().safeParse(input.account_id).success) return fail("Choose a valid company.");
   const name = z.string().trim().min(2).max(200).safeParse(input.display_name);
   if (!name.success) return fail("Enter the customer's name (at least 2 characters).");
   try {
@@ -85,6 +86,7 @@ export async function createWalkInContactAction(input: { display_name: string; p
     const supabase = await createServerSupabase();
     const { data: contactId, error } = await supabase.rpc("create_contact", {
       p_display_name: name.data,
+      p_account_id: input.account_id || undefined,
       p_phone: blank(input.phone),
       p_email: blank(input.email),
       p_customer_type: blank(input.customer_type),

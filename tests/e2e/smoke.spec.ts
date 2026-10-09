@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectHealthyRoute, PRIMARY_ROUTES, REPORT_ROUTES, SECONDARY_ROUTES } from "./route-smoke";
 
 const ADMIN = { email: "demo.admin@tileconcept.test", password: "TileDemo!2026" };
 
@@ -23,14 +24,12 @@ test("admin can sign in and see the Command Centre", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
 });
 
-test("core routes render for admin", async ({ page }) => {
-  await login(page);
-  for (const path of ["/sales/inbox", "/sales/pipeline", "/sales/accounts", "/sales/projects", "/sales/walk-ins", "/sales/tasks", "/sales/identity-review", "/merchandise/catalog", "/merchandise/pricing", "/platform/audit", "/platform/settings", "/platform/data-health", "/platform/integrations", "/marketing/shoot-calendar", "/merchandise/stock"]) {
-    const res = await page.goto(path);
-    expect(res?.status(), path).toBeLessThan(500);
-    await expect(page.locator("main h1").first(), path).toBeVisible();
-  }
-});
+for (const path of [...PRIMARY_ROUTES.map((route) => route.path), ...REPORT_ROUTES, ...SECONDARY_ROUTES]) {
+  test(`admin route renders: ${path}`, async ({ page }) => {
+    await login(page);
+    await expectHealthyRoute(page, path);
+  });
+}
 
 test("global search finds a seeded product", async ({ page }) => {
   await login(page);

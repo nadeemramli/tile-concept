@@ -35,7 +35,8 @@ select lives_ok($$select api.annotate_inquiry('eeeeeeee-2109-0011-0000-000000000
 select is((select source_channel from api.leads where id='eeeeeeee-2109-0011-0000-000000000001'),'google_ads','Google Ads is distinct from generic website');
 
 select pg_temp.inbox_act_as('aaaaaaaa-0000-0000-0000-000000000004');
-select throws_like($$select api.annotate_inquiry('eeeeeeee-2109-0011-0000-000000000001',gen_random_uuid(),'remark','Other owner attempted write')$$,'%not the owner%','teammate read access does not grant remark writes');
+select lives_ok($$select api.annotate_inquiry('eeeeeeee-2109-0011-0000-000000000001',gen_random_uuid(),'remark','Shared teammate context')$$,'sales_rep shared-edit grant permits teammate remarks');
+select is((select actor_id from api.activities where lead_id='eeeeeeee-2109-0011-0000-000000000001' and body='Shared teammate context'),'aaaaaaaa-0000-0000-0000-000000000004'::uuid,'shared remark retains the actual teammate author');
 select pg_temp.inbox_act_as('aaaaaaaa-0000-0000-0000-000000000002');
 select lives_ok($$select api.annotate_inquiry('eeeeeeee-2109-0011-0000-000000000001',gen_random_uuid(),'remark','Manager follow-up context')$$,'manager can annotate team inquiry');
 select throws_like($$select api.annotate_inquiry('eeeeeeee-2109-0011-0000-000000000099',gen_random_uuid(),'remark','Wrong workspace attempt')$$,'%workspace%','cross-workspace write denied');

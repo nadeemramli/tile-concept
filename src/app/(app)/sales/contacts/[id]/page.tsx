@@ -105,7 +105,7 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
                 </ul>
               </div>
               <div>
-                <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Organisations</div>
+                <div className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Companies</div>
                 {contact.relationships.length === 0 && <p className="text-sm text-muted-foreground">Not linked to an account.</p>}
                 <ul className="space-y-1 text-sm">
                   {contact.relationships.map((r) => (
@@ -149,7 +149,7 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
             )}
           </SectionCard>
 
-          <SectionCard title="Purchases" count={contact.purchases.length}>
+          <SectionCard title="Sales, invoices & receipts" count={contact.purchases.length}>
             <PurchasesList items={contact.purchases} />
           </SectionCard>
 

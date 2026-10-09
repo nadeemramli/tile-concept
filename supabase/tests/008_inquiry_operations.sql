@@ -78,7 +78,7 @@ select is((api.inquiry_page('all','017-888-0001')->>'total')::int,1,'formatted p
 select is((api.inquiry_page('all','%',p_size=>25)->>'total')::int,0,'search wildcard is literal');
 select is((api.inquiry_page('all','Pagination fixture',p_source=>'meta')->>'total')::int,0,'source filter applies before counts');
 select is((api.inquiry_page('all','Pagination fixture')->'counts'->>'upcoming')::int,1100,'view counts use same untruncated search scope');
-select throws_like($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000002','whatsapp_sent',gen_random_uuid())$$,'%owner%','shared lead visibility does not permit another owner to write');
+select lives_ok($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000002','whatsapp_sent',gen_random_uuid())$$,'deployed shared-edit grant permits a teammate WhatsApp marker');
 select is((api.inquiry_page('all','Cross-workspace inquiry')->>'total')::int,0,'server search cannot leak another workspace');
 select throws_like($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000099','whatsapp_sent',gen_random_uuid())$$,'%workspace%','direct RPC cannot mutate another workspace');
 select throws_like($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000001',null,gen_random_uuid())$$,'%Unknown inquiry action%','null action rejected');
@@ -86,12 +86,13 @@ select throws_like($$select api.work_inquiry('cccccccc-2109-0000-0000-0000000000
 
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000004');
 select is((select open_follow_ups::int from api.inbox_leads where id='cccccccc-2109-0000-0000-000000000001'),1,'teammate sees the shared reminder summary');
-select is((select count(*)::int from api.tasks where lead_id='cccccccc-2109-0000-0000-000000000001'),0,'teammate cannot read private task records');
+select is((select count(*)::int from api.tasks where lead_id='cccccccc-2109-0000-0000-000000000001'),3,'teammate can read shared open and historical task records');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000002');
 select lives_ok($$select api.assign_lead('cccccccc-2109-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000004','Cover colleague')$$,'manager reassigns inquiry');
 select is((select follow_up_owner_id::text from api.inbox_leads where id='cccccccc-2109-0000-0000-000000000001'),'aaaaaaaa-0000-0000-0000-000000000004','reassignment transfers outstanding reminder');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
-select throws_like($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000001','complete',gen_random_uuid(),p_body=>'Old owner attempt')$$,'%owner%','former owner cannot complete reassigned follow-up');
+select lives_ok($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000001','complete',gen_random_uuid(),p_body=>'Shared teammate follow-up outcome')$$,'shared-edit permission survives a change of inquiry owner');
+select is((select completed_follow_ups::int from api.inbox_leads where id='cccccccc-2109-0000-0000-000000000001'),2,'teammate completion persists alongside prior follow-up history');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000006');
 select throws_like($$select api.inquiry_page()$$,'%permission denied%','non-sales role cannot query inquiry dashboard');
 reset role;

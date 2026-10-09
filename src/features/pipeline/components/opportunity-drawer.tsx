@@ -216,7 +216,7 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         )}
       </DrawerSection>
 
-      <DrawerSection title={`Purchases (${opp.purchases.length})`}>
+      <DrawerSection title={`Sales, invoices & receipts (${opp.purchases.length})`}>
         <PurchasesList items={opp.purchases} />
       </DrawerSection>
 

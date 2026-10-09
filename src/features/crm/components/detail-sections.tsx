@@ -54,7 +54,7 @@ export function PurchasesList({ items }: { items: PurchaseSummary[] }) {
       {items.map((p) => (
         <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
           <span className="tnum w-24 text-xs text-muted-foreground">{formatDate(p.purchased_at)}</span>
-          <span className="w-28 font-mono text-[12px] tnum">{p.external_ref ?? "—"}</span>
+          <Link href={`/sales/record-sale?id=${p.id}`} className="w-36 text-xs hover:underline"><span className="block text-muted-foreground">{p.document_type ? titleCase(p.document_type) : "Sale / receipt"}</span><span className="font-mono">{p.external_ref ?? "Open sale"}</span></Link>
           <span className="tnum w-28 font-medium">{formatMoney(p.amount, p.currency)}</span>
           <span className="flex-1 truncate text-xs text-muted-foreground">{p.payments.map((m) => titleCase(m)).join(", ") || "—"}</span>
           {p.is_repeat && (

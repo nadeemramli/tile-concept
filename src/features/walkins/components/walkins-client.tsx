@@ -20,6 +20,7 @@ import { Field } from "@/components/patterns/field";
 import { DisabledHint, Gated, gateReason } from "@/components/patterns/explain";
 import { PURCHASE_STATUS, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatDateTime, formatMoney, formatRelative, titleCase } from "@/lib/format";
+import { VisitQuotationFiles } from "./visit-quotation-files";
 import { useSession } from "@/components/shell/session-context";
 import { correctPurchaseAction } from "@/server/commands/walkins";
 import type { PurchaseRow, VisitRow } from "@/features/walkins/types";
@@ -272,6 +273,9 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
                 ]}
               />
               {visit.notes && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{visit.notes}</p>}
+            </DrawerSection>
+            <DrawerSection title="Quotation files">
+              <VisitQuotationFiles key={visit.id} visitId={visit.id} canWrite={can("sales.write")} />
             </DrawerSection>
             <DrawerSection title="Customer feedback & Google review">
               {customerReview?.id && !visitFeedback.some(f => f.id === customerReview.id) ? <p className="rounded border p-3 text-sm">An earlier Google review is recorded for this customer: {titleCase(customerReview.review_outcome ?? "unknown")}. <Link className="text-info underline" href={`/sales/feedback/new?request=${customerReview.id}`}>Open earlier request</Link></p> : null}

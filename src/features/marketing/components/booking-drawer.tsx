@@ -23,6 +23,7 @@ import type { ProfileRef } from "@/server/queries/reference";
 import { formatDate, formatDateTime, titleCase } from "@/lib/format";
 import { APP_TZ_LABEL, timeRangeLabel } from "@/features/marketing/lib/time";
 import { cn } from "@/lib/utils";
+import { RelatedCreatives } from "@/features/creative/components/related-creatives";
 
 const CONTENT_TYPE_LABELS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.label]));
 const CONTENT_TYPE_HINTS = Object.fromEntries(CONTENT_TYPES.map((c) => [c.value, c.hint]));
@@ -245,8 +246,10 @@ export function BookingDrawer({
         )}
       </DrawerSection>
 
+      <RelatedCreatives sourceId={booking.content_opportunity_id} shootId={booking.id} />
+
       <DrawerSection title={`Outputs (${booking.outputs.length})`} action={<InfoTip label="Outputs" content={{ body: "Photos, video and notes from the shoot. Marking one usable is checked against the customer media permission by the database, so it cannot be done while that is unapproved or expired.", action: CUSTOMER_MEDIA_PERMISSION_HINT.action }} />}>
-        <OutputsList outputs={booking.outputs} permissionStatus={booking.permission_status} permissionExpiresAt={booking.permission_expires_at} />
+        <OutputsList outputs={booking.outputs} contentOpportunityId={booking.content_opportunity_id} shootId={booking.id} permissionStatus={booking.permission_status} permissionExpiresAt={booking.permission_expires_at} />
       </DrawerSection>
 
       <DrawerSection title={`Booking history (${booking.status_events.length})`} action={<InfoTip label="Booking history" content="Every status change with who made it and why. A reschedule keeps the previous slot here." />}>
