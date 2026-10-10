@@ -20,11 +20,32 @@ export const ASSET_KIND: StatusMap = {
 };
 
 export const JOB_STATUS: StatusMap = {
-  queued: { label: "Queued", tone: "neutral", hint: "Waiting for a worker." },
+  queued: { label: "Queued", tone: "neutral", hint: "Waiting for a worker. OCR runs in the background worker, not in the page; meanwhile you can enter rows by hand." },
   running: { label: "Running", tone: "info", hint: "In progress." },
   succeeded: { label: "Succeeded", tone: "success", hint: "Finished without error." },
-  failed: { label: "Failed", tone: "destructive", hint: "Stopped with an error. It will be retried with backoff." },
-  dead_letter: { label: "Dead letter", tone: "destructive", hint: "Retries are exhausted. It needs a person to look at the error and re-run it." },
+  failed: { label: "Failed", tone: "destructive", hint: "Stopped with an error the file itself caused. Each page has a manual-entry row." },
+  dead_letter: { label: "Dead letter", tone: "destructive", hint: "Retries are exhausted. Each page has a manual-entry row; fix the cause and retry." },
+};
+
+/** Why an OCR job stopped. Input problems are not retried; the rest are. */
+export const OCR_FAILURE: StatusMap = {
+  transient: { label: "Temporary error", tone: "warning", hint: "The worker hit an error that may not recur. It retries with backoff; you can also retry it now." },
+  retries_exhausted: { label: "Retries used up", tone: "destructive", hint: "Every automatic attempt failed. Each page now has a manual-entry row; you can retry once the cause is fixed." },
+  engine_unavailable: { label: "OCR engine missing", tone: "destructive", hint: "The worker has no Tesseract installation. Pages became manual-entry rows; retry after the engine is installed." },
+  encrypted: { label: "Encrypted PDF", tone: "destructive", hint: "The PDF is password-protected, so its pages cannot be read. Upload an unlocked copy, or enter the rows by hand." },
+  unsupported: { label: "Unsupported file", tone: "destructive", hint: "The file could not be decoded as a scanned PDF or image. Enter the rows by hand." },
+  oversize: { label: "Too large", tone: "destructive", hint: "The file is larger than OCR accepts (25 MB). Split it, or enter the rows by hand." },
+  too_many_pages: { label: "Too many pages", tone: "destructive", hint: "OCR reads at most 20 pages per job. Choose the pages to read." },
+  source_missing: { label: "Original missing", tone: "destructive", hint: "The stored original could not be found. Re-upload it, or enter the rows by hand." },
+};
+
+/** Per-page result of an OCR job. */
+export const OCR_PAGE_OUTCOME: StatusMap = {
+  read: { label: "Read", tone: "success", hint: "Text was recognised and proposals were staged for review." },
+  unreadable: { label: "Unreadable", tone: "destructive", hint: "The scan was too poor, or no product code was found. The page has a manual-entry row." },
+  no_text: { label: "Text layer", tone: "info", hint: "The page already has selectable text, so the text parser read it and OCR skipped it." },
+  no_image: { label: "No image", tone: "warning", hint: "The page has neither text nor a scanned image. It has a manual-entry row." },
+  failed: { label: "Failed", tone: "destructive", hint: "The engine failed on this page." },
 };
 
 export const REVIEW_ITEM_STATUS: StatusMap = {

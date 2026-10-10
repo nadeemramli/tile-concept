@@ -10,12 +10,17 @@ import type { Json } from "@/lib/supabase/database.types";
 import {
   approveSchema,
   archiveSchema,
+  manualItemSchema,
   parseAssetSchema,
   registerAssetSchema,
   rejectSchema,
+  requestOcrSchema,
+  retryOcrSchema,
   signedUrlSchema,
   isSignableSourceObject,
   type ApproveInput,
+  type ManualItemInput,
+  type RequestOcrInput,
   type RegisterAssetInput,
   type RejectInput,
 } from "@/features/sources/schema";
@@ -82,6 +87,19 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
 
     const kind = classifySource(asset.name ?? "", asset.mime_type);
 
+    // An image has no text layer: it goes straight to the OCR worker. If OCR
+    // refuses it (size, format), the refusal is the answer and manual entry
+    // remains available from the source.
+    if (kind === "image") {
+      const queued = await queueOcr(supabase, asset.id, [1]);
+      revalidatePath("/sources/library");
+      if (!queued.ok) return fail(`${queued.error} You can still enter its rows by hand from the source.`);
+      return ok(
+        { records: 0, review_items: 0, duplicates: 0, note: queued.reused ? "OCR for this image was already requested" : "Queued for OCR" },
+        queued.reused ? "OCR for this image was already requested." : "Queued for OCR. Proposals appear in review when the worker has read it.",
+      );
+    }
+
     // Read the original with the service-role client: the object is private and
     // the parse runs on the server, never in the browser.
     const admin = createAdminSupabase();
@@ -96,7 +114,7 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
     const PARSER_VERSION: Record<string, string> = { pdf: "pdf-text@1", excel: "sheet@1", csv: "sheet@1", image: "image@1" };
     const { data: jobId, error: jobErr } = await supabase.rpc("create_ingestion_job", {
       p_source_asset_id: asset.id,
-      p_job_type: kind === "pdf" ? "parse_pdf" : kind === "image" ? "ocr" : "parse_sheet",
+      p_job_type: kind === "pdf" ? "parse_pdf" : "parse_sheet",
       p_parser_version: PARSER_VERSION[kind] ?? "none@1",
     });
     if (jobErr || !jobId) return fail(jobErr ?? "Could not create the import job");
@@ -108,10 +126,25 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
       result = { records: [], stats: {}, parserVersion: "unknown@1", jobType: "manual", error: e instanceof Error ? e.message : "Extraction failed" };
     }
 
+    // Scanned pages go to the OCR worker. Only if OCR refuses them do they stay
+    // as manual-entry rows here — either way nothing is silently dropped.
+    const rasterPages = result.records.filter((r) => r.issues.some((i) => i.code === "needs_manual")).map((r) => r.page_no ?? 1);
+    let ocrNote: string | undefined;
+    let records = result.records;
+    if (kind === "pdf" && rasterPages.length > 0) {
+      const queued = await queueOcr(supabase, asset.id, rasterPages);
+      if (queued.ok) {
+        records = result.records.filter((r) => !r.issues.some((i) => i.code === "needs_manual"));
+        ocrNote = `${rasterPages.length} scanned page(s) ${queued.reused ? "already queued" : "queued"} for OCR`;
+      } else {
+        ocrNote = `OCR refused the scanned page(s): ${queued.error}`;
+      }
+    }
+
     const status = result.error && result.records.length === 0 ? "failed" : "succeeded";
     const { data: summary, error: recErr } = await supabase.rpc("record_extraction", {
       p_job_id: jobId,
-      p_records: result.records as unknown as Json,
+      p_records: records as unknown as Json,
       p_status: status,
       p_error: result.error ?? undefined,
       p_stats: { ...result.stats, parser_version: result.parserVersion } as unknown as Json,
@@ -119,15 +152,81 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
     if (recErr) return fail(recErr);
 
     const counts = (summary ?? {}) as { records?: number; review_items?: number; duplicates?: number };
-    const manual = result.records.filter((r) => r.issues.some((i) => i.code === "needs_manual")).length;
+    const manual = records.filter((r) => r.issues.some((i) => i.code === "needs_manual")).length;
     revalidatePath("/sources/library");
     revalidatePath("/sources/review");
 
     if (status === "failed") return fail(result.error ?? "Nothing could be extracted from this file");
+    const note = [ocrNote, manual ? `${manual} page(s) need manual entry` : undefined].filter(Boolean).join("; ") || undefined;
     return ok(
-      { records: Number(counts.records ?? 0), review_items: Number(counts.review_items ?? 0), duplicates: Number(counts.duplicates ?? 0), note: manual ? `${manual} page(s) need manual entry` : undefined },
-      `Extracted ${counts.records ?? 0} row(s) into the review queue.`,
+      { records: Number(counts.records ?? 0), review_items: Number(counts.review_items ?? 0), duplicates: Number(counts.duplicates ?? 0), note },
+      `Extracted ${counts.records ?? 0} row(s) into the review queue.${ocrNote ? ` ${ocrNote}.` : ""}`,
     );
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+type ServerSupabase = Awaited<ReturnType<typeof createServerSupabase>>;
+
+/** The database decides limits and de-duplication; this only relays its answer. */
+async function queueOcr(supabase: ServerSupabase, assetId: string, pages?: number[]): Promise<{ ok: true; jobId: string; reused: boolean } | { ok: false; error: string }> {
+  const { data, error } = await supabase.rpc("request_ocr", { p_source_asset_id: assetId, p_pages: pages });
+  if (error) return { ok: false, error: error.message };
+  const r = (data ?? {}) as { job_id?: string; reused?: boolean };
+  if (!r.job_id) return { ok: false, error: "OCR could not be queued" };
+  return { ok: true, jobId: r.job_id, reused: Boolean(r.reused) };
+}
+
+/** Queue OCR for a source's scanned pages (TILE-22). Runs in the background worker. */
+export async function requestOcrAction(input: RequestOcrInput): Promise<ActionResult<{ job_id: string; reused: boolean }>> {
+  try {
+    await requirePermission("source.import");
+    const parsed = requestOcrSchema.safeParse(input);
+    if (!parsed.success) return fail("Check the page numbers", parsed.error.flatten().fieldErrors as Record<string, string[]>);
+    const supabase = await createServerSupabase();
+    const res = await queueOcr(supabase, parsed.data.asset_id, parsed.data.pages);
+    if (!res.ok) return fail(res.error);
+    revalidatePath("/sources/library");
+    return ok({ job_id: res.jobId, reused: res.reused }, res.reused ? "OCR for these pages was already requested." : "Queued for OCR.");
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function retryOcrJobAction(input: { job_id: string }): Promise<ActionResult> {
+  try {
+    await requirePermission("source.import");
+    const parsed = retryOcrSchema.safeParse(input);
+    if (!parsed.success) return fail("Invalid job");
+    const supabase = await createServerSupabase();
+    const { error } = await supabase.rpc("retry_ocr_job", { p_job_id: parsed.data.job_id });
+    if (error) return fail(error);
+    revalidatePath("/sources/library");
+    return ok(undefined, "Queued again for OCR.");
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Manual fallback: a blank review row tied to a page of the original. */
+export async function addManualReviewItemAction(input: ManualItemInput): Promise<ActionResult<{ review_item_id: string }>> {
+  try {
+    await requirePermission("source.import");
+    const parsed = manualItemSchema.safeParse(input);
+    if (!parsed.success) return fail("Check the highlighted fields", parsed.error.flatten().fieldErrors as Record<string, string[]>);
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.rpc("add_manual_review_item", {
+      p_source_asset_id: parsed.data.asset_id,
+      p_page_no: parsed.data.page_no,
+      p_item_type: parsed.data.item_type,
+      p_note: parsed.data.note || undefined,
+    });
+    if (error) return fail(error);
+    if (!data) return fail("The manual row could not be created");
+    revalidatePath("/sources/library");
+    revalidatePath("/sources/review");
+    return ok({ review_item_id: data as string }, "Manual row added. Type its values from the original, then approve.");
   } catch (e) {
     return fail(e);
   }

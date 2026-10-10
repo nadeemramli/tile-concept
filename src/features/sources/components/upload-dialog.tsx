@@ -143,7 +143,7 @@ export function UploadDialog({ open, onOpenChange, suppliers, brands }: { open: 
         </DialogHeader>
 
         <div className="space-y-3">
-          <Field label="File" htmlFor="source-file" required hint="Native text and spreadsheet cells are read directly. Scanned pages are queued for manual entry.">
+          <Field label="File" htmlFor="source-file" required hint="Native text and spreadsheet cells are read directly. Scanned pages and images are queued for OCR in the background; what it reads waits for review, and any page can be entered by hand.">
             <Input
               id="source-file"
               ref={inputRef}

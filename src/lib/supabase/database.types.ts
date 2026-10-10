@@ -4075,13 +4075,22 @@ export type Database = {
           attempts: number | null
           created_at: string | null
           created_by: string | null
+          engine: string | null
+          engine_version: string | null
           error: string | null
+          failure_kind: string | null
           finished_at: string | null
           id: string | null
           job_type: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          max_attempts: number | null
+          next_attempt_at: string | null
           parser_version: string | null
           progress: Json | null
+          requested_pages: number[] | null
           source_asset_id: string | null
+          source_checksum: string | null
           started_at: string | null
           stats: Json | null
           status: string | null
@@ -4091,13 +4100,22 @@ export type Database = {
           attempts?: number | null
           created_at?: string | null
           created_by?: string | null
+          engine?: string | null
+          engine_version?: string | null
           error?: string | null
+          failure_kind?: string | null
           finished_at?: string | null
           id?: string | null
           job_type?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          max_attempts?: number | null
+          next_attempt_at?: string | null
           parser_version?: string | null
           progress?: Json | null
+          requested_pages?: number[] | null
           source_asset_id?: string | null
+          source_checksum?: string | null
           started_at?: string | null
           stats?: Json | null
           status?: string | null
@@ -4107,13 +4125,22 @@ export type Database = {
           attempts?: number | null
           created_at?: string | null
           created_by?: string | null
+          engine?: string | null
+          engine_version?: string | null
           error?: string | null
+          failure_kind?: string | null
           finished_at?: string | null
           id?: string | null
           job_type?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          max_attempts?: number | null
+          next_attempt_at?: string | null
           parser_version?: string | null
           progress?: Json | null
+          requested_pages?: number[] | null
           source_asset_id?: string | null
+          source_checksum?: string | null
           started_at?: string | null
           stats?: Json | null
           status?: string | null
@@ -4204,6 +4231,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_records_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -5602,6 +5636,174 @@ export type Database = {
           sources?: string[] | null
         }
         Relationships: []
+      }
+      ocr_jobs: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          created_by: string | null
+          engine: string | null
+          engine_version: string | null
+          error: string | null
+          failure_kind: string | null
+          finished_at: string | null
+          id: string | null
+          max_attempts: number | null
+          next_attempt_at: string | null
+          pages: Json | null
+          parser_version: string | null
+          pending_items: number | null
+          requested_pages: number[] | null
+          review_items: number | null
+          source_asset_id: string | null
+          source_checksum: string | null
+          source_name: string | null
+          started_at: string | null
+          stats: Json | null
+          status: string | null
+          superseded: boolean | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ocr_page_results: {
+        Row: {
+          created_at: string | null
+          detail: string | null
+          engine: string | null
+          engine_version: string | null
+          height_px: number | null
+          id: string | null
+          image_path: string | null
+          job_id: string | null
+          mean_confidence: number | null
+          outcome: string | null
+          page_no: number | null
+          preprocessing: Json | null
+          text: string | null
+          tsv_path: string | null
+          width_px: number | null
+          word_count: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          detail?: string | null
+          engine?: string | null
+          engine_version?: string | null
+          height_px?: number | null
+          id?: string | null
+          image_path?: string | null
+          job_id?: string | null
+          mean_confidence?: number | null
+          outcome?: string | null
+          page_no?: number | null
+          preprocessing?: Json | null
+          text?: string | null
+          tsv_path?: string | null
+          width_px?: number | null
+          word_count?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          detail?: string | null
+          engine?: string | null
+          engine_version?: string | null
+          height_px?: number | null
+          id?: string | null
+          image_path?: string | null
+          job_id?: string | null
+          mean_confidence?: number | null
+          outcome?: string | null
+          page_no?: number | null
+          preprocessing?: Json | null
+          text?: string | null
+          tsv_path?: string | null
+          width_px?: number | null
+          word_count?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_page_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       opportunities: {
         Row: {
@@ -8430,6 +8632,13 @@ export type Database = {
             foreignKeyName: "review_items_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["job_id"]
           },
@@ -8495,6 +8704,12 @@ export type Database = {
           item_type: string | null
           job_id: string | null
           job_type: string | null
+          ocr_engine: string | null
+          ocr_engine_version: string | null
+          ocr_height_px: number | null
+          ocr_image_path: string | null
+          ocr_page_confidence: number | null
+          ocr_width_px: number | null
           page_count: number | null
           page_no: number | null
           parser_version: string | null
@@ -11737,6 +11952,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_manual_review_item: {
+        Args: {
+          p_item_type?: string
+          p_note?: string
+          p_page_no?: number
+          p_source_asset_id: string
+        }
+        Returns: string
+      }
       annotate_inquiry: {
         Args: {
           p_action: string
@@ -12164,6 +12388,31 @@ export type Database = {
         }
         Returns: string
       }
+      ocr_claim_job: {
+        Args: { p_lease_seconds?: number; p_worker: string }
+        Returns: Json
+      }
+      ocr_complete_job: {
+        Args: {
+          p_engine?: string
+          p_engine_version?: string
+          p_job_id: string
+          p_lease_token: string
+          p_pages: Json
+          p_records: Json
+          p_stats?: Json
+        }
+        Returns: Json
+      }
+      ocr_fail_job: {
+        Args: {
+          p_error: string
+          p_failure_kind?: string
+          p_job_id: string
+          p_lease_token: string
+        }
+        Returns: Json
+      }
       open_reconciliation_case: {
         Args: {
           p_expected: number
@@ -12538,6 +12787,10 @@ export type Database = {
           visits: number
         }[]
       }
+      request_ocr: {
+        Args: { p_pages?: number[]; p_source_asset_id: string }
+        Returns: Json
+      }
       resolve_reconciliation_case: {
         Args: { p_case_id: string; p_notes: string; p_status: string }
         Returns: undefined
@@ -12552,6 +12805,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      retry_ocr_job: { Args: { p_job_id: string }; Returns: Json }
       reveal_contact_points: {
         Args: { p_contact_id: string }
         Returns: {

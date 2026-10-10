@@ -66,10 +66,10 @@ export default async function SourceLibraryPage({ searchParams }: PageProps<"/so
           tone={counts.needsManual ? "warning" : "neutral"}
           href="/sources/review?conflicts=1"
           info={{
-            definition: "Scanned pages and images with no text layer.",
+            definition: "Pages OCR could not read, and pages OCR was not allowed to read (too large, encrypted, unsupported).",
             grain: "Review item",
             source: "ingest.review_items",
-            caveat: "OCR runs in the background worker (PRD §12.5); until it ships these are entered by hand.",
+            caveat: "Readable scans become OCR proposals instead. While a job is queued, any page can still be entered by hand from the source.",
           }}
         />
       </div>
