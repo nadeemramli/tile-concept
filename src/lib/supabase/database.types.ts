@@ -8698,6 +8698,7 @@ export type Database = {
           confidence: number | null
           conflicts: Json | null
           created_at: string | null
+          decision_corrections: Json | null
           decision_note: string | null
           fields: Json | null
           id: string | null

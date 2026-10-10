@@ -198,7 +198,9 @@ test("admin imports a scanned catalogue; OCR proposals are edited, approved and 
 
   // Reload: the decision and the corrected value are what the queue shows.
   await page.goto(`/sources/review?status=corrected&asset=${asset}&item=${itemId}`);
+  // A decided row shows what was published (the correction), not the OCR reading.
   await expect(page.locator("#f-code")).toHaveValue(CODE);
+  await expect(page.locator("#f-name")).toHaveValue(`Synthetic grey matt ${tag}`);
   await expect(page.getByText(/published this on/)).toBeVisible();
 
   // The second entry was never approved: still pending, still nowhere in the catalogue.

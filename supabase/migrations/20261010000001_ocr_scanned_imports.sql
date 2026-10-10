@@ -548,7 +548,12 @@ select ri.id, ri.workspace_id, ri.item_type, ri.proposed, ri.conflicts, ri.statu
           from ingest.extracted_fields f where f.record_id = r.id) as fields,
        ri.task_type, ri.priority, ri.review_target_type, ri.review_target_key,
        op.image_path as ocr_image_path, op.width_px as ocr_width_px, op.height_px as ocr_height_px,
-       op.mean_confidence as ocr_page_confidence, j.engine as ocr_engine, j.engine_version as ocr_engine_version
+       op.mean_confidence as ocr_page_confidence, j.engine as ocr_engine, j.engine_version as ocr_engine_version,
+       -- What the reviewer changed, so a decided row shows what was published
+       -- and not only what the machine read.
+       (select d.corrected_value from ingest.review_decisions d
+         where d.workspace_id = ri.workspace_id and d.review_target_type = 'review_item' and d.review_target_id = ri.id
+         order by d.reviewed_at desc, d.created_at desc limit 1) as decision_corrections
 from ingest.review_items ri
 left join ingest.ingestion_jobs j on j.id = ri.job_id
 left join ingest.source_assets a on a.id = coalesce(ri.source_asset_id, j.source_asset_id)

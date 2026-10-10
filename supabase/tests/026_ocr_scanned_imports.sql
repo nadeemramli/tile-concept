@@ -2,7 +2,7 @@
 -- leases, retry, manual fallback, permissions and the unchanged publish gate.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(50);
+select plan(51);
 
 -- Synthetic fixtures only. W = seeded workspace, X = another workspace.
 insert into core.workspaces(id, name, slug) values ('0c22a000-0000-4000-8000-00000000000a', 'Synthetic OCR isolation', 'synthetic-ocr-isolation');
@@ -181,6 +181,8 @@ select isnt((api.approve_review_item((select (v#>>'{}')::uuid from r where k = '
 'typed from page 2'))->>'product_id',
   null,
   'a manual row publishes only through the same explicit approval');
+select is((select decision_corrections->>'code' from api.review_queue where id = (select (v#>>'{}')::uuid from r where k = 'manual')), 'SYN-OCR-MANUAL-1',
+  'the review queue carries the reviewer''s correction, so a decided row shows what was published');
 reset role;
 select is((select source_asset_id from merch.products where code = 'SYN-OCR-MANUAL-1'), '0c22a000-0000-4000-8000-000000000001'::uuid, 'and keeps the source it was typed from');
 
