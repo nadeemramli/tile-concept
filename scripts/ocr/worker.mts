@@ -8,12 +8,16 @@
  *
  * Flags: --once (drain due jobs, then exit) · --poll=<ms> (default 5000)
  *        --max-jobs=<n> · --worker=<name>
+ *        --check (engine + read-only database check, claims nothing)
+ * SUPABASE_SECRET_KEY_FILE reads the key from a file (a container secret).
+ * Hosted placement: infra/ocr-worker/README.md.
  *
  * The document never leaves this machine: OCR is a local subprocess, with no
  * hosted provider, key or cost. The worker refuses a non-local Supabase URL
  * unless OCR_WORKER_ALLOW_REMOTE=1 is set deliberately by the operator.
  */
 import { createClient } from "@supabase/supabase-js";
+import { readFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { OcrFailure, detectEngine, runOcr, type EngineInfo } from "../../src/lib/ocr/engine";
 
@@ -28,8 +32,11 @@ const pollMs = Number(args.get("poll") ?? 5000);
 const maxJobs = Number(args.get("max-jobs") ?? Infinity);
 const workerName = args.get("worker") ?? `ocr-worker@${hostname()}:${process.pid}`;
 
+const check = args.has("check");
 const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+// A container reads the key from a mounted secret file (infra/ocr-worker).
+const keyFile = process.env.SUPABASE_SECRET_KEY_FILE;
+const key = keyFile ? readFileSync(keyFile, "utf8").trim() : (process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY);
 if (!url || !key) {
   console.error("SUPABASE_URL and SUPABASE_SECRET_KEY are required (the worker is a trusted server consumer).");
   process.exit(2);
@@ -145,6 +152,13 @@ async function main() {
     log("engine ready", { engine: engine.engine, version: engine.version, languages: engine.languages });
   } catch (e) {
     log("engine unavailable — jobs will fail to manual entry", { error: e instanceof Error ? e.message : String(e) });
+  }
+
+  // --check: prove the engine and a read-only database round trip, claim nothing.
+  if (check) {
+    const { count, error } = await db.from("ocr_jobs").select("id", { count: "exact", head: true }).eq("status", "queued");
+    log("check", { engine: engine ? `${engine.engine} ${engine.version}` : null, database: error ? `error: ${error.message}` : "ok", queued_jobs: count ?? null });
+    process.exit(engine && !error ? 0 : 1);
   }
 
   let done = 0;

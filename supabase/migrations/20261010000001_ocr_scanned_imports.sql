@@ -534,6 +534,8 @@ from ingest.ingestion_jobs j
 join ingest.source_assets a on a.id = j.source_asset_id
 where j.job_type = 'ocr';
 grant select on api.ocr_jobs to authenticated;
+-- The worker's read-only --check counts queued jobs through this view.
+grant select on api.ocr_jobs to service_role;
 
 -- The review queue gains the OCR page image and engine for the evidence pane.
 -- Appended columns only, so existing selects keep working.
