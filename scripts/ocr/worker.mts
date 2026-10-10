@@ -17,9 +17,9 @@
  * unless OCR_WORKER_ALLOW_REMOTE=1 is set deliberately by the operator.
  */
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
-import { OcrFailure, detectEngine, runOcr, type EngineInfo } from "../../src/lib/ocr/engine";
+import { OcrFailure, PAGE_TIMEOUT_MS, detectEngine, runOcr, type EngineInfo } from "../../src/lib/ocr/engine";
 
 const args = new Map(
   process.argv.slice(2).map((a) => {
@@ -47,7 +47,25 @@ if (!local && process.env.OCR_WORKER_ALLOW_REMOTE !== "1") {
   process.exit(2);
 }
 
-const db = createClient(url, key, { db: { schema: "api" }, auth: { persistSession: false, autoRefreshToken: false } });
+// Always-on safety. A stalled request fails instead of hanging the loop; the
+// lease covers the slowest bounded job; a job that still overruns ends the
+// process so the supervisor restarts it and the lease frees the job.
+const REQUEST_TIMEOUT_MS = 120_000;
+const MAX_PAGES = 20; // ingest.ocr_limits().max_pages
+const LEASE_SECONDS = Math.ceil((MAX_PAGES * PAGE_TIMEOUT_MS) / 1000) + 300;
+const JOB_DEADLINE_MS = (LEASE_SECONDS - 60) * 1000;
+// Liveness for the container healthcheck: touched every loop and every page.
+const heartbeatFile = process.env.OCR_WORKER_HEARTBEAT_FILE;
+function heartbeat() {
+  if (heartbeatFile) try { writeFileSync(heartbeatFile, new Date().toISOString()); } catch { /* best effort */ }
+}
+
+const timedFetch: typeof fetch = (input, init) =>
+  fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]) : AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+const db = createClient(url, key, { db: { schema: "api" }, auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: timedFetch } });
+
+let stopping = false;
+let current: ClaimedJob | null = null;
 
 interface ClaimedJob {
   job_id: string;
@@ -84,6 +102,11 @@ async function processJob(job: ClaimedJob, engine: EngineInfo | null) {
   // a job only ever reads a file inside its own workspace's folder.
   if (!job.storage_path.startsWith(`${job.workspace_id}/`) || job.storage_path.split("/").includes("..")) {
     return fail(job, "source_missing", "The stored path is outside this workspace, so it was not read");
+  }
+  // Only scanned originals are read: the service role could open any bucket.
+  if (job.storage_bucket !== "source-assets") return fail(job, "source_missing", `Originals are read only from source-assets, not ${job.storage_bucket}`);
+  if (job.size_bytes != null && job.size_bytes > job.limits.max_bytes) {
+    return fail(job, "oversize", `The original is ${job.size_bytes} bytes; OCR reads at most ${job.limits.max_bytes}`);
   }
 
   const dl = await db.storage.from(job.storage_bucket).download(job.storage_path);
@@ -161,21 +184,49 @@ async function main() {
     process.exit(engine && !error ? 0 : 1);
   }
 
+  // A stop (docker compose down/restart) hands the job back instead of holding
+  // its lease until it expires.
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, async () => {
+      stopping = true;
+      log("stopping", { signal, job: current?.job_id ?? null });
+      if (current) await fail(current, "transient", "The OCR worker was stopped during this job");
+      process.exit(0);
+    });
+  }
+
   let done = 0;
-  for (;;) {
-    const { data, error } = await db.rpc("ocr_claim_job", { p_worker: workerName, p_lease_seconds: 600 });
+  let idleMs = pollMs;
+  while (!stopping) {
+    heartbeat();
+    const { data, error } = await db.rpc("ocr_claim_job", { p_worker: workerName, p_lease_seconds: LEASE_SECONDS });
     if (error) {
       log("claim failed", { error: error.message });
       if (once) process.exit(1);
+      // Back off while the project is unreachable, up to five minutes.
+      idleMs = Math.min(idleMs * 2, 300_000);
     } else if (data) {
-      await processJob(data as ClaimedJob, engine);
+      idleMs = pollMs;
+      current = data as ClaimedJob;
+      const watchdog = setTimeout(() => {
+        log("job overran its deadline; exiting so the lease frees it", { job: current?.job_id, deadline_s: JOB_DEADLINE_MS / 1000 });
+        process.exit(1);
+      }, JOB_DEADLINE_MS);
+      try {
+        await processJob(current, engine);
+      } finally {
+        clearTimeout(watchdog);
+        current = null;
+      }
       done += 1;
       if (done >= maxJobs) break;
       continue;
     } else if (once) {
       break;
+    } else {
+      idleMs = pollMs;
     }
-    await new Promise((r) => setTimeout(r, pollMs));
+    await new Promise((r) => setTimeout(r, idleMs));
   }
   log("exiting", { processed: done });
 }
