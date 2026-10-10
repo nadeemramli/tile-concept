@@ -1,0 +1,46 @@
+name: tile-concept-ocr
+
+# One OCR worker for the hosted project. Its own Compose project beside
+# tile-concept-automation (n8n); it publishes no port, joins no proxy network
+# and needs only outbound HTTPS to the Supabase project.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  worker:
+    image: tile-concept-ocr-worker:${OCR_WORKER_TAG:?Set OCR_WORKER_TAG to the built commit in .env}
+    restart: unless-stopped
+    command: ["--poll=10000", "--worker=ocr-worker@tile-concept-ocr"]
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in .env}
+      SUPABASE_SECRET_KEY_FILE: /run/secrets/supabase_secret_key
+      # The worker refuses a non-local project unless this is set on purpose.
+      OCR_WORKER_ALLOW_REMOTE: "1"
+      TZ: Asia/Kuala_Lumpur
+    secrets:
+      - supabase_secret_key
+    networks:
+      - egress
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    # Tesseract on a 20-page job is CPU-bound; keep it from starving n8n.
+    cpus: 1.5
+    mem_limit: 1536m
+    pids_limit: 128
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+networks:
+  egress:
+
+secrets:
+  supabase_secret_key:
+    file: ./secrets/supabase_secret_key

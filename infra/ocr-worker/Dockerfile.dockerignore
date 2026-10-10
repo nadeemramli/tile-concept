@@ -1,0 +1,10 @@
+# Build context is the repository root; send only what the image copies.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!.npmrc
+!tsconfig.json
+!scripts/ocr/**
+!src/lib/ocr/**
+!src/lib/parsers/**

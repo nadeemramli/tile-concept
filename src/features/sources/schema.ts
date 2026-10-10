@@ -50,6 +50,23 @@ export type RejectInput = z.input<typeof rejectSchema>;
 
 export const archiveSchema = z.object({ asset_id: uuid() });
 
+/** OCR (TILE-22). Limits live in the database (ingest.ocr_limits); these only shape input. */
+export const requestOcrSchema = z.object({
+  asset_id: uuid(),
+  pages: z.array(z.number().int().min(1).max(10000)).max(200).optional(),
+});
+export type RequestOcrInput = z.input<typeof requestOcrSchema>;
+
+export const retryOcrSchema = z.object({ job_id: uuid() });
+
+export const manualItemSchema = z.object({
+  asset_id: uuid(),
+  page_no: z.number().int().min(1).max(10000).optional(),
+  item_type: z.enum(["product", "price"]).default("product"),
+  note: z.string().trim().max(500).optional().or(z.literal("")),
+});
+export type ManualItemInput = z.input<typeof manualItemSchema>;
+
 /**
  * Fields the reviewer may correct before approving.
  *

@@ -94,19 +94,55 @@ export interface IngestionJobRow {
   created_by_name: string | null;
 }
 
+export interface OcrPageRow {
+  page_no: number;
+  outcome: string;
+  word_count: number;
+  mean_confidence: number | null;
+  detail: string | null;
+}
+
+/** An OCR job as the source drawer shows it (TILE-22). */
+export interface OcrJobRow {
+  id: string;
+  status: string;
+  attempts: number;
+  max_attempts: number;
+  requested_pages: number[] | null;
+  /** The source has a newer version than the one this job read. */
+  superseded: boolean;
+  engine: string | null;
+  engine_version: string | null;
+  error: string | null;
+  failure_kind: string | null;
+  next_attempt_at: string | null;
+  created_at: string | null;
+  finished_at: string | null;
+  review_items: number;
+  pending_items: number;
+  stats: Record<string, unknown>;
+  pages: OcrPageRow[];
+}
+
 export interface SourceAssetDetail {
   asset: SourceAssetRow;
   versions: AssetVersion[];
   jobs: IngestionJobRow[];
+  ocrJobs: OcrJobRow[];
 }
 
 export async function getSourceAssetDetail(id: string): Promise<SourceAssetDetail | null> {
   const supabase = await createServerSupabase();
-  const [assets, { data: versions }, { data: jobs }, members] = await Promise.all([
+  const [assets, { data: versions }, { data: jobs }, members, { data: ocr }] = await Promise.all([
     listSourceAssets(),
     supabase.from("source_asset_versions").select("id, version_no, checksum, storage_path, created_at").eq("source_asset_id", id).order("version_no", { ascending: false }),
     supabase.from("ingestion_jobs").select("id, job_type, status, parser_version, attempts, started_at, finished_at, error, stats, created_by").eq("source_asset_id", id).order("created_at", { ascending: false }),
     getMemberMap(),
+    supabase
+      .from("ocr_jobs")
+      .select("id, status, attempts, max_attempts, requested_pages, superseded, engine, engine_version, error, failure_kind, next_attempt_at, created_at, finished_at, review_items, pending_items, stats, pages")
+      .eq("source_asset_id", id)
+      .order("created_at", { ascending: false }),
   ]);
   const asset = assets.find((a) => a.id === id);
   if (!asset) return null;
@@ -124,6 +160,27 @@ export async function getSourceAssetDetail(id: string): Promise<SourceAssetDetai
       error: j.error,
       stats: (j.stats ?? {}) as Record<string, unknown>,
       created_by_name: j.created_by ? (members.get(j.created_by)?.full_name ?? null) : null,
+    })),
+    ocrJobs: (ocr ?? []).filter((j) => j.id).map((j) => ({
+      id: j.id!,
+      status: j.status ?? "queued",
+      attempts: Number(j.attempts ?? 0),
+      max_attempts: Number(j.max_attempts ?? 0),
+      requested_pages: j.requested_pages ?? null,
+      superseded: Boolean(j.superseded),
+      engine: j.engine,
+      engine_version: j.engine_version,
+      error: j.error,
+      failure_kind: j.failure_kind,
+      next_attempt_at: j.next_attempt_at,
+      created_at: j.created_at,
+      finished_at: j.finished_at,
+      review_items: Number(j.review_items ?? 0),
+      pending_items: Number(j.pending_items ?? 0),
+      stats: (j.stats ?? {}) as Record<string, unknown>,
+      pages: Array.isArray(j.pages)
+        ? (j.pages as unknown as OcrPageRow[]).map((p) => ({ ...p, mean_confidence: p.mean_confidence === null ? null : Number(p.mean_confidence) }))
+        : [],
     })),
   };
 }
@@ -169,6 +226,10 @@ export interface ReviewItemRow {
   page_no: number | null;
   raw: Record<string, unknown>;
   fields: ExtractedFieldRow[];
+  /** OCR evidence (TILE-22): the preprocessed page image the engine read, and its size. */
+  ocr: { image_path: string; width: number; height: number; page_confidence: number | null; engine: string | null } | null;
+  /** The reviewer's corrections from the latest decision; null while pending or approved as read. */
+  corrections: Record<string, unknown> | null;
 }
 
 export interface ReviewFilters {
@@ -183,7 +244,7 @@ export const listReviewQueue = cache(async (filters: ReviewFilters = {}): Promis
   const supabase = await createServerSupabase();
   let query = supabase
     .from("review_queue")
-    .select("id, item_type, task_type, status, confidence, proposed, conflicts, decision_note, reviewed_at, reviewed_by, published_object_id, created_at, job_id, job_type, parser_version, source_asset_id, source_name, source_kind, storage_bucket, storage_path, page_count, supplier_name, row_no, page_no, raw, fields")
+    .select("id, item_type, task_type, status, confidence, proposed, conflicts, decision_note, reviewed_at, reviewed_by, published_object_id, created_at, job_id, job_type, parser_version, source_asset_id, source_name, source_kind, storage_bucket, storage_path, page_count, supplier_name, row_no, page_no, raw, fields, ocr_image_path, ocr_width_px, ocr_height_px, ocr_page_confidence, ocr_engine, ocr_engine_version, decision_corrections")
     .order("created_at", { ascending: true })
     .order("row_no", { ascending: true })
     .limit(500);
@@ -224,6 +285,17 @@ export const listReviewQueue = cache(async (filters: ReviewFilters = {}): Promis
       page_no: r.page_no,
       raw: (r.raw ?? {}) as Record<string, unknown>,
       fields: Array.isArray(r.fields) ? (r.fields as unknown as ExtractedFieldRow[]) : [],
+      ocr:
+        r.ocr_image_path && r.ocr_width_px && r.ocr_height_px
+          ? {
+              image_path: r.ocr_image_path,
+              width: Number(r.ocr_width_px),
+              height: Number(r.ocr_height_px),
+              page_confidence: r.ocr_page_confidence === null ? null : Number(r.ocr_page_confidence),
+              engine: r.ocr_engine ? `${r.ocr_engine} ${r.ocr_engine_version ?? ""}`.trim() : null,
+            }
+          : null,
+      corrections: r.decision_corrections && typeof r.decision_corrections === "object" && !Array.isArray(r.decision_corrections) ? (r.decision_corrections as Record<string, unknown>) : null,
     }));
   return filters.conflictsOnly ? rows.filter((r) => r.conflicts.length > 0) : rows;
 });

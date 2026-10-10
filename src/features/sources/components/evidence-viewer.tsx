@@ -14,9 +14,12 @@ import { cn } from "@/lib/utils";
  * stated plainly rather than shown as a broken frame.
  */
 export function EvidenceViewer({ item, focusedField }: { item: ReviewItemRow; focusedField: ExtractedFieldRow | null }) {
-  const path = item.storage_path;
-  const bucket = item.storage_bucket ?? "source-assets";
-  const isViewable = item.source_kind === "pdf" || item.source_kind === "image";
+  // An OCR row is judged against the exact page image the engine read, with
+  // the line it came from boxed; other rows against the original file.
+  const ocr = item.ocr;
+  const path = ocr ? ocr.image_path : item.storage_path;
+  const bucket = ocr ? "ingest-artifacts" : (item.storage_bucket ?? "source-assets");
+  const isViewable = Boolean(ocr) || item.source_kind === "pdf" || item.source_kind === "image";
 
   const [signed, setSigned] = useState<{ state: "idle" | "loading" | "ready" | "missing"; url: string | null }>(() => ({
     state: isViewable && path ? "loading" : "idle",
@@ -45,8 +48,9 @@ export function EvidenceViewer({ item, focusedField }: { item: ReviewItemRow; fo
   const state = signed.state;
   const url = signed.url;
 
-  const region = focusedField?.region as { x?: number; y?: number; w?: number; h?: number; page?: number; line?: number; ref?: string; sheet?: string } | null;
-  const hasBox = Boolean(region && region.x !== undefined && region.y !== undefined);
+  const region = focusedField?.region as { x?: number; y?: number; w?: number; h?: number; page?: number; line?: number; ref?: string; sheet?: string; ocr_conf?: number } | null;
+  // Pixel boxes only mean something on the image they were measured on.
+  const hasBox = Boolean(ocr && region && region.x !== undefined && region.y !== undefined);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
@@ -58,6 +62,13 @@ export function EvidenceViewer({ item, focusedField }: { item: ReviewItemRow; fo
           {item.row_no ? `${item.page_no ? " · " : ""}row ${item.row_no}` : ""}
         </span>
       </div>
+
+      {ocr && (
+        <p className="text-[11px] text-muted-foreground">
+          Read by OCR ({ocr.engine ?? "Tesseract"}) from a scanned page
+          {ocr.page_confidence !== null ? ` · page confidence ${Math.round(ocr.page_confidence)}%` : ""}. Focus a field to box the line it came from.
+        </p>
+      )}
 
       {/* Raw row — always available, and the only evidence for spreadsheets. */}
       <div className="overflow-hidden rounded-lg border bg-card">
@@ -94,6 +105,7 @@ export function EvidenceViewer({ item, focusedField }: { item: ReviewItemRow; fo
           <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Source text for {focusedField.key}
             {region?.ref ? ` · ${region.sheet ? `${region.sheet}!` : ""}${region.ref}` : region?.line !== undefined ? ` · line ${region.line + 1}` : ""}
+            {region?.ocr_conf !== undefined ? ` · OCR ${Math.round(region.ocr_conf)}%` : ""}
           </div>
           <p className="mt-0.5 break-words font-mono text-[12px]">{focusedField.source_text}</p>
         </div>
@@ -116,18 +128,31 @@ export function EvidenceViewer({ item, focusedField }: { item: ReviewItemRow; fo
           )}
           {state === "ready" && url && (
             <div className="relative h-full min-h-80">
-              {item.source_kind === "image" ? (
+              {ocr ? (
+                <div className="max-h-[70vh] overflow-auto">
+                  <div className="relative w-full" style={{ aspectRatio: `${ocr.width} / ${ocr.height}` }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Scanned page ${item.page_no ?? 1} of ${item.source_name ?? "document"}, as read by OCR`} className="absolute inset-0 h-full w-full" />
+                    {hasBox && (
+                      <span
+                        data-testid="ocr-region"
+                        aria-hidden
+                        className="pointer-events-none absolute rounded border-2 border-brand bg-brand/20"
+                        style={{
+                          left: `${(region!.x! / ocr.width) * 100}%`,
+                          top: `${(region!.y! / ocr.height) * 100}%`,
+                          width: `${((region!.w ?? 0) / ocr.width) * 100}%`,
+                          height: `${((region!.h ?? 0) / ocr.height) * 100}%`,
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              ) : item.source_kind === "image" ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={url} alt={`Source page for ${item.source_name ?? "document"}`} className="h-full w-full object-contain" />
               ) : (
                 <embed src={`${url}#page=${item.page_no ?? 1}&toolbar=0`} type="application/pdf" className="h-full min-h-80 w-full" />
-              )}
-              {hasBox && (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute rounded border-2 border-brand bg-brand/20"
-                  style={{ left: region!.x, top: region!.y, width: region!.w ?? 80, height: region!.h ?? 18 }}
-                />
               )}
             </div>
           )}
