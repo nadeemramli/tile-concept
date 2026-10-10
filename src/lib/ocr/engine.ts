@@ -24,6 +24,8 @@ const MAX_INPUT_PIXELS = 60_000_000;
 export const PAGE_TIMEOUT_MS = 90_000;
 /** Page segmentation: a single uniform block reads catalogue cards in order. */
 const PSM = "6";
+/** Operators can point at a specific install; default is the one on PATH. */
+const TESSERACT = process.env.OCR_TESSERACT_BIN || "tesseract";
 
 export type OcrFailureKind = "transient" | "encrypted" | "unsupported" | "oversize" | "too_many_pages" | "engine_unavailable" | "source_missing";
 
@@ -56,7 +58,7 @@ function run(cmd: string, args: string[], input?: Buffer, timeoutMs = PAGE_TIMEO
     child.stderr.on("data", (d) => err.push(d));
     child.on("error", (e: NodeJS.ErrnoException) => {
       clearTimeout(timer);
-      reject(e.code === "ENOENT" ? new OcrFailure("engine_unavailable", "Tesseract is not installed on the OCR worker") : e);
+      reject(e.code === "ENOENT" ? new OcrFailure("engine_unavailable", `Tesseract is not installed on the OCR worker (${cmd} not found)`) : e);
     });
     child.on("close", (code) => {
       clearTimeout(timer);
@@ -68,10 +70,10 @@ function run(cmd: string, args: string[], input?: Buffer, timeoutMs = PAGE_TIMEO
 }
 
 export async function detectEngine(): Promise<EngineInfo> {
-  const v = await run("tesseract", ["--version"], undefined, 15_000);
+  const v = await run(TESSERACT, ["--version"], undefined, 15_000);
   const version = /tesseract\s+v?([\d.]+[\w.-]*)/i.exec(v.stdout + v.stderr)?.[1];
   if (!version) throw new OcrFailure("engine_unavailable", "Tesseract did not report a version");
-  const l = await run("tesseract", ["--list-langs"], undefined, 15_000);
+  const l = await run(TESSERACT, ["--list-langs"], undefined, 15_000);
   const languages = (l.stdout + l.stderr).split(/\r?\n/).slice(1).map((s) => s.trim()).filter((s) => /^[a-z_]+$/i.test(s));
   if (!languages.includes("eng")) throw new OcrFailure("engine_unavailable", "Tesseract has no English language data installed");
   return { engine: "tesseract", version, languages };
@@ -173,7 +175,7 @@ export async function prepareImage(data: Uint8Array): Promise<PageSource> {
 }
 
 export async function recognise(png: Buffer): Promise<{ tsv: string }> {
-  const r = await run("tesseract", ["stdin", "stdout", "-l", "eng", "--psm", PSM, "tsv"], png);
+  const r = await run(TESSERACT, ["stdin", "stdout", "-l", "eng", "--psm", PSM, "tsv"], png);
   if (r.code !== 0) throw new OcrFailure("transient", `Tesseract exited with ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
   return { tsv: r.stdout };
 }

@@ -73,6 +73,11 @@ async function processJob(job: ClaimedJob, engine: EngineInfo | null) {
   log("claimed", { job: job.job_id, attempt: job.attempt, source: job.source_asset_id });
   if (!engine) return fail(job, "engine_unavailable", "Tesseract is not installed on the OCR worker");
   if (!job.storage_path) return fail(job, "source_missing", "The source has no stored original");
+  // The service role can read any object, so the row's path is checked here:
+  // a job only ever reads a file inside its own workspace's folder.
+  if (!job.storage_path.startsWith(`${job.workspace_id}/`) || job.storage_path.split("/").includes("..")) {
+    return fail(job, "source_missing", "The stored path is outside this workspace, so it was not read");
+  }
 
   const dl = await db.storage.from(job.storage_bucket).download(job.storage_path);
   if (dl.error || !dl.data) return fail(job, "transient", `The original could not be downloaded (${dl.error?.message ?? "empty"})`);

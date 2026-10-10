@@ -340,19 +340,29 @@ begin
     perform ingest.ocr_terminal_failure(j, 'retries_exhausted', 'The worker stopped responding on every attempt');
   end loop;
 
-  select * into j from ingest.ingestion_jobs
-  where job_type = 'ocr'
-    and ((status = 'queued' and coalesce(next_attempt_at, now()) <= now())
-      or (status = 'running' and lease_expires_at < now() and attempts < max_attempts))
-  order by coalesce(next_attempt_at, created_at), created_at
-  limit 1
-  for update skip locked;
-  if not found then return null; end if;
+  for j in
+    select * from ingest.ingestion_jobs
+    where job_type = 'ocr'
+      and ((status = 'queued' and coalesce(next_attempt_at, now()) <= now())
+        or (status = 'running' and lease_expires_at < now() and attempts < max_attempts))
+    order by coalesce(next_attempt_at, created_at), created_at
+    for update skip locked
+  loop
+    select * into a from ingest.source_assets where id = j.source_asset_id;
+    -- Read the exact version that was requested, not whatever replaced it since.
+    select v.storage_path into v_path from ingest.source_asset_versions v
+    where v.source_asset_id = a.id and v.checksum = j.source_checksum order by v.version_no desc limit 1;
+    v_path := coalesce(v_path, a.storage_path);
 
-  select * into a from ingest.source_assets where id = j.source_asset_id;
-  -- Read the exact version that was requested, not whatever replaced it since.
-  select v.storage_path into v_path from ingest.source_asset_versions v
-  where v.source_asset_id = a.id and v.checksum = j.source_checksum order by v.version_no desc limit 1;
+    -- The worker reads with the service role, which can open any object. A
+    -- path outside the job's own workspace folder is never handed to it.
+    if v_path is null or v_path not like j.workspace_id::text || '/%' or v_path like '%/../%' then
+      perform ingest.ocr_terminal_failure(j, 'source_missing', 'the stored file is missing or outside this workspace');
+      continue;
+    end if;
+    exit;
+  end loop;
+  if j.id is null or (select status from ingest.ingestion_jobs where id = j.id) not in ('queued', 'running') then return null; end if;
 
   update ingest.ingestion_jobs
   set status = 'running', attempts = attempts + 1, started_at = now(), lease_token = v_token,
@@ -428,6 +438,21 @@ begin
     on conflict (job_id, page_no) do nothing;
     if pg->>'outcome' <> 'read' then n_unreadable := n_unreadable + 1; end if;
   end loop;
+
+  -- A retry that now reads a page closes the manual-entry placeholder an
+  -- earlier failed attempt left for it, so the queue does not ask twice. It is
+  -- a system note on a placeholder, not a reviewer's decision on a proposal.
+  with superseded as (
+    update ingest.review_items ri
+    set status = 'rejected', reviewed_at = now(),
+        decision_note = 'Superseded: OCR attempt ' || j.attempts || ' read this page; its proposals are in the queue.'
+    from ingest.ingestion_records rr
+    where rr.id = ri.record_id and ri.job_id = j.id and ri.status = 'pending'
+      and rr.raw ? 'ocr_failure'
+      and rr.page_no in (select (pr->>'page_no')::int from jsonb_array_elements(coalesce(p_pages, '[]'::jsonb)) as e(pr) where pr->>'outcome' = 'read')
+    returning ri.record_id
+  )
+  update ingest.ingestion_records set status = 'rejected' where id in (select record_id from superseded);
 
   v_counts := ingest.store_extraction_records(j.id, p_records);
 

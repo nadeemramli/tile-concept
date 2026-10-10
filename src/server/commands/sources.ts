@@ -69,9 +69,9 @@ export async function registerSourceAssetAction(input: RegisterAssetInput): Prom
  * is preferred; a raster page produces a "needs manual entry" record rather
  * than invented values.
  */
-export async function parseSourceAssetAction(input: { asset_id: string }): Promise<ActionResult<{ records: number; review_items: number; duplicates: number; note?: string }>> {
+export async function parseSourceAssetAction(input: { asset_id: string }): Promise<ActionResult<{ records: number; review_items: number; duplicates: number; note?: string; ocr?: string }>> {
   try {
-    await requirePermission("source.import");
+    const session = await requirePermission("source.import");
     const parsed = parseAssetSchema.safeParse(input);
     if (!parsed.success) return fail("Invalid source");
     const supabase = await createServerSupabase();
@@ -84,6 +84,9 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
     if (assetErr) return fail(assetErr);
     if (!asset?.id) return fail("Source asset not found");
     if (!asset.storage_path) return fail("This source has no stored file to parse");
+    // The original is read with the service role below, so the path must stay
+    // inside the caller's own workspace folder whatever the row says.
+    if (!isSignableSourceObject(asset.storage_bucket ?? BUCKET, asset.storage_path, session.workspaceId)) return fail("This source points outside your workspace, so it was not read");
 
     const kind = classifySource(asset.name ?? "", asset.mime_type);
 
@@ -95,7 +98,7 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
       revalidatePath("/sources/library");
       if (!queued.ok) return fail(`${queued.error} You can still enter its rows by hand from the source.`);
       return ok(
-        { records: 0, review_items: 0, duplicates: 0, note: queued.reused ? "OCR for this image was already requested" : "Queued for OCR" },
+        { records: 0, review_items: 0, duplicates: 0, ocr: queued.reused ? "OCR already requested" : "Queued for OCR" },
         queued.reused ? "OCR for this image was already requested." : "Queued for OCR. Proposals appear in review when the worker has read it.",
       );
     }
@@ -130,6 +133,7 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
     // as manual-entry rows here — either way nothing is silently dropped.
     const rasterPages = result.records.filter((r) => r.issues.some((i) => i.code === "needs_manual")).map((r) => r.page_no ?? 1);
     let ocrNote: string | undefined;
+    let ocrProblem: string | undefined;
     let records = result.records;
     if (kind === "pdf" && rasterPages.length > 0) {
       const queued = await queueOcr(supabase, asset.id, rasterPages);
@@ -137,8 +141,14 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
         records = result.records.filter((r) => !r.issues.some((i) => i.code === "needs_manual"));
         ocrNote = `${rasterPages.length} scanned page(s) ${queued.reused ? "already queued" : "queued"} for OCR`;
       } else {
-        ocrNote = `OCR refused the scanned page(s): ${queued.error}`;
+        ocrProblem = `OCR refused the scanned page(s): ${queued.error}`;
       }
+    }
+
+    // An encrypted PDF cannot be read by either path; say so rather than
+    // reporting a generic parse failure, and leave manual entry as the way on.
+    if (kind === "pdf" && result.error && /password|encrypt/i.test(result.error)) {
+      result = { ...result, error: "This PDF is password-protected, so neither its text nor its scanned pages can be read. Upload an unlocked copy, or add its rows by hand from the source." };
     }
 
     const status = result.error && result.records.length === 0 ? "failed" : "succeeded";
@@ -157,9 +167,9 @@ export async function parseSourceAssetAction(input: { asset_id: string }): Promi
     revalidatePath("/sources/review");
 
     if (status === "failed") return fail(result.error ?? "Nothing could be extracted from this file");
-    const note = [ocrNote, manual ? `${manual} page(s) need manual entry` : undefined].filter(Boolean).join("; ") || undefined;
+    const note = [ocrProblem, manual ? `${manual} page(s) need manual entry` : undefined].filter(Boolean).join("; ") || undefined;
     return ok(
-      { records: Number(counts.records ?? 0), review_items: Number(counts.review_items ?? 0), duplicates: Number(counts.duplicates ?? 0), note },
+      { records: Number(counts.records ?? 0), review_items: Number(counts.review_items ?? 0), duplicates: Number(counts.duplicates ?? 0), note, ocr: ocrNote },
       `Extracted ${counts.records ?? 0} row(s) into the review queue.${ocrNote ? ` ${ocrNote}.` : ""}`,
     );
   } catch (e) {

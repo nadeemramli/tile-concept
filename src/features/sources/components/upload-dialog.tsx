@@ -48,7 +48,7 @@ export function UploadDialog({ open, onOpenChange, suppliers, brands }: { open: 
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [existingId, setExistingId] = useState<string | null>(null);
-  const [summary, setSummary] = useState<{ records: number; review_items: number; duplicates: number; note?: string } | null>(null);
+  const [summary, setSummary] = useState<{ records: number; review_items: number; duplicates: number; note?: string; ocr?: string } | null>(null);
 
   const busy = ["hashing", "uploading", "registering", "parsing"].includes(phase);
 
@@ -202,6 +202,7 @@ export function UploadDialog({ open, onOpenChange, suppliers, brands }: { open: 
               <div className="flex flex-wrap gap-1.5">
                 <TonePill tone="warning" label={`${summary.review_items} to review`} hint="Rows staged for a reviewer. None of them has reached the catalog or a price list." />
                 {summary.duplicates > 0 && <TonePill tone="info" label={`${summary.duplicates} existing code(s)`} hint="Rows whose product code already exists in the catalog. They are flagged as a duplicate conflict so the reviewer decides whether it is the same product." />}
+                {summary.ocr && <TonePill tone="info" label={summary.ocr} hint="Scanned pages wait for the background OCR worker. Its proposals join the review queue with a confidence score; until then any page can be entered by hand from the source." />}
                 {summary.note && <TonePill tone="destructive" label={summary.note} hint="A problem the parser reported for this document. Check the import job in the document drawer." />}
               </div>
               <p className="text-muted-foreground">Nothing has been published — every row waits in the review queue.</p>
