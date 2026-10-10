@@ -65,8 +65,11 @@ test("a guest cannot manage settings", async ({ page }) => {
   await enterAsGuest(page);
   await page.goto("/platform/settings");
   // settings.manage is the one permission the guest role does not carry, because
-  // it includes sending invitations.
-  await expect(page.getByText(/Not available/)).toBeVisible();
+  // it includes sending invitations. By role, not text: during navigation a
+  // hidden copy of the denial can sit in the DOM, which getByText also matches
+  // (strict-mode failure); the role query sees only what the user sees, and
+  // stays strict, so two visible denials would still fail.
+  await expect(page.getByRole("heading", { name: /^Not available/ })).toBeVisible();
 });
 
 test("a guest cannot manage lead connectors", async ({ page }) => {
