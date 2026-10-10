@@ -91,7 +91,9 @@ test("sales sees per-warehouse balances, and persisted stock changes after reloa
   await page.getByRole("tab", { name: "Stock" }).click();
   await expect(row(page, WH_A)).toContainText("Low");
   await expect(row(page, WH_A)).toContainText("5");
-  await expect(row(page, WH_A)).not.toContainText("35");
+  // No cell still shows the old 35. Checked per cell: the whole row also holds
+  // the random fixture tag, which can itself contain "35".
+  await expect(row(page, WH_A).getByRole("cell").filter({ hasText: /^35$/ })).toHaveCount(0);
   await expect(row(page, "In-house total across warehouses")).toContainText("17");
 
   // Supplier evidence for variant B appears as its own dated line, not as in-house stock.
