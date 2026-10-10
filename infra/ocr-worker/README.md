@@ -17,7 +17,7 @@ This directory runs that worker for the hosted project, following the `infra/n8n
 | When jobs run | When someone runs it | Polls every 10 s |
 | New cost | None | None: shares the existing server; no new service, licence or API |
 | Where the originals go | Supabase → the owner's machine | Supabase → the automation host |
-| Credentials | Hosted service-role key in the owner's shell for that run | Hosted service-role key in `secrets/supabase_secret_key` (`0600`-style, never in Git or `.env`) |
+| Credentials | Hosted service-role key in the owner's shell for that run | Hosted service-role key in `secrets/supabase_secret_key` (file `0644` inside a root-owned `0700` directory, as in `infra/n8n`; never in Git or `.env`) |
 
 The service-role key bypasses RLS. That is why the database, not the worker, enforces the rules:
 - the worker RPCs are `service_role`-only
@@ -56,7 +56,7 @@ The two options differ in where a copy of each scanned original is processed. Ne
 
 ## Order of operations for a release
 
-1. Apply the migrations on the hosted project in order: `20261009000001`, `20261009000002`, `20261010000001`.
+1. Apply the migrations on the hosted project in order: `20261008065207`, `20261009000001`, `20261009000002`, `20261010000001`, `20261010000002`. The hosted project stops at `20261004000002` (read on 2026-10-10), so the catalogue upload migration from PR20 comes first.
 2. Deploy the app.
 3. Start the worker: option A, or option B steps 1–4.
 4. Smoke-test at the owner entrypoint:
