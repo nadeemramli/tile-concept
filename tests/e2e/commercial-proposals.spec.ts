@@ -60,7 +60,8 @@ test("operator approves a stated price only after naming the tax basis, and reje
   await page.getByRole("button", { name: "Reject" }).click();
   await page.locator("#reject-reason").fill("Synthetic: superseded by the newer list");
   await page.getByRole("button", { name: "Reject row" }).click();
-  await expect(page.getByText("Rejected. The correction is kept as parser feedback.")).toBeVisible();
+  // The action can take a few seconds when the whole suite shares the machine.
+  await expect(page.getByText("Rejected. The correction is kept as parser feedback.")).toBeVisible({ timeout: 15_000 });
   await page.reload();
   expect(sql(`select status || '|' || coalesce(decision_note,'') from ingest.review_items where id='${rejectId}'`)).toBe("rejected|Synthetic: superseded by the newer list");
   await page.goto(`/sources/review?status=${state}&item=${approveId}`); // persisted decision after reload

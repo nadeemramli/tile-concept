@@ -53,7 +53,9 @@ function worker(env: Record<string, string> = {}) {
 const assetId = (name: string) => sql(`select id from ingest.source_assets where workspace_id='${WS}' and name='${name}'`);
 const job = (asset: string) => sql(`select status || '|' || coalesce(failure_kind,'') || '|' || attempts from ingest.ingestion_jobs where source_asset_id='${asset}' and job_type='ocr'`);
 
-test.describe.configure({ mode: "serial" });
+// Each journey runs the real OCR worker as a separate process; under a full
+// parallel suite that alone can take tens of seconds, so the budget is explicit.
+test.describe.configure({ mode: "serial", timeout: 180_000 });
 
 test.beforeAll(async () => {
   const cat = await syntheticCatalogue(tag);
