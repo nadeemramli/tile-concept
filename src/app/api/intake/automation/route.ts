@@ -18,6 +18,7 @@ export const runtime = "nodejs";
 
 const bodySchema = z
   .object({
+    customer_type: z.string().trim().max(200).optional(),
     submission_id: z.string().trim().min(1).max(200),
     source: z.enum(AUTOMATION_SOURCES),
     name: z.string().trim().max(200).optional(),
