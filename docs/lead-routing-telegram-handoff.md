@@ -39,7 +39,7 @@ Provider updates receive a success response only after app persistence succeeds.
 
 ## Deployment boundaries
 
-The forward migration is `20261015182133_configurable_lead_routing_telegram.sql`. The routing settings, assignments, Telegram bindings/codes/cards and processed-update records have RLS. Bot-only RPCs are not executable by browser roles.
+The forward migration is `20261015200520_configurable_lead_routing_telegram.sql`. The routing settings, assignments, Telegram bindings/codes/cards and processed-update records have RLS. Bot-only RPCs are not executable by browser roles.
 
 `ops/n8n/tile-concept-progress.workflow.json` is a credential-free template for the existing `tc-meta-sheet-telegram` workflow. Before import, preserve the live workflow's sheet checkpoint/static data and retain a private backup. Do not replace a live checkpoint with a template baseline or replay historical rows. Existing bot and Google credentials remain in n8n. The new `httpHeaderAuth` credential is `tc-telegram-webhook-secret`; its value must match Telegram's `secret_token` and must never enter Git. The bot webhook is `/webhook/tile-concept-telegram-progress`.
 
