@@ -1,5 +1,7 @@
 "use client";
 
+import { RoutingSettings } from "@/features/lead-routing/routing-settings";
+import type { RoutingState } from "@/features/lead-routing/schema";
 import { useState } from "react";
 import { parseAsString, useQueryState } from "nuqs";
 import { ArrowDown, ArrowUp, Check, Mail, Plus, Send } from "lucide-react";
@@ -39,6 +41,7 @@ import {
 import type { getRolesMatrix, listAllLocations, listFeatureFlags, listInvites, listSharedViews, listStagesAdmin, listUsers, getWorkspace } from "@/server/queries/platform";
 
 export interface SettingsData {
+  routing: RoutingState;
   users: Awaited<ReturnType<typeof listUsers>>;
   invites: Awaited<ReturnType<typeof listInvites>>;
   roles: Awaited<ReturnType<typeof getRolesMatrix>>["roles"];
@@ -61,6 +64,7 @@ const TABS = [
   { key: "stages", label: "Stages" },
   { key: "views", label: "Saved views" },
   { key: "flags", label: "Feature flags" },
+  { key: "routing", label: "Lead routing" },
 ];
 
 const roleOpts = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }));
@@ -78,6 +82,7 @@ export function SettingsTabs({ data }: { data: SettingsData }) {
           ))}
         </TabsList>
       </Tabs>
+      {tab === "routing" && <RoutingSettings initial={data.routing} users={data.users} />}
       {tab === "users" && <UsersTab data={data} />}
       {tab === "invites" && <InvitesTab data={data} />}
       {tab === "roles" && <RolesTab data={data} />}
