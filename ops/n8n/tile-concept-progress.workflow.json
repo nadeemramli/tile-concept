@@ -1,0 +1,1146 @@
+[
+  {
+    "id": "tc-meta-sheet-telegram",
+    "name": "Tile Concept - Meta Sheet to Inquiry Box and Telegram",
+    "active": false,
+    "nodes": [
+      {
+        "id": "tc-setup-notes",
+        "name": "Setup before publishing",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          0,
+          -310
+        ],
+        "parameters": {
+          "content": "## Tile Concept lead operations\nGoogle Sheet \u2192 app intake and atomic routing \u2192 durable Telegram card queue.\nCallbacks require Telegram secret-header authentication and the signed internal relay. App member linking, owner checks, progress history and retry deduplication run in the app database.\nSlots without app accounts stay pending. Do not put bot tokens or webhook secrets in workflow source.\nDelivery is acknowledged one card at a time. Failed cards remain queued for retry after their lease expires. No historical reposting is performed.",
+          "height": 285,
+          "width": 620
+        }
+      },
+      {
+        "id": "tc-new-sheet-lead",
+        "name": "New Meta lead in Google Sheet",
+        "type": "n8n-nodes-base.googleSheetsTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          100
+        ],
+        "parameters": {
+          "pollTimes": {
+            "item": [
+              {
+                "mode": "everyMinute"
+              }
+            ]
+          },
+          "documentId": {
+            "__rl": true,
+            "value": "1fMgAXAiC3mVtDNqlUwjrKL4xjbfi2CyIQ-1EsmqClPY",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "0",
+            "mode": "id"
+          },
+          "event": "rowAdded",
+          "options": {},
+          "authentication": "serviceAccount"
+        },
+        "credentials": {
+          "googleApi": {
+            "id": "tc-google-sheets-reader",
+            "name": "Tile Concept Leads Sheet (read only)"
+          }
+        }
+      },
+      {
+        "id": "tc-normalize-meta",
+        "name": "Validate and normalize Meta lead",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          260,
+          100
+        ],
+        "parameters": {
+          "jsCode": "\nconst output = [];\nfor (const [inputIndex, item] of $input.all().entries()) {\n  const row = item.json;\n  const text = (key, limit = 200) => String(row[key] ?? '').trim().slice(0, limit);\n  if (Object.values(row).some(value => String(value).includes('<test lead:')) || text('email').toLowerCase() === 'test@meta.com') continue;\n  const id = text('id');\n  if (!id) throw new Error('Sheet row is missing its source lead ID');\n  const rawPhone = text('phone_number', 60).replace(/^p:/i, '').replace(/[\\s()\\-]/g, '');\n  const phone = /^\\+[1-9]\\d{7,14}$/.test(rawPhone) ? rawPhone : '';\n  const rawEmail = text('email');\n  const email = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(rawEmail) ? rawEmail : '';\n  if (!phone && !email) throw new Error('Source lead ' + id + ' has no valid phone or email; review the sheet row');\n  const platform = text('platform').toLowerCase();\n  const source = platform === 'fb' ? 'facebook' : platform === 'ig' ? 'instagram' : 'meta';\n  const notes = [1, 2, 3].map(n => {\n    const key = 'conditional_question_' + n;\n    return text(key, 1000) ? key + ': ' + text(key, 1000) : '';\n  }).filter(Boolean).join('\\n');\n  const intake = {\n    submission_id: id,\n    source,\n    source_detail: ('Google Sheet 1fMgAXAiC3mVtDNqlUwjrKL4xjbfi2CyIQ-1EsmqClPY / Sheet1; adset_id=' + text('adset_id') + '; adset_name=' + text('adset_name')).slice(0, 500),\n  };\n  const optional = { customer_type: text('conditional_question_1'), name: text('full_name'), phone, email, company: text('company_name'), message: notes,\n    interest: text('conditional_question_3', 500), form_id: text('form_id'), form_name: text('form_name'),\n    campaign_id: text('campaign_id'), campaign_name: text('campaign_name'), ad_id: text('ad_id'), ad_name: text('ad_name') };\n  for (const [key, value] of Object.entries(optional)) if (value) intake[key] = value;\n  const created = text('created_time');\n  if (created) {\n    const date = new Date(created);\n    if (Number.isNaN(date.valueOf())) throw new Error('Source lead ' + id + ' has an invalid submission time');\n    intake.occurred_at = date.toISOString();\n  }\n  output.push({ json: { intake }, pairedItem: { item: inputIndex } });\n}\nreturn output;\n"
+        }
+      },
+      {
+        "id": "tc-save-inquiry",
+        "name": "Save to Inquiry Box",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          520,
+          100
+        ],
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 5000,
+        "parameters": {
+          "method": "POST",
+          "url": "http://intake-relay:3000/intake",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.intake) }}",
+          "options": {
+            "timeout": 30000
+          }
+        }
+      },
+      {
+        "id": "tc-delivery-timer",
+        "name": "Retry pending Telegram delivery",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          450
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tc-pending-cards",
+        "name": "Claim pending Telegram cards",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          760,
+          100
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://intake-relay:3000/telegram",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "{\"operation\":\"pending\"}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1500
+      },
+      {
+        "id": "tc-split-cards",
+        "name": "Each pending card",
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          980,
+          100
+        ],
+        "parameters": {
+          "fieldToSplitOut": "cards",
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-card-loop",
+        "name": "For each card",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          1190,
+          100
+        ],
+        "parameters": {
+          "batchSize": 1,
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-existing-card",
+        "name": "Existing Telegram message",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1410,
+          100
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "tc-existing-card-condition",
+                "leftValue": "={{ $json.message_id !== null }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-is-closed-send",
+        "name": "Closed inquiry for new message",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1500,
+          350
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "tc-is-closed-send-condition",
+                "leftValue": "={{ ['disqualified','duplicate'].includes($json.status) }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-is-closed-edit",
+        "name": "Closed inquiry for refresh",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1500,
+          -140
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "tc-is-closed-edit-condition",
+                "leftValue": "={{ ['disqualified','duplicate'].includes($json.status) }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-send-card",
+        "name": "Send lead card",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1620,
+          250
+        ],
+        "parameters": {
+          "resource": "message",
+          "chatId": "={{ $json.chat_id }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "WhatsApp sent",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':sent' }}"
+                      }
+                    },
+                    {
+                      "text": "Customer replied",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':reply' }}"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "No response",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':none' }}"
+                      }
+                    },
+                    {
+                      "text": "Follow up tomorrow \u00b7 9am",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':tomorrow' }}"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "Open Inquiry",
+                      "additionalFields": {
+                        "url": "={{ $json.lead_url }}"
+                      }
+                    },
+                    {
+                      "text": "={{ $json.whatsapp_url ? 'Open WhatsApp' : 'Contact details' }}",
+                      "additionalFields": {
+                        "url": "={{ $json.whatsapp_url || $json.lead_url }}"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "additionalFields": {
+            "appendAttribution": false,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": true
+          },
+          "operation": "sendMessage"
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "tc-telegram-leads-bot",
+            "name": "Tile Concept Telegram"
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 5000
+      },
+      {
+        "id": "tc-edit-card",
+        "name": "Refresh lead card",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1620,
+          -40
+        ],
+        "parameters": {
+          "resource": "message",
+          "chatId": "={{ $json.chat_id }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "WhatsApp sent",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':sent' }}"
+                      }
+                    },
+                    {
+                      "text": "Customer replied",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':reply' }}"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "No response",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':none' }}"
+                      }
+                    },
+                    {
+                      "text": "Follow up tomorrow \u00b7 9am",
+                      "additionalFields": {
+                        "callback_data": "={{ 'tc:' + $json.token + ':tomorrow' }}"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "Open Inquiry",
+                      "additionalFields": {
+                        "url": "={{ $json.lead_url }}"
+                      }
+                    },
+                    {
+                      "text": "={{ $json.whatsapp_url ? 'Open WhatsApp' : 'Contact details' }}",
+                      "additionalFields": {
+                        "url": "={{ $json.whatsapp_url || $json.lead_url }}"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "additionalFields": {
+            "appendAttribution": false,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": true
+          },
+          "operation": "editMessageText",
+          "messageType": "message",
+          "messageId": "={{ $json.message_id }}"
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "tc-telegram-leads-bot",
+            "name": "Tile Concept Telegram"
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1500,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "tc-send-closed-card",
+        "name": "Send closed inquiry card",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1620,
+          450
+        ],
+        "parameters": {
+          "resource": "message",
+          "chatId": "={{ $json.chat_id }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "Open Inquiry",
+                      "additionalFields": {
+                        "url": "={{ $json.lead_url }}"
+                      }
+                    },
+                    {
+                      "text": "={{ $json.whatsapp_url ? 'Open WhatsApp' : 'Contact details' }}",
+                      "additionalFields": {
+                        "url": "={{ $json.whatsapp_url || $json.lead_url }}"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "additionalFields": {
+            "appendAttribution": false,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": true
+          },
+          "operation": "sendMessage"
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "tc-telegram-leads-bot",
+            "name": "Tile Concept Telegram"
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 5000
+      },
+      {
+        "id": "tc-edit-closed-card",
+        "name": "Refresh closed inquiry card",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1620,
+          -250
+        ],
+        "parameters": {
+          "resource": "message",
+          "chatId": "={{ $json.chat_id }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "replyMarkup": "inlineKeyboard",
+          "inlineKeyboard": {
+            "rows": [
+              {
+                "row": {
+                  "buttons": [
+                    {
+                      "text": "Open Inquiry",
+                      "additionalFields": {
+                        "url": "={{ $json.lead_url }}"
+                      }
+                    },
+                    {
+                      "text": "={{ $json.whatsapp_url ? 'Open WhatsApp' : 'Contact details' }}",
+                      "additionalFields": {
+                        "url": "={{ $json.whatsapp_url || $json.lead_url }}"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "additionalFields": {
+            "appendAttribution": false,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": true
+          },
+          "operation": "editMessageText",
+          "messageType": "message",
+          "messageId": "={{ $json.message_id }}"
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "tc-telegram-leads-bot",
+            "name": "Tile Concept Telegram"
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1500,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "tc-check-edit",
+        "name": "Validate message refresh",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1840,
+          -40
+        ],
+        "parameters": {
+          "jsCode": "for (const item of $input.all()) { if (item.json.error && !String(item.json.error).includes('message is not modified')) throw new Error('Telegram refresh failed; delivery remains queued'); } return $input.all();"
+        }
+      },
+      {
+        "id": "tc-confirm-card",
+        "name": "Confirm Telegram delivery",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2060,
+          100
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://intake-relay:3000/telegram",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({operation:'sent',lead_id:$('For each card').item.json.lead_id,token:$('For each card').item.json.token,message_id:$json.result?.message_id ?? $('For each card').item.json.message_id}) }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1500
+      },
+      {
+        "id": "tc-telegram-events",
+        "name": "Telegram progress and account linking",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          850
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "tile-concept-telegram-progress",
+          "authentication": "headerAuth",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "tc-telegram-webhook-secret",
+            "name": "Tile Concept Telegram webhook verification"
+          }
+        },
+        "webhookId": "tc-telegram-progress-webhook"
+      },
+      {
+        "id": "tc-save-telegram",
+        "name": "Save verified Telegram update",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          260,
+          850
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://intake-relay:3000/telegram",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({operation:'update',update:$json.body}) }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1500,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "tc-is-saved",
+        "name": "Telegram update persisted",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          430,
+          850
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "tc-is-saved-condition",
+                "leftValue": "={{ $json.ok === true && !!$json.result }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-answer-retry",
+        "name": "Ask Telegram to retry failed persistence",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          680,
+          1200
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\":false,\"error\":\"persistence_unavailable\"}",
+          "options": {
+            "responseCode": 503
+          }
+        }
+      },
+      {
+        "id": "tc-ack-provider",
+        "name": "Acknowledge persisted Telegram update",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          510,
+          850
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"ok\":true}",
+          "options": {
+            "responseCode": 200
+          }
+        }
+      },
+      {
+        "id": "tc-is-callback",
+        "name": "Progress button pressed",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          760,
+          850
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "tc-is-callback-condition",
+                "leftValue": "={{ $json.result?.kind === 'callback' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-answer-callback",
+        "name": "Confirm progress to salesperson",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1010,
+          750
+        ],
+        "parameters": {
+          "resource": "callback",
+          "operation": "answerQuery",
+          "queryId": "={{ $json.result.callback_query_id }}",
+          "additionalFields": {
+            "text": "={{ $json.result.text }}",
+            "show_alert": "={{ $json.result.show_alert }}"
+          }
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "tc-telegram-leads-bot",
+            "name": "Tile Concept Telegram"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "tc-is-link",
+        "name": "Account linking response",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1010,
+          1000
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "tc-is-link-condition",
+                "leftValue": "={{ $json.result?.kind === 'message' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "tc-answer-link",
+        "name": "Confirm private account link",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1260,
+          1000
+        ],
+        "parameters": {
+          "resource": "message",
+          "operation": "sendMessage",
+          "chatId": "={{ $json.result.chat_id }}",
+          "text": "={{ $json.result.text }}",
+          "additionalFields": {
+            "appendAttribution": false,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": true
+          }
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "tc-telegram-leads-bot",
+            "name": "Tile Concept Telegram"
+          }
+        },
+        "onError": "continueRegularOutput"
+      }
+    ],
+    "connections": {
+      "New Meta lead in Google Sheet": {
+        "main": [
+          [
+            {
+              "node": "Validate and normalize Meta lead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate and normalize Meta lead": {
+        "main": [
+          [
+            {
+              "node": "Save to Inquiry Box",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save to Inquiry Box": {
+        "main": [
+          [
+            {
+              "node": "Claim pending Telegram cards",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Retry pending Telegram delivery": {
+        "main": [
+          [
+            {
+              "node": "Claim pending Telegram cards",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claim pending Telegram cards": {
+        "main": [
+          [
+            {
+              "node": "Each pending card",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Each pending card": {
+        "main": [
+          [
+            {
+              "node": "For each card",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Existing Telegram message": {
+        "main": [
+          [
+            {
+              "node": "Closed inquiry for refresh",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Closed inquiry for new message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Closed inquiry for refresh": {
+        "main": [
+          [
+            {
+              "node": "Refresh closed inquiry card",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Refresh lead card",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Closed inquiry for new message": {
+        "main": [
+          [
+            {
+              "node": "Send closed inquiry card",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Send lead card",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Refresh closed inquiry card": {
+        "main": [
+          [
+            {
+              "node": "Validate message refresh",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send closed inquiry card": {
+        "main": [
+          [
+            {
+              "node": "Confirm Telegram delivery",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Refresh lead card": {
+        "main": [
+          [
+            {
+              "node": "Validate message refresh",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate message refresh": {
+        "main": [
+          [
+            {
+              "node": "Confirm Telegram delivery",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send lead card": {
+        "main": [
+          [
+            {
+              "node": "Confirm Telegram delivery",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Confirm Telegram delivery": {
+        "main": [
+          [
+            {
+              "node": "For each card",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Telegram progress and account linking": {
+        "main": [
+          [
+            {
+              "node": "Save verified Telegram update",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save verified Telegram update": {
+        "main": [
+          [
+            {
+              "node": "Telegram update persisted",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Telegram update persisted": {
+        "main": [
+          [
+            {
+              "node": "Acknowledge persisted Telegram update",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Ask Telegram to retry failed persistence",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Acknowledge persisted Telegram update": {
+        "main": [
+          [
+            {
+              "node": "Progress button pressed",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Progress button pressed": {
+        "main": [
+          [
+            {
+              "node": "Confirm progress to salesperson",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Account linking response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Confirm progress to salesperson": {
+        "main": [
+          [
+            {
+              "node": "Claim pending Telegram cards",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Account linking response": {
+        "main": [
+          [
+            {
+              "node": "Confirm private account link",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Confirm private account link": {
+        "main": [
+          [
+            {
+              "node": "Claim pending Telegram cards",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "For each card": {
+        "main": [
+          [],
+          [
+            {
+              "node": "Existing Telegram message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "timezone": "Asia/Kuala_Lumpur",
+      "saveDataSuccessExecution": "none",
+      "saveDataErrorExecution": "none",
+      "saveManualExecutions": false
+    },
+    "pinData": {},
+    "versionId": "be8f0b03-44a3-477c-a480-51396526f730"
+  }
+]

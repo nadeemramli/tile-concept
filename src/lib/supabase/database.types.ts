@@ -4681,6 +4681,45 @@ export type Database = {
           },
         ]
       }
+      lead_assignment_settings: {
+        Row: {
+          config: Json | null
+          updated_at: string | null
+          updated_by: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          config?: Json | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          config?: Json | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignment_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_intake_links: {
         Row: {
           intake_event_id: string | null
@@ -4714,6 +4753,71 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_routing_assignments: {
+        Row: {
+          config_version: number | null
+          created_at: string | null
+          customer_type: string | null
+          lead_id: string | null
+          owner_id: string | null
+          pool_key: string | null
+          reason: string | null
+          slot_name: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          config_version?: number | null
+          created_at?: string | null
+          customer_type?: string | null
+          lead_id?: string | null
+          owner_id?: string | null
+          pool_key?: string | null
+          reason?: string | null
+          slot_name?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          config_version?: number | null
+          created_at?: string | null
+          customer_type?: string | null
+          lead_id?: string | null
+          owner_id?: string | null
+          pool_key?: string | null
+          reason?: string | null
+          slot_name?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_routing_assignments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_routing_assignments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_routing_assignments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "lead_routing_assignments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -10540,6 +10644,224 @@ export type Database = {
           },
         ]
       }
+      telegram_lead_cards: {
+        Row: {
+          assigned_at: string | null
+          chat_id: number | null
+          created_at: string | null
+          delivered_follow_up_at: string | null
+          expires_at: string | null
+          lead_id: string | null
+          lease_until: string | null
+          leased_follow_up_at: string | null
+          message_id: number | null
+          needs_sync: boolean | null
+          owner_id: string | null
+          token: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          chat_id?: number | null
+          created_at?: string | null
+          delivered_follow_up_at?: string | null
+          expires_at?: string | null
+          lead_id?: string | null
+          lease_until?: string | null
+          leased_follow_up_at?: string | null
+          message_id?: number | null
+          needs_sync?: boolean | null
+          owner_id?: string | null
+          token?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          chat_id?: number | null
+          created_at?: string | null
+          delivered_follow_up_at?: string | null
+          expires_at?: string | null
+          lead_id?: string | null
+          lease_until?: string | null
+          leased_follow_up_at?: string | null
+          message_id?: number | null
+          needs_sync?: boolean | null
+          owner_id?: string | null
+          token?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_lead_cards_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_lead_cards_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_lead_cards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_lead_cards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_link_codes: {
+        Row: {
+          expires_at: string | null
+          token_hash: string | null
+          used_at: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          expires_at?: string | null
+          token_hash?: string | null
+          used_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          expires_at?: string | null
+          token_hash?: string | null
+          used_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_link_codes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_link_codes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_members: {
+        Row: {
+          linked_at: string | null
+          telegram_user_id: number | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          linked_at?: string | null
+          telegram_user_id?: number | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          linked_at?: string | null
+          telegram_user_id?: number | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_sales_channels: {
+        Row: {
+          chat_id: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          chat_id?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          chat_id?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_sales_channels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_sales_channels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_updates: {
+        Row: {
+          processed_at: string | null
+          result: Json | null
+          update_id: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          processed_at?: string | null
+          result?: Json | null
+          update_id?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          processed_at?: string | null
+          result?: Json | null
+          update_id?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_updates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_updates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unit_conversions: {
         Row: {
           context_variant_id: string | null
@@ -11359,6 +11681,10 @@ export type Database = {
         }
         Returns: string
       }
+      begin_telegram_link: {
+        Args: { p_token_hash: string }
+        Returns: undefined
+      }
       change_opportunity_stage: {
         Args: {
           p_next_action?: string
@@ -11378,6 +11704,15 @@ export type Database = {
       confirm_feedback_by_token: {
         Args: { p_customer_text: string; p_token_hash: string }
         Returns: boolean
+      }
+      confirm_telegram_card: {
+        Args: {
+          p_lead_id: string
+          p_message_id: number
+          p_token: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
       convert_lead: {
         Args: {
@@ -11600,6 +11935,7 @@ export type Database = {
           object_path: string
         }[]
       }
+      get_lead_routing: { Args: never; Returns: Json }
       global_search: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -11751,6 +12087,10 @@ export type Database = {
         }
         Returns: string
       }
+      pending_telegram_cards: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       prepare_feedback_photo: {
         Args: {
           p_media_id: string
@@ -11772,6 +12112,10 @@ export type Database = {
       }
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
       preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
+      process_telegram_update: {
+        Args: { p_update: Json; p_workspace_id: string }
+        Returns: Json
+      }
       publish_price: {
         Args: {
           p_override?: boolean
@@ -12128,6 +12472,10 @@ export type Database = {
         Returns: string
       }
       sales_scorecard: { Args: { p_year?: number }; Returns: Json }
+      save_lead_routing: {
+        Args: { p_config: Json; p_expected_version: number }
+        Returns: Json
+      }
       set_content_opportunity_status: {
         Args: {
           p_id: string
@@ -12185,6 +12533,7 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: number
       }
+      unlink_my_telegram: { Args: never; Returns: undefined }
       unmerge_contacts: {
         Args: { p_merge_event_id: string; p_reason: string }
         Returns: undefined

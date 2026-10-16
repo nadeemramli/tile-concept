@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { requireSession } from "@/server/session";
 import { PermissionDenied } from "@/components/patterns/states";
@@ -37,6 +38,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/sales/inbo
   return (
     <PageBody>
       <PageHeader title="Inquiry Inbox" description="Know who needs attention, what happened last, and when to follow up. Every inquiry stays in your history." />
+      {session.permissions.includes("sales.write") && <Link href="/sales/inbox/telegram" className="text-sm underline">Connect my Telegram</Link>}
       {sp.lead && !selected && <p role="status" className="rounded-md border p-3 text-sm text-muted-foreground">This inquiry link is invalid or the record is unavailable to your account. You can still search your authorized inquiries below.</p>}
       <InboxClient
         refreshedAt={new Date().toISOString()}

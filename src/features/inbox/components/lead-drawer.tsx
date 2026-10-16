@@ -27,7 +27,7 @@ import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
 import { VIEW_LABELS, whereIsLead } from "@/features/inbox/lib/whereabouts";
 import type { LeadView } from "@/features/inbox/schema";
-import type { IdentityCandidate, IntakeEventRow, LeadRow } from "@/features/inbox/types";
+import type { IdentityCandidate, IntakeEventRow, LeadRow, LeadRoutingAssignment } from "@/features/inbox/types";
 import type { ProfileRef } from "@/server/queries/reference";
 import {
   assignLeadAction,
@@ -39,6 +39,7 @@ import {
 } from "@/server/commands/leads";
 
 interface Props {
+  routing?: LeadRoutingAssignment | null;
   lead: LeadRow | null;
   intake: IntakeEventRow[];
   timeline: TimelineItem[];
@@ -59,7 +60,7 @@ const TIMELINE_PREVIEW = 5;
 
 const MASKED_HINT = "Shown masked because your role does not include contact.reveal. Revealing a phone number or email is audited with who, when and which record.";
 
-export function LeadDrawer({ lead, intake, timeline, contact, loading = false, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
+export function LeadDrawer({ lead, intake, timeline, contact, routing, loading = false, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
   const router = useRouter();
   const { can, session } = useSession();
   const [pending, start] = useTransition();
@@ -238,6 +239,10 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
           <div className="grid gap-5 @3xl:grid-cols-[3fr_2fr]">
             {/* Left: who they are and what they want */}
             <div className="space-y-5">
+              {routing && <DrawerSection title="Initial lead routing">
+                <FactList items={[{label:"Customer type",value:titleCase(routing.customer_type ?? "Needs review")},{label:"Pool",value:routing.pool_key ? titleCase(routing.pool_key) : "Needs review"},{label:"Salesperson slot",value:routing.slot_name ?? "Not assigned"}]}/>
+                <p className="mt-2 text-sm text-muted-foreground">{routing.reason}. Later ownership changes are recorded separately.</p>
+              </DrawerSection>}
               <DrawerSection title="Contact">
                 <FactList
                   className="sm:grid-cols-3"

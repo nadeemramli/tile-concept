@@ -1,3 +1,4 @@
+import type { LeadRoutingAssignment } from "@/features/inbox/types";
 import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -157,6 +158,7 @@ export async function getLinkedContactSummary(contactId: string | null) {
 }
 
 export interface InquiryDetail {
+  routing?: LeadRoutingAssignment | null;
   lead: LeadRow;
   intake: IntakeEventRow[];
   timeline: TimelineItem[];
@@ -169,8 +171,15 @@ export interface InquiryDetail {
  * on the lead row; only the linked contact summary depends on it.
  */
 export async function getInquiryDetail(leadId: string): Promise<InquiryDetail | null> {
-  const [lead, intake, timeline] = await Promise.all([getLead(leadId), getLeadIntakeEvents(leadId), getLeadTimeline(leadId)]);
+  const [lead, intake, timeline, routing] = await Promise.all([getLead(leadId), getLeadIntakeEvents(leadId), getLeadTimeline(leadId), getLeadRoutingAssignment(leadId)]);
   if (!lead) return null;
   const contact = await getLinkedContactSummary(lead.contact_id);
-  return { lead, intake, timeline, contact };
+  return { lead, intake, timeline, contact, routing };
+}
+
+async function getLeadRoutingAssignment(leadId: string): Promise<LeadRoutingAssignment | null> {
+ const db=await createServerSupabase();
+ const {data,error}=await db.from("lead_routing_assignments").select("customer_type,pool_key,slot_name,reason").eq("lead_id",leadId).maybeSingle();
+ if(error) throw new Error("Inquiry assignment details could not be loaded.");
+ return data ? {customer_type:data.customer_type,pool_key:data.pool_key,slot_name:data.slot_name,reason:data.reason ?? "Review routing"} : null;
 }
