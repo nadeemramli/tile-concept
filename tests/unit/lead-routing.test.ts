@@ -27,7 +27,8 @@ describe("Telegram operational card",()=>{
     expect(callbacks.every(b=>!b.callback_data.includes(card.lead_id))).toBe(true);
     expect(buttons.find(b=>b.text==="Open Inquiry")).toMatchObject({url:expect.stringContaining(`lead=${card.lead_id}`)});
     expect(result.text).toContain("9:00");
-    expect(result.text).toContain("Opening WhatsApp does not record a sent message");
+    expect(result.text).not.toContain("Opening WhatsApp");
+    expect(result.text).not.toContain(card.routing_reason);
   });
   it("removes progress controls from closed leads while retaining navigation",()=>{
     const result=buildTelegramCard({...card,status:"disqualified"},"https://example.test");
@@ -36,7 +37,41 @@ describe("Telegram operational card",()=>{
   });
   it("shows No response only until a newer customer reply is recorded",()=>{
     const unanswered={...card,status:"contacted",customer_reply_at:"2026-10-14T01:00:00Z",last_customer_reply_at:"2026-10-14T01:00:00Z",last_contact_attempt_at:"2026-10-15T01:00:00Z",no_response_at:"2026-10-15T01:00:00Z"};
-    expect(buildTelegramCard(unanswered,"https://example.test").text).toContain("Progress: No response");
-    expect(buildTelegramCard({...unanswered,last_customer_reply_at:"2026-10-16T01:00:00Z"},"https://example.test").text).toContain("Progress: Customer replied");
+    expect(buildTelegramCard(unanswered,"https://example.test").text).toContain("Status: No response");
+    expect(buildTelegramCard({...unanswered,last_customer_reply_at:"2026-10-16T01:00:00Z"},"https://example.test").text).toContain("Status: Customer replied");
+  });
+});
+
+describe("Sales-facing enquiry information",()=>{
+  it("shows the exact project/enquiry answers once with contact and source context",()=>{
+    const message="conditional_question_1: Pemilik rumah\nconditional_question_2: Masih merancang projek\nconditional_question_3: Nak tengok katalog dan harga dulu";
+    const result=buildTelegramCard({...card,assignee:"Naufal",email:"prospect@example.test",company:"Synthetic Studio",interest:"Nak tengok katalog dan harga dulu",enquiry_message:message,source:"facebook",received_at:"2026-10-15T01:34:26Z"},"https://example.test");
+    expect(result.text).toContain("Assigned to: Naufal");
+    expect(result.text).toContain("WhatsApp / phone: +60123456789");
+    expect(result.text).toContain("Email: prospect@example.test");
+    expect(result.text).toContain("Company: Synthetic Studio");
+    expect(result.text).toContain("Customer type: Pemilik rumah");
+    expect(result.text).toContain("Project stage: Masih merancang projek");
+    expect(result.text.match(/Nak tengok katalog dan harga dulu/g)).toHaveLength(1);
+    expect(result.text).toContain("Source: Facebook");
+    expect(result.text).toContain("15 Oct 2026");
+    expect(result.text).not.toContain("conditional_question");
+    expect(result.text).not.toContain("configure pool");
+  });
+  it("does not invent missing project details and preserves a free-text enquiry",()=>{
+    const result=buildTelegramCard({...card,phone:null,enquiry_message:"Need panels for a reception wall",customer_type:"designer"},"https://example.test");
+    expect(result.text).toContain("WhatsApp / phone: Not provided");
+    expect(result.text).toContain("Project stage: Not provided");
+    expect(result.text).toContain("Enquiry: Need panels for a reception wall");
+    expect(result.text).toContain("Customer type: Interior designer");
+    expect(result.text).not.toContain("Location:");
+  });
+  it("bounds form text while retaining the follow-up and transport-safe literal text",()=>{
+    const result=buildTelegramCard({...card,name:"<Test & name>",enquiry_message:"conditional_question_3: "+"A<&".repeat(4000)+"\nconditional_question_4: Other answer"},"https://example.test");
+    expect(result.text.length).toBeLessThanOrEqual(3800);
+    expect(result.text).toContain("<Test & name>"); // The existing n8n HTML boundary escapes this once.
+    expect(result.text).toContain("Other answer 4: Other answer");
+    expect(result.text).toContain("Next follow-up:");
+    expect(result.text).not.toContain(card.token);
   });
 });
