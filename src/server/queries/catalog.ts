@@ -68,6 +68,8 @@ export interface CatalogRow {
   dimensions_label: string;
   price: CurrentPrice | null;
   updated_at: string | null;
+  image_url?: string | null;
+  image_alt?: string | null;
 }
 
 export interface CatalogSearchResult {
@@ -179,6 +181,20 @@ export async function searchCatalog(filters: CatalogFilters): Promise<CatalogSea
       updated_at: r.updated_at,
     };
   });
+  if (rows.length) {
+    const { data: images, error: mediaError } = await supabase.from("product_media").select("product_id, storage_bucket, storage_path, alt_text, caption").in("product_id", rows.map(row => row.id)).eq("is_primary", true).eq("kind", "image").eq("review_state", "reviewed").eq("usage_rights_state", "accepted").is("archived_at", null);
+    if (mediaError) throw new Error(mediaError.message);
+    const resolved = await Promise.all((images ?? []).map(async image => {
+      const { data } = await supabase.storage.from(image.storage_bucket ?? "product-media").createSignedUrl(image.storage_path!, 300);
+      return { ...image, url: data?.signedUrl ?? null };
+    }));
+    const imageMap = new Map(resolved.map(image => [image.product_id, image]));
+    for (const row of rows) {
+      const image = imageMap.get(row.id);
+      row.image_url = image?.url ?? null;
+      row.image_alt = image?.alt_text ?? image?.caption ?? row.name;
+    }
+  }
   const total = count ?? 0;
   return { rows, total, page, pageSize, pageCount: Math.max(1, Math.ceil(total / pageSize)) };
 }
@@ -268,11 +284,15 @@ export async function getProductDetail(id: string) {
     variantIds.length ? supabase.from("variant_prices").select("*").in("variant_id", variantIds).order("valid_from", { ascending: false }) : Promise.resolve({ data: [] }),
     supabase.from("product_attribute_values").select("*").eq("product_id", id),
     supabase.from("product_aliases").select("*").eq("product_id", id).order("created_at"),
-    supabase.from("product_media").select("*").eq("product_id", id),
+    supabase.from("product_media").select("*").eq("product_id", id).is("archived_at", null).order("is_primary", { ascending: false }).order("sort_order").order("created_at"),
     supabase.from("catalog_entries").select("*").eq("product_id", id),
     supabase.from("price_lists").select("id, name, price_type, currency"),
   ]);
-  const auditIds = [id, ...variantIds, ...(prices ?? []).map((x) => x.id!)];
+  const resolvedMedia = await Promise.all((media ?? []).map(async item => {
+    const { data } = await supabase.storage.from(item.storage_bucket ?? "product-media").createSignedUrl(item.storage_path!, 300);
+    return { ...item, id: item.id!, kind: item.kind!, storage_path: item.storage_path!, is_primary: !!item.is_primary, url: data?.signedUrl ?? null };
+  }));
+  const auditIds = [id, ...resolvedMedia.map(item => item.id), ...variantIds, ...(prices ?? []).map((x) => x.id!)];
   const { data: audit } = await supabase.from("audit_events").select("id, occurred_at, actor_id, action, object_table, object_id, reason, before_data, after_data").in("object_id", auditIds).order("occurred_at", { ascending: false }).limit(30);
 
   // possible duplicates: same code_key / alias key, or same brand + name prefix
@@ -361,7 +381,7 @@ export async function getProductDetail(id: string) {
       notes: pr.notes,
     })),
     aliases: (aliases ?? []).map((a) => ({ id: a.id!, alias: a.alias!, source: a.source })),
-    media: (media ?? []).map((m) => ({ id: m.id!, kind: m.kind!, storage_path: m.storage_path!, caption: m.caption, is_primary: !!m.is_primary, source_ref: m.source_ref })),
+    media: resolvedMedia,
     catalogEntries: (entries ?? []).map((e) => ({ id: e.id!, page_ref: e.page_ref, snippet: e.snippet, source_asset_id: e.source_asset_id })),
     audit: (audit ?? []).map((a) => ({ ...a, id: a.id!, actor_name: a.actor_id ? (members.get(a.actor_id)?.full_name ?? null) : null })),
     duplicates: [...dupMap.values()],
