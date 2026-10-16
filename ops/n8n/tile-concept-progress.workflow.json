@@ -278,7 +278,7 @@
         "parameters": {
           "resource": "message",
           "chatId": "={{ $json.chat_id }}",
-          "text": "={{ $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
           "replyMarkup": "inlineKeyboard",
           "inlineKeyboard": {
             "rows": [
@@ -367,7 +367,7 @@
         "parameters": {
           "resource": "message",
           "chatId": "={{ $json.chat_id }}",
-          "text": "={{ $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
           "replyMarkup": "inlineKeyboard",
           "inlineKeyboard": {
             "rows": [
@@ -459,7 +459,7 @@
         "parameters": {
           "resource": "message",
           "chatId": "={{ $json.chat_id }}",
-          "text": "={{ $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
           "replyMarkup": "inlineKeyboard",
           "inlineKeyboard": {
             "rows": [
@@ -512,7 +512,7 @@
         "parameters": {
           "resource": "message",
           "chatId": "={{ $json.chat_id }}",
-          "text": "={{ $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+          "text": "={{ $json.text_html ?? $json.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
           "replyMarkup": "inlineKeyboard",
           "inlineKeyboard": {
             "rows": [

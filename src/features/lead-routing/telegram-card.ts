@@ -7,6 +7,7 @@ export const telegramCardSchema=z.object({
   name:z.string(),assignee:z.string(),status:z.string(),routing_reason:z.string().nullable(),customer_type:z.string().nullable(),
   whatsapp_sent_at:z.string().nullable(),customer_reply_at:z.string().nullable(),no_response_at:z.string().nullable(),follow_up_at:z.string().nullable(),
   last_customer_reply_at:z.string().nullable(),last_contact_attempt_at:z.string().nullable(),
+  assignee_telegram_id:z.string().regex(/^[1-9][0-9]{0,15}$/).nullable().optional(),
   phone:z.string().nullable().optional(),
   email:z.string().nullable().optional(),company:z.string().nullable().optional(),
   interest:z.string().nullable().optional(),enquiry_message:z.string().nullable().optional(),
@@ -22,6 +23,7 @@ function clip(value:string,max:number) {return value.length>max ? value.slice(0,
 function clean(value:string | null | undefined,max:number) {
   return clip((value ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069]/g,"").trim(),max);
 }
+function escapeHtml(value:string) {return value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function displayDate(value:string) {
   const date=new Date(value);
   return Number.isNaN(date.getTime()) ? "Not provided" : new Intl.DateTimeFormat("en-MY",{timeZone:"Asia/Kuala_Lumpur",dateStyle:"medium",timeStyle:"short"}).format(date)+" MYT";
@@ -59,16 +61,22 @@ export function buildTelegramCard(card:TelegramCard,appUrl:string) {
     card.last_contact_attempt_at && `Last contact: ${displayDate(card.last_contact_attempt_at)}`,
     latestReply && `Last customer reply: ${displayDate(latestReply)}`,
     "",`Source: ${source}${card.received_at ? ` · ${displayDate(card.received_at)}` : ""}`].filter(line=>line!==null && line!==undefined).join("\n");
-  const body=["📩 CUSTOMER ENQUIRY",`Name: ${clean(card.name,140) || "New prospect"}`,
-    `Assigned to: ${clean(card.assignee,120) || "Unassigned"}`,"","📞 CONTACT",...contact,"","💬 WHAT THEY NEED",...details].join("\n");
+  const assignee=clean(card.assignee.replace(/\s+/g," "),120) || "Unassigned";
+  const assignmentLine=`Assigned to: ${assignee}`;
+  const body=["📩 CUSTOMER ENQUIRY",`Name: ${clean(card.name.replace(/\s+/g," "),140) || "New prospect"}`,
+    assignmentLine,"","📞 CONTACT",...contact,"","💬 WHAT THEY NEED",...details].join("\n");
   // Keep follow-up and contact context even for unusually long form answers.
   const text=clip(body,3800-footer.length-2)+"\n\n"+footer;
+  // Only the server-projected verified numeric identity may produce mention markup.
+  const mentionId=card.assignee_telegram_id;
+  const text_html=text.split("\n").map((line,index)=>index===2 && line===assignmentLine && mentionId && /^[1-9][0-9]{0,15}$/.test(mentionId)
+    ? `Assigned to: <a href="tg://user?id=${mentionId}">${escapeHtml(assignee)}</a>` : escapeHtml(line)).join("\n");
   const action=(label:string,key:string)=>({text:label,callback_data:`tc:${card.token}:${key}`});
   const links=[{text:"Open Inquiry",url:buildLeadInboxUrl(appUrl,card.lead_id)}];
   const whatsapp=buildWhatsAppUrl(card.phone ?? undefined, "");
   if(whatsapp) links.push({text:"Open WhatsApp",url:whatsapp});
   const closed=["disqualified","duplicate"].includes(card.status);
-  return {...card,text,lead_url:buildLeadInboxUrl(appUrl,card.lead_id),whatsapp_url:whatsapp,reply_markup:{inline_keyboard:[...(closed?[]:[
+  return {...card,text,text_html,lead_url:buildLeadInboxUrl(appUrl,card.lead_id),whatsapp_url:whatsapp,reply_markup:{inline_keyboard:[...(closed?[]:[
     [action("WhatsApp sent","sent"),action("Customer replied","reply")],
     [action("No response","none"),action("Follow up tomorrow · 9am","tomorrow")],
   ]),links]}};

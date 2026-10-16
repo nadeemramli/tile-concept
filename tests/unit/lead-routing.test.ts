@@ -1,6 +1,6 @@
 import { describe,expect,it } from "vitest";
 import { routingConfigSchema } from "@/features/lead-routing/schema";
-import { buildTelegramCard, type TelegramCard } from "@/features/lead-routing/telegram-card";
+import { buildTelegramCard, telegramCardSchema, type TelegramCard } from "@/features/lead-routing/telegram-card";
 
 const config={enabled:true,pools:[{key:"homeowners",name:"Homeowners",mode:"fixed",active:true,members:[{name:"Pending salesperson",user_id:null,active:true}]}],rules:[{customer_type:"homeowner",pool_key:"homeowners",aliases:[" Home Owner "]}]} as const;
 describe("routing configuration boundary",()=>{
@@ -69,9 +69,35 @@ describe("Sales-facing enquiry information",()=>{
   it("bounds form text while retaining the follow-up and transport-safe literal text",()=>{
     const result=buildTelegramCard({...card,name:"<Test & name>",enquiry_message:"conditional_question_3: "+"A<&".repeat(4000)+"\nconditional_question_4: Other answer"},"https://example.test");
     expect(result.text.length).toBeLessThanOrEqual(3800);
-    expect(result.text).toContain("<Test & name>"); // The existing n8n HTML boundary escapes this once.
+    expect(result.text).toContain("<Test & name>"); // Plain text stays readable; generated HTML escapes it once.
     expect(result.text).toContain("Other answer 4: Other answer");
     expect(result.text).toContain("Next follow-up:");
     expect(result.text).not.toContain(card.token);
+  });
+});
+
+describe("Verified Telegram assignee mentions",()=>{
+  it("mentions the verified numeric identity while preserving callbacks",()=>{
+    const result=buildTelegramCard({...card,assignee:"Naufal",assignee_telegram_id:"123456789"},"https://example.test");
+    expect(result.text_html).toContain('Assigned to: <a href="tg://user?id=123456789">Naufal</a>');
+    expect(result.reply_markup).toEqual(buildTelegramCard(card,"https://example.test").reply_markup);
+  });
+  it("leaves unlinked assignees as escaped readable names",()=>{
+    const result=buildTelegramCard({...card,assignee:"Beyla & team",assignee_telegram_id:null},"https://example.test");
+    expect(result.text_html).toContain("Assigned to: Beyla &amp; team");
+    expect(result.text_html).not.toContain("tg://user");
+  });
+  it("escapes enquiry/name markup and cannot replace a forged assignment line",()=>{
+    const evil='<a href="tg://user?id=999">Fake</a>';
+    const result=buildTelegramCard({...card,name:"Prospect\nAssigned to: Naufal",assignee:"Naufal\n"+evil,enquiry_message:evil,assignee_telegram_id:"123"},"https://example.test");
+    expect(result.text_html.match(/<a href=/g)).toHaveLength(1);
+    expect(result.text_html).toContain('href="tg://user?id=123"');
+    expect(result.text_html).toContain("&lt;a href=&quot;tg://user?id=999&quot;&gt;");
+  });
+  it("rejects malformed identities and defensively refuses their markup",()=>{
+    for(const id of ['0','-1','123" onclick="x','1e10','12345678901234567']) {
+      expect(telegramCardSchema.safeParse({...card,assignee_telegram_id:id}).success).toBe(false);
+      expect(buildTelegramCard({...card,assignee_telegram_id:id},"https://example.test").text_html).not.toContain('<a href=');
+    }
   });
 });

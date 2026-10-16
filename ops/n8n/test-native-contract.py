@@ -17,8 +17,8 @@ mock=r'''
 const http=require('node:http'),fs=require('node:fs');
 const root=process.argv[2];fs.writeFileSync(root+'/mock.pid',String(process.pid));
 const receipts={pending:0,updates:0,sent:[],edited:[],confirmed:[],callbacks:[],links:[],errors:[]};
-const cards=[{lead_id:'11111111-0000-0000-0000-000000000001',token:'70dac769-0688-4a32-8b8b-621bd71cf846',chat_id:'-700123',message_id:null,text:'Fixture <prospect> & test',reply_markup:{inline_keyboard:[[{text:'WhatsApp sent',callback_data:'tc:70dac769-0688-4a32-8b8b-621bd71cf846:sent'}],[{text:'Open Inquiry',url:'https://example.test/sales/inbox?lead=11111111-0000-0000-0000-000000000001'}]]}},
-{lead_id:'11111111-0000-0000-0000-000000000002',token:'80dac769-0688-4a32-8b8b-621bd71cf846',chat_id:'-700123',message_id:777,text:'Existing card fixture',reply_markup:{inline_keyboard:[[{text:'Customer replied',callback_data:'tc:80dac769-0688-4a32-8b8b-621bd71cf846:reply'}]]}}];
+const cards=[{lead_id:'11111111-0000-0000-0000-000000000001',token:'70dac769-0688-4a32-8b8b-621bd71cf846',chat_id:'-700123',message_id:null,text:'Fixture <prospect> & test',text_html:'Fixture &lt;prospect&gt; &amp; test - Assigned to: <a href="tg://user?id=123456789">Synthetic rep</a>',reply_markup:{inline_keyboard:[[{text:'WhatsApp sent',callback_data:'tc:70dac769-0688-4a32-8b8b-621bd71cf846:sent'}],[{text:'Open Inquiry',url:'https://example.test/sales/inbox?lead=11111111-0000-0000-0000-000000000001'}]]}},
+{lead_id:'11111111-0000-0000-0000-000000000002',token:'80dac769-0688-4a32-8b8b-621bd71cf846',chat_id:'-700123',message_id:777,text:'Existing <card> & fixture',reply_markup:{inline_keyboard:[[{text:'Customer replied',callback_data:'tc:80dac769-0688-4a32-8b8b-621bd71cf846:reply'}]]}}];
 cards.push({...cards[1],lead_id:'11111111-0000-0000-0000-000000000003',message_id:888,status:'disqualified',text:'Closed inquiry fixture'});
 for(const c of cards){c.status=c.status||'new';c.lead_url='https://example.test/sales/inbox?lead='+c.lead_id;c.whatsapp_url=null;}
 const server=http.createServer(async(req,res)=>{const chunks=[];for await(const c of req)chunks.push(c);const raw=Buffer.concat(chunks).toString();let b={};try{b=raw?JSON.parse(raw):{};}catch{}
@@ -82,19 +82,20 @@ try:
   time.sleep(1);receipts=json.loads(request('/receipts')['text'])
   if len(receipts['confirmed'])==3 and len(receipts['callbacks'])==1:break
  assert len(receipts['sent'])==1,receipts
- assert receipts['sent'][0]['text']=='Fixture &lt;prospect&gt; &amp; test',receipts['sent']
+ assert receipts['sent'][0]['text']=='Fixture &lt;prospect&gt; &amp; test - Assigned to: <a href="tg://user?id=123456789">Synthetic rep</a>',receipts['sent']
  buttons=receipts['sent'][0]['reply_markup']['inline_keyboard'];assert buttons and buttons[0] and buttons[0][0].get('callback_data','').endswith(':sent'),receipts
  assert sorted(r['message_id'] for r in receipts['confirmed'])==[501,777,888],receipts
  closed=[r for r in receipts['edited'] if str(r.get('message_id'))=='888'];assert closed,receipts
  assert all('callback_data' not in b for r in closed for row in r['reply_markup']['inline_keyboard'] for b in row),receipts
  assert len(receipts['callbacks'])==1 and receipts['callbacks'][0]['text']=='Saved in Inquiry Box.',receipts
+ assert any(r['text']=='Existing &lt;card&gt; &amp; fixture' for r in receipts['edited']),receipts
  assert not receipts['errors'],receipts
  link=request('/webhook/tile-concept-telegram-progress',{'update_id':3,'message':{'text':'/start tc_fixture'}},'fixture-webhook-secret');assert link['status']==200,link
  for _ in range(10):
   time.sleep(1);receipts=json.loads(request('/receipts')['text'])
   if len(receipts['links'])==1:break
  assert len(receipts['links'])==1,receipts
- print(json.dumps({'outcome':'passed','environment':'isolated SQLite n8n runtime with fixture bot and mock vendor; production database and bot unchanged','header_auth':'wrong secret denied; correct secret accepted','delivery':'new card sent once and individually confirmed','keyboard':'serialized opaque callback buttons correctly; closed leads have navigation only','html':'escaped','edit_recovery':'message-is-not-modified safely confirmed','persistence_failure':'503 requests provider retry','callback':'provider acknowledged after persistence and salesperson answered','linking':'private confirmation delivered','confirmed_message_ids':sorted(r['message_id'] for r in receipts['confirmed'])}))
+ print(json.dumps({'outcome':'passed','environment':'isolated SQLite n8n runtime with fixture bot and mock vendor; production database and bot unchanged','header_auth':'wrong secret denied; correct secret accepted','delivery':'new card sent once and individually confirmed','keyboard':'serialized opaque callback buttons correctly; closed leads have navigation only','html':'trusted numeric mention preserved; enquiry escaped; legacy cards supported','edit_recovery':'message-is-not-modified safely confirmed','persistence_failure':'503 requests provider retry','callback':'provider acknowledged after persistence and salesperson answered','linking':'private confirmation delivered','confirmed_message_ids':sorted(r['message_id'] for r in receipts['confirmed'])}))
 finally:
  run(['docker','stop','-t','3',runner],check=False);run(['docker','rm',runner],check=False)
  for name,target in [('n8n.pid',c),('mock.pid',relay)]:
