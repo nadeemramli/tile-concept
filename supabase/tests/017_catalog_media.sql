@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(27);
 
 select is((select public from storage.buckets where id = 'product-media'), false, 'catalogue media stays private');
 select ok((select allowed_mime_types @> array['video/mp4','video/webm','application/pdf'] from storage.buckets where id = 'product-media'), 'video and PDF types supported');
@@ -18,6 +18,9 @@ insert into merch.product_media(id,workspace_id,product_id,storage_path,kind,rev
 ('ca7a1000-0000-4000-8000-000000000013','11111111-1111-1111-1111-111111111111','ca7a1000-0000-4000-8000-000000000002','11111111-1111-1111-1111-111111111111/test/d.pdf','pdf','reviewed','accepted'),
 ('ca7a1000-0000-4000-8000-000000000014','11111111-1111-1111-1111-111111111111','ca7a1000-0000-4000-8000-000000000002','11111111-1111-1111-1111-111111111111/test/e.jpg','image','reviewed','accepted');
 
+insert into storage.objects(bucket_id,name) select 'product-media', storage_path from merch.product_media
+where product_id='ca7a1000-0000-4000-8000-000000000002';
+
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000006","role":"authenticated"}', true);
 select lives_ok($$select api.set_primary_catalog_media('ca7a1000-0000-4000-8000-000000000010','ca7a1000-0000-4000-8000-000000000002')$$,'catalogue operator selects reviewed image');
@@ -29,9 +32,13 @@ select throws_ok($$select api.set_primary_catalog_media('ca7a1000-0000-4000-8000
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000003","role":"authenticated"}', true);
 select throws_ok($$select api.set_primary_catalog_media('ca7a1000-0000-4000-8000-000000000010','ca7a1000-0000-4000-8000-000000000002')$$,null::text,null::text,'sales rep cannot mutate primary image');
 select is((select count(*) from api.product_media where product_id='ca7a1000-0000-4000-8000-000000000002'),4::bigint,'sales sees approved media only, not unreviewed');
+select is((select count(*) from storage.objects where bucket_id='product-media' and name like '11111111-1111-1111-1111-111111111111/test/%'),4::bigint,'sales can read only approved active objects by known path');
+select is((select count(*) from storage.objects where bucket_id='product-media' and name='11111111-1111-1111-1111-111111111111/test/c.jpg'),0::bigint,'unreviewed known path denied to sales');
+select is(core.has_permission_in('ca7a1000-0000-4000-8000-000000000001','catalog.write'),false,'catalogue permission cannot cross workspaces');
 select throws_ok($$select api.replace_catalog_media('ca7a1000-0000-4000-8000-000000000011','ca7a1000-0000-4000-8000-000000000014')$$,null::text,null::text,'sales rep cannot replace media');
 select throws_ok($$insert into storage.objects(bucket_id,name,owner_id) values ('product-media','11111111-1111-1111-1111-111111111111/products/x/y.png','aaaaaaaa-0000-0000-0000-000000000003')$$,'42501',null::text,'sales rep cannot write catalogue media objects');
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000006","role":"authenticated"}', true);
+select is((select count(*) from storage.objects where bucket_id='product-media' and name like '11111111-1111-1111-1111-111111111111/test/%'),5::bigint,'operator can validate unreviewed uploads before attachment');
 update api.product_media set caption = 'Old caption' where id = 'ca7a1000-0000-4000-8000-000000000011';
 select lives_ok($$select api.replace_catalog_media('ca7a1000-0000-4000-8000-000000000011','ca7a1000-0000-4000-8000-000000000014')$$,'operator replaces the primary image');
 select is((select id from api.product_media where product_id='ca7a1000-0000-4000-8000-000000000002' and is_primary),'ca7a1000-0000-4000-8000-000000000014'::uuid,'replacement inherits primary role');
@@ -40,6 +47,11 @@ select is((select caption from api.product_media where id='ca7a1000-0000-4000-80
 select throws_ok($$select api.replace_catalog_media('ca7a1000-0000-4000-8000-000000000011','ca7a1000-0000-4000-8000-000000000010')$$,'P0001','media to replace is not active','archived media cannot be replaced again');
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000003","role":"authenticated"}', true);
 select is((select count(*) from api.product_media where product_id='ca7a1000-0000-4000-8000-000000000002'),3::bigint,'archived media hidden from sales after reload');
+select is((select count(*) from storage.objects where bucket_id='product-media' and name='11111111-1111-1111-1111-111111111111/test/b.jpg'),0::bigint,'archived known path denied to sales');
+reset role;
+update merch.product_media set usage_rights_state='denied', review_state='conflicted' where id='ca7a1000-0000-4000-8000-000000000010';
+set local role authenticated;
+select is((select count(*) from storage.objects where bucket_id='product-media' and name='11111111-1111-1111-1111-111111111111/test/a.jpg'),0::bigint,'rights-denied known path denied to sales');
 reset role;
 select ok(exists(select 1 from audit.audit_events where object_id='ca7a1000-0000-4000-8000-000000000011'),'media changes retain audit evidence');
 select * from finish();

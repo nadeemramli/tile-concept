@@ -20,7 +20,7 @@ const email = `catalog-media-${randomUUID()}@example.test`;
 const password = randomUUID() + randomUUID();
 let userId: string | undefined;
 let objectPath: string | undefined;
-function sql(query: string) { return execFileSync("docker", ["exec", "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
+function sql(query: string) { return execFileSync("docker", ["exec", process.env.E2E_DB_CONTAINER ?? "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(); }
 try {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   assert.ifError(created.error); userId = created.data.user?.id; assert(userId);
