@@ -1,6 +1,7 @@
 # Standard sales reporting — gap analysis and plan
 
 **Status:** proposal, 2026-10-04. Nothing in this document is built yet.
+**Provenance:** merged in PR #17 at `85a048d`. Reconciled for TILE-3 in `docs/sales-reporting-baseline-tile-3.md` §7: where that dictionary differs (GLC as an independent dimension, quotation send events, selected-week forecast, neutral competitor relationship, no forecast or segment gates, dimension coverage), the coordinator rules recorded there apply. Decisions in this plan remain proposals; none is owner-accepted.
 **Owner question:** "What is missing in our lead management system before the app can show the standard weekly sales report by default?"
 
 ## 1. The report we want
