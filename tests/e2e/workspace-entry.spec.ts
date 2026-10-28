@@ -23,6 +23,8 @@ const USERS = {
 } as const;
 // Driver here (the acting, oldest membership) and sales rep in another workspace.
 const DUAL = { id: randomUUID(), email: `e2e.dual.${run}@tileconcept.test`, name: "E2E Dual" };
+// The reverse (TILE-62): admin in another workspace (acting) and driver here.
+const REVERSE = { id: randomUUID(), email: `e2e.reverse.${run}@tileconcept.test`, name: "E2E Reverse" };
 const OTHER_WORKSPACE = randomUUID();
 
 function sql(query: string) {
@@ -36,7 +38,7 @@ const PUBLISHABLE_KEY: string = status.PUBLISHABLE_KEY ?? status.ANON_KEY;
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(() => {
-  const all = [...Object.values(USERS), DUAL];
+  const all = [...Object.values(USERS), DUAL, REVERSE];
   const values = all.map((u) => `('${u.id}'::uuid,'${u.email}','${u.name}')`).join(",");
   sql(`with u(id,email,name) as (values ${values})
        insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
@@ -51,14 +53,17 @@ test.beforeAll(() => {
        insert into core.workspaces(id,slug,name) values ('${OTHER_WORKSPACE}','e2e-entry-${run}','E2E other workspace');
        insert into core.memberships(workspace_id,user_id,role_key,created_at) values
          ('${WORKSPACE}','${DUAL.id}','driver',now()-interval '1 day'),
-         ('${OTHER_WORKSPACE}','${DUAL.id}','sales_rep',now());
+         ('${OTHER_WORKSPACE}','${DUAL.id}','sales_rep',now()),
+         ('${OTHER_WORKSPACE}','${REVERSE.id}','admin',now()-interval '1 day'),
+         ('${WORKSPACE}','${REVERSE.id}','driver',now());
        delete from core.user_preferences where user_id='${ADMIN_ID}';`);
 });
 
 test.afterAll(() => {
+  // The other workspace first: the lead the reverse admin created there references its author.
   sql(`delete from core.user_preferences where user_id='${ADMIN_ID}';
-       delete from auth.users where id in (${[...Object.values(USERS), DUAL].map((u) => `'${u.id}'`).join(",")});
-       delete from core.workspaces where id='${OTHER_WORKSPACE}';`);
+       delete from core.workspaces where id='${OTHER_WORKSPACE}';
+       delete from auth.users where id in (${[...Object.values(USERS), DUAL, REVERSE].map((u) => `'${u.id}'`).join(",")});`);
 });
 
 async function signIn(page: Page, email: string, path = "/login") {
@@ -90,6 +95,38 @@ async function rpc(context: BrowserContext, fn: string, body: object) {
     body: JSON.stringify(body),
   });
   return { status: res.status, body: await res.text() };
+}
+
+/** A PostgREST call on the `api` schema with the browser's own session. */
+async function rest(context: BrowserContext, method: string, path: string, body?: object) {
+  const res = await fetch(`${API_URL}/rest/v1/${path}`, {
+    method,
+    headers: { apikey: PUBLISHABLE_KEY, Authorization: `Bearer ${await accessToken(context)}`, "Content-Type": "application/json", "Content-Profile": "api", "Accept-Profile": "api", Prefer: "return=representation" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return { status: res.status, body: await res.text() };
+}
+
+/** Workspace data a borrowed permission could read or change. */
+const workspaceFingerprint = () =>
+  sql(`select md5(concat_ws('|',
+         (select string_agg(to_jsonb(l)::text, ',' order by l.id) from sales.leads l where l.workspace_id='${WORKSPACE}'),
+         (select string_agg(to_jsonb(c)::text, ',' order by c.id) from identity.contacts c where c.workspace_id='${WORKSPACE}'),
+         (select string_agg(to_jsonb(i)::text, ',' order by i.id) from core.membership_invites i where i.workspace_id='${WORKSPACE}'),
+         (select count(*)::text from audit.audit_events e where e.workspace_id='${WORKSPACE}')))`);
+
+/** Every way the browser session could reach this workspace's customers, refused. */
+async function expectNoBorrowedAccess(context: BrowserContext) {
+  const contact = sql(`select id from identity.contacts where workspace_id='${WORKSPACE}' and merged_into_contact_id is null order by id limit 1`);
+  const lead = sql(`select id from sales.leads where workspace_id='${WORKSPACE}' order by id limit 1`);
+  expect((await rest(context, "GET", `leads?workspace_id=eq.${WORKSPACE}&select=id`)).body).toBe("[]");
+  expect((await rest(context, "GET", `contacts?workspace_id=eq.${WORKSPACE}&select=id`)).body).toBe("[]");
+  expect((await rest(context, "GET", `contact_points?workspace_id=eq.${WORKSPACE}&select=id`)).body).toBe("[]");
+  expect((await rpc(context, "reveal_contact_points", { p_contact_id: contact })).status).toBe(403);
+  expect((await rpc(context, "assign_lead", { p_lead_id: lead, p_owner_id: ADMIN_ID })).status).toBe(403);
+  expect((await rest(context, "POST", "leads", { workspace_id: WORKSPACE, source_channel: "other" })).status).toBe(403);
+  expect((await rest(context, "PATCH", `contacts?workspace_id=eq.${WORKSPACE}`, { display_name: "Borrowed" })).body).toBe("[]");
+  expect((await rest(context, "POST", "membership_invites", { workspace_id: WORKSPACE, email: `e2e.borrowed.${run}@tileconcept.test`, role_key: "admin" })).status).toBe(403);
 }
 
 const primaryNav = (page: Page) => page.getByRole("navigation", { name: "Primary" });
@@ -144,6 +181,34 @@ test.describe("landings and denials", () => {
     expect(operating.status).toBe(403);
     expect(operating.body).toContain("workspace.operating");
     expect(sql(`select count(*) from core.user_preferences where user_id='${DUAL.id}'`)).toBe("0");
+
+    // TILE-62: the sales role elsewhere reaches none of this workspace's data,
+    // through the pages or straight at the service, before and after a reload.
+    const before = workspaceFingerprint();
+    await page.goto("/sales/inbox");
+    await expect(page.getByText(/Not available/).first()).toBeVisible();
+    await expectNoBorrowedAccess(context);
+    expect((await rpc(context, "command_centre_summary", {})).status).toBe(403);
+    expect((await rpc(context, "global_search", { p_query: "a" })).body).toBe("[]");
+    await page.reload();
+    await expect(page.getByText(/Not available/).first()).toBeVisible();
+    await expectNoBorrowedAccess(context);
+    expect(workspaceFingerprint()).toBe(before);
+  });
+
+  test("an admin role elsewhere does not reach this workspace through a driver membership here", async ({ page, context }) => {
+    await signIn(page, REVERSE.email);
+    // Acting as the admin of the other workspace: its own areas, nothing here.
+    const before = workspaceFingerprint();
+    await expectNoBorrowedAccess(context);
+    expect(JSON.parse((await rpc(context, "global_search", { p_query: "a" })).body)).toEqual([]);
+    expect(workspaceFingerprint()).toBe(before);
+    // Legitimate: the admin membership still writes its own workspace, and it persists.
+    const created = await rest(context, "POST", "leads", { workspace_id: OTHER_WORKSPACE, source_channel: "other" });
+    expect(created.status).toBe(201);
+    expect(sql(`select count(*) from sales.leads where workspace_id='${OTHER_WORKSPACE}'`)).toBe("1");
+    await page.reload();
+    expect(JSON.parse((await rest(context, "GET", `leads?workspace_id=eq.${OTHER_WORKSPACE}&select=id`)).body)).toHaveLength(1);
   });
 
   test("warehouse lands on preparation and an admin employee on the Admin System hub", async ({ page }) => {
