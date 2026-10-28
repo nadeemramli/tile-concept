@@ -96,6 +96,46 @@ select ok((select count(*) from api.leads)>0,'management can browse Operating Sy
 select ok(not core.has_permission('stock.write') and not core.has_permission('settings.manage') and not core.has_permission('purchase.correct'),'management browsing grants no approval');
 select is(api.set_default_area('admin'),'admin','management may remember an area it can enter');
 
+------------------------------------------------------------------------------
+-- Dual membership: entry follows the acting membership, not the union
+------------------------------------------------------------------------------
+reset role;
+insert into core.workspaces(id,slug,name) values ('99999999-3200-0000-0000-000000000002','synthetic-entry-other','Synthetic other workspace');
+insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
+  confirmation_token,recovery_token,email_change,email_change_token_new,email_change_token_current,phone_change,phone_change_token,reauthentication_token,is_sso_user)
+select '00000000-0000-0000-0000-000000000000',u.id,'authenticated','authenticated',u.email,'',now(),'{"provider":"email","providers":["email"]}','{}',now(),now(),'','','','','','','','',false
+from (values
+  ('dddddddd-3200-0000-0000-000000000011'::uuid,'synthetic.dual.driver@tileconcept.test'),
+  ('dddddddd-3200-0000-0000-000000000012'::uuid,'synthetic.dual.rep@tileconcept.test')
+) as u(id,email);
+-- The oldest active membership is the acting one (core.current_workspace_id).
+insert into core.memberships(workspace_id,user_id,role_key,created_at) values
+  ('11111111-1111-1111-1111-111111111111','dddddddd-3200-0000-0000-000000000011','driver',now()-interval '1 day'),
+  ('99999999-3200-0000-0000-000000000002','dddddddd-3200-0000-0000-000000000011','sales_rep',now()),
+  ('11111111-1111-1111-1111-111111111111','dddddddd-3200-0000-0000-000000000012','sales_rep',now()-interval '1 day'),
+  ('99999999-3200-0000-0000-000000000002','dddddddd-3200-0000-0000-000000000012','driver',now());
+set local role authenticated;
+
+select pg_temp.act_as('dddddddd-3200-0000-0000-000000000011');
+select ok(core.has_permission('workspace.operating'),'fixture: the global union does include the other workspace''s Operating System');
+select is((select array_agg(p order by p) from api.my_workspace_permissions() p),array['delivery.read_own','workspace.admin'],'acting permissions are the driver role only');
+select throws_ok($$select api.set_default_area('operating')$$,'42501','permission denied: workspace.operating','a driver here cannot remember the Operating System granted elsewhere');
+select is(api.set_default_area('admin'),'admin','the acting area can still be remembered');
+select is((select workspace_id from api.user_preferences),'11111111-1111-1111-1111-111111111111'::uuid,'the preference is stored for the acting workspace only');
+
+select pg_temp.act_as('dddddddd-3200-0000-0000-000000000012');
+select ok(not ('delivery.read_own' = any(array(select api.my_workspace_permissions()))),'a sales rep here gets no driver queue from another workspace');
+select throws_ok($$select api.set_default_area('admin')$$,'42501','permission denied: workspace.admin','a sales rep here cannot remember the Admin System granted elsewhere');
+
+-- Pre-existing, NOT introduced or fixed here (recorded in
+-- docs/admin-beta-workspace-entry-handoff.md): table RLS uses the globally
+-- aggregated core.has_permission, so this driver still reads this workspace's
+-- sales records through the other membership's sales role.
+select pg_temp.act_as('dddddddd-3200-0000-0000-000000000011');
+select todo_start('pre-existing: RLS aggregates permissions across memberships');
+select is((select count(*)::int from api.leads where workspace_id='11111111-1111-1111-1111-111111111111'),0,'a driver here sees no leads here despite a sales role elsewhere');
+select todo_end();
+
 select set_config('request.jwt.claims','',true);
 select throws_ok($$select api.set_default_area('admin')$$,'42501',null,'an unauthenticated caller cannot store a preference');
 

@@ -103,8 +103,10 @@ begin
     raise exception 'unknown workspace area: %', p_area using errcode = '22023';
   end if;
   -- Remembering an area is only allowed for an area the caller may already
-  -- enter. This is what keeps a preference from ever acting as a grant.
-  if p_area is not null and not core.has_permission('workspace.' || p_area) then
+  -- enter IN THE WORKSPACE THE ROW IS FOR. core.has_permission ORs across every
+  -- active membership, so a driver here who is a sales rep elsewhere would pass
+  -- it; has_permission_in checks this membership's role only.
+  if p_area is not null and not core.has_permission_in(v_ws, 'workspace.' || p_area) then
     raise exception 'permission denied: workspace.%', p_area using errcode = '42501';
   end if;
 
@@ -115,3 +117,22 @@ begin
 end $$;
 revoke all on function api.set_default_area(text) from public;
 grant execute on function api.set_default_area(text) to authenticated;
+
+------------------------------------------------------------------------------
+-- 4. Permissions of the membership the caller acts under.
+--
+-- api.my_permissions() is the union over every active membership. Workspace
+-- entry (which area, which landing) must follow the acting membership's role
+-- only, so the app reads the entry keys from here. Other keys keep their
+-- existing aggregated behaviour; see docs/admin-beta-workspace-entry-handoff.md.
+------------------------------------------------------------------------------
+create or replace function api.my_workspace_permissions()
+returns setof text
+language sql stable security definer set search_path = '' as $$
+  select rp.permission from core.memberships m
+  join core.role_permissions rp on rp.role_key = m.role_key
+  where m.user_id = (select auth.uid()) and m.status = 'active'
+    and m.workspace_id = core.current_workspace_id()
+$$;
+revoke all on function api.my_workspace_permissions() from public;
+grant execute on function api.my_workspace_permissions() to authenticated;

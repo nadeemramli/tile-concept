@@ -21,6 +21,9 @@ const USERS = {
   warehouse: { id: randomUUID(), email: `e2e.warehouse.${run}@tileconcept.test`, name: "E2E Warehouse" },
   business_admin: { id: randomUUID(), email: `e2e.office.${run}@tileconcept.test`, name: "E2E Office" },
 } as const;
+// Driver here (the acting, oldest membership) and sales rep in another workspace.
+const DUAL = { id: randomUUID(), email: `e2e.dual.${run}@tileconcept.test`, name: "E2E Dual" };
+const OTHER_WORKSPACE = randomUUID();
 
 function sql(query: string) {
   return execFileSync("docker", ["exec", process.env.E2E_DB_CONTAINER ?? "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8" }).trim();
@@ -33,23 +36,29 @@ const PUBLISHABLE_KEY: string = status.PUBLISHABLE_KEY ?? status.ANON_KEY;
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(() => {
-  const values = Object.entries(USERS).map(([, u]) => `('${u.id}'::uuid,'${u.email}','${u.name}')`).join(",");
+  const all = [...Object.values(USERS), DUAL];
+  const values = all.map((u) => `('${u.id}'::uuid,'${u.email}','${u.name}')`).join(",");
   sql(`with u(id,email,name) as (values ${values})
        insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
          confirmation_token,recovery_token,email_change,email_change_token_new,email_change_token_current,phone_change,phone_change_token,reauthentication_token,is_sso_user)
        select '00000000-0000-0000-0000-000000000000',id,'authenticated','authenticated',email,extensions.crypt('${PASSWORD}',extensions.gen_salt('bf')),now(),
          '{"provider":"email","providers":["email"]}',jsonb_build_object('full_name',name),now(),now(),'','','','','','','','',false from u;
-       with u(id,email) as (values ${Object.values(USERS).map((u) => `('${u.id}'::uuid,'${u.email}')`).join(",")})
+       with u(id,email) as (values ${all.map((u) => `('${u.id}'::uuid,'${u.email}')`).join(",")})
        insert into auth.identities(id,user_id,provider_id,provider,identity_data,last_sign_in_at,created_at,updated_at)
        select gen_random_uuid(),id,email,'email',jsonb_build_object('sub',id,'email',email,'email_verified',true),now(),now(),now() from u;
        insert into core.memberships(workspace_id,user_id,role_key) values
          ${Object.entries(USERS).map(([role, u]) => `('${WORKSPACE}','${u.id}','${role}')`).join(",")};
+       insert into core.workspaces(id,slug,name) values ('${OTHER_WORKSPACE}','e2e-entry-${run}','E2E other workspace');
+       insert into core.memberships(workspace_id,user_id,role_key,created_at) values
+         ('${WORKSPACE}','${DUAL.id}','driver',now()-interval '1 day'),
+         ('${OTHER_WORKSPACE}','${DUAL.id}','sales_rep',now());
        delete from core.user_preferences where user_id='${ADMIN_ID}';`);
 });
 
 test.afterAll(() => {
   sql(`delete from core.user_preferences where user_id='${ADMIN_ID}';
-       delete from auth.users where id in (${Object.values(USERS).map((u) => `'${u.id}'`).join(",")});`);
+       delete from auth.users where id in (${[...Object.values(USERS), DUAL].map((u) => `'${u.id}'`).join(",")});
+       delete from core.workspaces where id='${OTHER_WORKSPACE}';`);
 });
 
 async function signIn(page: Page, email: string, path = "/login") {
@@ -119,6 +128,22 @@ test.describe("landings and denials", () => {
     expect(operating.status).toBe(403);
     expect(operating.body).toContain("workspace.operating");
     expect(sql(`select count(*) from core.user_preferences where user_id='${USERS.driver.id}'`)).toBe("0");
+  });
+
+  test("a sales role in another workspace does not open the Operating System here", async ({ page, context }) => {
+    await signIn(page, DUAL.email);
+    await expect(page).toHaveURL(/\/admin\/my-deliveries$/);
+    expect(await currentArea(page)).toBe("Admin System");
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/admin\/my-deliveries$/);
+    await page.goto("/overview");
+    await expect(page.getByRole("heading", { name: "Not available to your role" })).toBeVisible();
+    await page.goto("/admin/preparation");
+    await expect(page.getByRole("heading", { name: "Not available to your role" })).toBeVisible();
+    const operating = await rpc(context, "set_default_area", { p_area: "operating" });
+    expect(operating.status).toBe(403);
+    expect(operating.body).toContain("workspace.operating");
+    expect(sql(`select count(*) from core.user_preferences where user_id='${DUAL.id}'`)).toBe("0");
   });
 
   test("warehouse lands on preparation and an admin employee on the Admin System hub", async ({ page }) => {

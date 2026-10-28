@@ -16,6 +16,21 @@ export const AREA_PERMISSION: Record<Area, PermissionKey> = {
 
 type Perms = ReadonlySet<string> | readonly string[];
 
+/** The keys that decide workspace entry and landing. */
+export const ENTRY_PERMISSIONS = ["workspace.operating", "workspace.admin", "overview.read", "admin.coordinate", "preparation.read", "delivery.read_own"] as const satisfies readonly PermissionKey[];
+
+/**
+ * `api.my_permissions()` is the union over all of a user's memberships, so a
+ * driver here who is a sales rep in another workspace would appear to hold
+ * `workspace.operating`. Entry keys therefore come from the acting membership
+ * only (`api.my_workspace_permissions()`); every other key is passed through
+ * unchanged, which keeps this change from touching existing authorization.
+ */
+export function scopeEntryPermissions(aggregated: readonly string[], acting: readonly string[]): string[] {
+  const entry = new Set<string>(ENTRY_PERMISSIONS);
+  return [...aggregated.filter((p) => !entry.has(p)), ...acting.filter((p) => entry.has(p))];
+}
+
 function has(perms: Perms, p: PermissionKey): boolean {
   return perms instanceof Set ? perms.has(p) : (perms as readonly string[]).includes(p);
 }

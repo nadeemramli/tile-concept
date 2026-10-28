@@ -11745,6 +11745,7 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: never; Returns: string[] }
+      my_workspace_permissions: { Args: never; Returns: string[] }
       nominate_content_opportunity: {
         Args: {
           p_content_types: string[]

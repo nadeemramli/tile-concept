@@ -37,6 +37,12 @@ additionally gains `workspace.admin`, `overview.read`, `admin.coordinate`,
 admin queues but not `overview.read`, so it chooses a default instead. The demo
 `guest` keeps "every permission except `settings.manage`".
 
+Entry keys are read for the **acting membership only**
+(`api.my_workspace_permissions()`, and `core.has_permission_in` inside
+`api.set_default_area`), because `core.has_permission` / `api.my_permissions()`
+OR across all memberships. The remaining aggregated behaviour of other keys is a
+recorded pre-existing gap — see `docs/admin-beta-workspace-entry-handoff.md`.
+
 Pages still check their own permission and RLS still decides every read: the
 area is navigation, never a grant. A driver has no `sales.read`, so every sales
 page refuses, `global_search` returns nothing and `command_centre_summary`
@@ -63,7 +69,8 @@ An unauthorised deep link still opens and is refused on the page.
 `core.user_preferences(user_id, workspace_id, default_area)`; RLS lets a member
 read only their own row, there are no write policies, and the only writer is
 `api.set_default_area(p_area text default null)` (SECURITY DEFINER), which
-refuses an area the caller lacks (42501) and unknown values (22023). The app
+refuses an area the caller's acting membership lacks (42501) and unknown values
+(22023). The app
 also ignores a stored area once its permission is gone. Read in parallel inside
 `getSession()` — no extra round trip.
 
