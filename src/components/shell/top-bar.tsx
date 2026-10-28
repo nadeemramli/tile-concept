@@ -24,8 +24,12 @@ import { GlobalSearch } from "@/components/shell/global-search";
 import { ModePill } from "@/components/shell/mode-pill";
 import { ThemeToggleItem } from "@/components/shell/theme-toggle";
 import { SidebarBrand, SidebarNav } from "@/components/shell/sidebar";
+import { WorkspaceSwitcher } from "@/components/shell/workspace-switcher";
 import { useSession } from "@/components/shell/session-context";
-import { chromeRoutes, isRouteActive, platformRoutes, routeForPath } from "@/lib/nav/routes";
+import { LanguageToggle } from "@/components/i18n/language-toggle";
+import { useLocale } from "@/components/i18n/locale-context";
+import { chromeRoutes, isRouteActive, platformRoutes, routeForPath, routeLabel } from "@/lib/nav/routes";
+import { areaForPath } from "@/lib/workspace/areas";
 import { initials } from "@/lib/format";
 import { signOutAction } from "@/server/commands/auth";
 import { Inbox, Store, Contact, FolderKanban, ListTodo, Package, Building2 } from "lucide-react";
@@ -93,6 +97,12 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
   // into beside Create, not a section they navigate to and stay in.
   const chrome = chromeRoutes(permissions, "top-bar");
   const current = routeForPath(pathname);
+  const { locale, t } = useLocale();
+  // Search and the attention bell only ever return sales/catalogue records, so
+  // roles without either (driver, warehouse, admin employee) do not get them:
+  // their phone header stays short and nothing hints at data they cannot see.
+  const canSearch = can("sales.read") || can("catalog.read");
+  const compact = !canSearch && !can("sales.write");
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3 md:gap-3 md:px-4">
@@ -104,22 +114,38 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
         <SheetContent side="left" className="w-64 bg-sidebar p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SidebarBrand onNavigate={() => setNavOpen(false)} />
+          {/* On a phone the busy header has no room for a labelled switcher, so
+              it moves to the top of the menu; compact roles keep it in the header. */}
+          {!compact && (
+            <div className="border-b border-sidebar-border p-3 sm:hidden">
+              <WorkspaceSwitcher full onNavigate={() => setNavOpen(false)} className="h-10 w-full max-w-none justify-start" />
+            </div>
+          )}
           <SidebarNav onNavigate={() => setNavOpen(false)} />
         </SheetContent>
       </Sheet>
 
-      <div className="hidden min-w-0 items-center gap-2 text-sm md:flex">
-        <span className="truncate font-medium">{current?.label ?? "Tile Concept OS"}</span>
-      </div>
+      <WorkspaceSwitcher className={cn("max-w-40 shrink sm:max-w-64", !compact && "hidden sm:inline-flex")} />
 
-      <Button variant="outline" size="sm" className="h-8 min-w-0 max-w-xs flex-1 shrink justify-start gap-2 px-2.5 text-muted-foreground md:ml-2 md:w-64 md:flex-none" onClick={() => setSearchOpen(true)} aria-label="Open global search">
-        <Search className="size-3.5" aria-hidden />
-        <span className="flex-1 truncate text-left text-xs">Search…</span>
-        <Kbd className="hidden md:inline-flex">⌘K</Kbd>
-      </Button>
-      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      {areaForPath(pathname) !== "neutral" && (
+        <div className="hidden min-w-0 items-center gap-2 text-sm lg:flex">
+          <span className="truncate font-medium">{current ? routeLabel(current, locale) : "Tile Concept OS"}</span>
+        </div>
+      )}
+
+      {canSearch && (
+        <>
+          <Button variant="outline" size="sm" className="h-8 min-w-0 max-w-xs flex-1 shrink justify-start gap-2 px-2.5 text-muted-foreground md:ml-2 md:w-64 md:flex-none" onClick={() => setSearchOpen(true)} aria-label="Open global search">
+            <Search className="size-3.5" aria-hidden />
+            <span className="flex-1 truncate text-left text-xs">Search…</span>
+            <Kbd className="hidden md:inline-flex">⌘K</Kbd>
+          </Button>
+          <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+        </>
+      )}
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        <LanguageToggle className={compact ? undefined : "hidden sm:inline-flex"} />
         <div className="hidden sm:block">
           <ModePill />
         </div>
@@ -196,9 +222,11 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
           );
         })}
 
-        <Suspense fallback={<NotificationBell items={[]} loading />}>
-          <ResolvedNotificationBell source={notifications} />
-        </Suspense>
+        {can("sales.read") && (
+          <Suspense fallback={<NotificationBell items={[]} loading />}>
+            <ResolvedNotificationBell source={notifications} />
+          </Suspense>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -247,6 +275,10 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
               </>
             )}
             <DropdownMenuSeparator />
+            <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-sm">
+              <span>{t.language.label}</span>
+              <LanguageToggle />
+            </div>
             <ThemeToggleItem />
             <DropdownMenuItem asChild>
               <Link href="/auth/set-password">Change password</Link>

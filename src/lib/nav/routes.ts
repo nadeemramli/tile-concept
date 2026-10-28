@@ -25,9 +25,14 @@ import {
   Tags,
   UserCheck,
   Building2,
+  LayoutGrid,
+  PackageCheck,
+  Truck,
   Webhook,
 } from "lucide-react";
 import type { PermissionKey } from "@/lib/rbac/matrix";
+import type { Locale } from "@/lib/i18n/locale";
+import type { Area } from "@/lib/workspace/areas";
 
 export const ROUTE_GROUPS = [
   "Command Centre",
@@ -37,6 +42,7 @@ export const ROUTE_GROUPS = [
   "Merchandise",
   "Sources",
   "Insights",
+  "Admin",
   "Platform",
 ] as const;
 export type RouteGroup = (typeof ROUTE_GROUPS)[number];
@@ -57,6 +63,10 @@ export interface RouteDef {
    * sidebar, which keeps the list short enough never to scroll.
    */
   placement?: "brand" | "top-bar" | "user-menu";
+  /** Which workspace area lists this route; undefined = the Operating System. */
+  area?: Area;
+  /** Localised labels for routes on the bilingual entry surfaces. */
+  labels?: Record<Locale, string>;
   description?: string;
   nextModule?: { phase: string; summary: string; workflow: string[]; unlocks: string[] };
 }
@@ -95,6 +105,12 @@ export const ROUTES: RouteDef[] = [
   { key: "review", label: "Imports & OCR Review", path: "/sources/review", icon: ClipboardCheck, group: "Sources", status: "live", permission: "review.approve", placement: "user-menu" },
   // Insights
   { key: "reports", label: "Reports", path: "/insights/reports", icon: BarChart3, group: "Insights", status: "live", permission: "report.read" },
+  // Admin System — business administration, a separate area of the same
+  // workspace (not platform administration). Only listed in the Admin area's
+  // sidebar, so the Operating System list does not grow.
+  { key: "admin-home", label: "Admin home", labels: { ms: "Utama Admin", en: "Admin home" }, path: "/admin", icon: LayoutGrid, group: "Admin", area: "admin", status: "live", permission: "admin.coordinate" },
+  { key: "preparation", label: "Order preparation", labels: { ms: "Penyediaan pesanan", en: "Order preparation" }, path: "/admin/preparation", icon: PackageCheck, group: "Admin", area: "admin", status: "live", permission: "preparation.read" },
+  { key: "my-deliveries", label: "My Deliveries", labels: { ms: "Penghantaran Saya", en: "My Deliveries" }, path: "/admin/my-deliveries", icon: Truck, group: "Admin", area: "admin", status: "live", permission: "delivery.read_own" },
   // Platform — administration, reached from the user menu
   // Identity Review is a periodic clean-up queue, not daily work, so it sits
   // with the other administration surfaces rather than in the sidebar.
@@ -119,8 +135,13 @@ export function visibleRoutes(perms: ReadonlySet<string>): RouteDef[] {
  */
 export const SIDEBAR_GROUPS = ROUTE_GROUPS.filter((g) => g !== "Platform");
 
-export function sidebarRoutes(perms: ReadonlySet<string>): RouteDef[] {
-  return visibleRoutes(perms).filter((r) => r.group !== "Platform" && !r.placement);
+/** The sidebar lists one area at a time, never every module at once. */
+export function sidebarRoutes(perms: ReadonlySet<string>, area: Area = "operating"): RouteDef[] {
+  return visibleRoutes(perms).filter((r) => r.group !== "Platform" && !r.placement && (r.area ?? "operating") === area);
+}
+
+export function routeLabel(route: RouteDef, locale: Locale): string {
+  return route.labels?.[locale] ?? route.label;
 }
 
 /** Routes the shell chrome renders itself, so the sidebar can leave them out. */
@@ -140,6 +161,7 @@ export function routeForPath(pathname: string): RouteDef | undefined {
 
 export function isRouteActive(route: RouteDef, pathname: string): boolean {
   if (route.path === "/") return pathname === "/";
+  if (route.path === "/admin") return pathname === "/admin";
   if (route.key === "accounts") return pathname.startsWith("/sales/accounts") || pathname.startsWith("/sales/contacts");
   return pathname === route.path || pathname.startsWith(`${route.path}/`);
 }

@@ -4,6 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { PermissionKey, RoleKey } from "@/lib/rbac/matrix";
+import { isArea, scopeEntryPermissions, type Area } from "@/lib/workspace/areas";
 
 export interface AppSession {
   userId: string;
@@ -18,6 +19,11 @@ export interface AppSession {
   timezone: string;
   currency: string;
   permissions: string[];
+  /**
+   * The area this member asked to start in, as stored. A preference only: the
+   * landing rule ignores it unless `workspace.<area>` is still in `permissions`.
+   */
+  defaultArea: Area | null;
 }
 
 /**
@@ -32,12 +38,17 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: membership }, { data: perms }, { data: profile }] = await Promise.all([
+  // In parallel, so the preference read adds no round trip. RLS returns only
+  // the caller's own row(s); the workspace filter below picks this membership's.
+  const [{ data: membership }, { data: perms }, { data: actingPerms }, { data: profile }, { data: prefs }] = await Promise.all([
     supabase.rpc("my_membership").maybeSingle(),
     supabase.rpc("my_permissions"),
+    supabase.rpc("my_workspace_permissions"),
     supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle(),
+    supabase.from("user_preferences").select("workspace_id, default_area").eq("user_id", user.id),
   ]);
   if (!membership) return null;
+  const pref = (prefs ?? []).find((p) => p.workspace_id === membership.workspace_id)?.default_area;
 
   return {
     userId: user.id,
@@ -51,7 +62,10 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
     defaultLocationId: membership.default_location_id,
     timezone: membership.timezone,
     currency: membership.currency,
-    permissions: (perms ?? []) as string[],
+    // Entry keys (workspace.*, overview, admin queues) follow the acting
+    // membership only; see scopeEntryPermissions.
+    permissions: scopeEntryPermissions((perms ?? []) as string[], (actingPerms ?? []) as string[]),
+    defaultArea: isArea(pref) ? pref : null,
   };
 });
 

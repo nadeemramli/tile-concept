@@ -10658,6 +10658,42 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          default_area: string | null
+          updated_at: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          default_area?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          default_area?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "user_preferences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       variant_candidates: {
         Row: {
           brand_hint: string | null
@@ -11709,6 +11745,7 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: never; Returns: string[] }
+      my_workspace_permissions: { Args: never; Returns: string[] }
       nominate_content_opportunity: {
         Args: {
           p_content_types: string[]
@@ -12137,6 +12174,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_default_area: { Args: { p_area?: string }; Returns: string }
       set_primary_catalog_media: {
         Args: { p_media_id: string; p_product_id: string }
         Returns: undefined
