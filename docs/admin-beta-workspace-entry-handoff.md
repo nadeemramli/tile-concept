@@ -30,7 +30,7 @@ Read this before extending the Admin System. Mechanics are in
 - **Placeholders stay honest.** Preparation, delivery schedule and My Deliveries
   are "not built" with no numbers. No scheduling, routing/fleet optimisation,
   stock posting or accounting ledger has been built; each needs its own issue.
-- **Not in TILE-32:** sync RPC guards and freshness (queued as TILE-59).
+- **Not in TILE-32:** sync RPC guards and freshness (TILE-59, see below).
 - **TILE-62:** cross-membership permission borrowing is closed; see below.
 
 ## Membership scope (read before touching auth)
@@ -73,7 +73,29 @@ Consequences, tested in `supabase/tests/025_workspace_permission_scope.sql`:
 `core.member_workspace_ids()` is unchanged: it still means "workspaces this
 person belongs to" for profiles, memberships, preferences and reference rows.
 
+## Connector run bookkeeping (TILE-59)
+
+`supabase/migrations/20261029000003_connector_sync_guards.sql`, tested in
+`supabase/tests/026_connector_sync_guards.sql` and, over HTTP against the local
+stack only, `pnpm exec tsx tests/integration/connector-sync-guards.mts`.
+
+| Path | Who | Rule |
+| --- | --- | --- |
+| `api.start_sync_run`, `api.finish_sync_run` | service_role only (the connector worker, server-side with the secret key) | PUBLIC, anon and authenticated cannot execute them; no app code calls them |
+| `sync_runs`, `connector_checkpoints` (api views and `ingest.*`) | members with `audit.read` in the connection's workspace | read only; no member writes them by view or base table |
+| a finished run | anyone, service_role included | final: re-finishing is 55000, a trigger refuses any update |
+| finish | worker | status `succeeded`/`partial`/`failed`, counts >= 0, a stream for a checkpoint, rejected records mean `partial`; otherwise 22023 and nothing is written |
+
+Freshness: only `succeeded` moves `last_success_at` and the checkpoint.
+`partial` marks the connection degraded, `failed` marks it failed; both keep the
+last complete success and the previous cursor (the retry resumes from it) and
+put the detail in `last_error`. A run that started before the stream's
+checkpoint last moved does not overwrite it. Not changed: members with
+`settings.manage` still edit `integration_connections` directly (pause/resume
+sets `status`), and there is no Run Now UI.
+
 ## Not applied anywhere hosted
 
-Migration `20261029000001_workspace_entry.sql` has run only on local and CI
-stacks. Applying it to the hosted project is the owner's decision.
+Migrations `20261029000001_workspace_entry.sql` onwards (including TILE-62
+and TILE-59) have run only on local and CI stacks. Applying them to the hosted
+project is the owner's decision.
