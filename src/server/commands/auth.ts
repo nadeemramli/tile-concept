@@ -18,7 +18,8 @@ export async function signInWithPasswordAction(_prev: AuthResult | null, formDat
   const supabase = await createServerSupabase();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { ok: false, error: error.message };
-  redirect(safeAuthNext(formData.get("next")));
+  // No deep link → /start, which applies the role's landing rule.
+  redirect(safeAuthNext(formData.get("next"), "/start"));
 }
 
 async function siteOrigin() {
@@ -33,9 +34,10 @@ export async function signInWithMagicLinkAction(_prev: AuthResult | null, formDa
   if (!email.success) return { ok: false, error: "Enter a valid email." };
   const supabase = await createServerSupabase();
   const origin = await siteOrigin();
+  const next = encodeURIComponent(safeAuthNext(formData.get("next"), "/start"));
   const { error } = await supabase.auth.signInWithOtp({
     email: email.data.toLowerCase(),
-    options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=/` },
+    options: { shouldCreateUser: false, emailRedirectTo: `${origin}/auth/callback?next=${next}` },
   });
   if (!error) {
     return { ok: true, message: "Check your inbox for your secure access link." };
@@ -73,7 +75,7 @@ export async function acceptEmailLinkAction(_prev: AuthResult | null, formData: 
   const { error } = await supabase.auth.verifyOtp(parsed.data);
   if (error) return { ok: false, error: "This access link is invalid or has expired. Request a new one from the sign-in page." };
 
-  const fallback = parsed.data.type === "invite" || parsed.data.type === "recovery" ? "/auth/set-password" : "/";
+  const fallback = parsed.data.type === "invite" || parsed.data.type === "recovery" ? "/auth/set-password" : "/start";
   redirect(safeAuthNext(formData.get("next"), fallback));
 }
 
@@ -150,7 +152,7 @@ export async function enterAsGuestAction(_prev: AuthResult | null, formData: For
     return { ok: false, error: "Guest access is not configured correctly in this environment." };
   }
 
-  redirect(safeAuthNext(formData.get("next")));
+  redirect(safeAuthNext(formData.get("next"), "/start"));
 }
 
 export async function updatePasswordAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
@@ -160,7 +162,7 @@ export async function updatePasswordAction(_prev: AuthResult | null, formData: F
   const supabase = await createServerSupabase();
   const { error } = await supabase.auth.updateUser({ password: pw.data });
   if (error) return { ok: false, error: error.message };
-  redirect("/");
+  redirect("/start");
 }
 
 export async function signOutAction() {

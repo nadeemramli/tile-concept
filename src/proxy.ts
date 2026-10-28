@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { safeAuthNext } from "@/lib/auth-links";
 
 // These server-to-server routes authenticate with provider/HMAC signatures,
 // not a staff Supabase session. Their handlers still reject unsigned traffic.
@@ -44,16 +45,19 @@ export async function proxy(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!user && !isPublic) {
+    // Keep the whole destination — path and query (?lead=…, ?view=…) — so a
+    // bookmark or shared deep link opens where it pointed after sign-in.
     const login = request.nextUrl.clone();
     login.pathname = "/login";
-    login.searchParams.set("next", pathname);
+    login.search = "";
+    login.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(login);
   }
   if (user && pathname === "/login") {
-    const home = request.nextUrl.clone();
-    home.pathname = "/";
-    home.search = "";
-    return NextResponse.redirect(home);
+    // Already signed in: go where the link asked, else to the landing rule.
+    const destination = new URL(safeAuthNext(request.nextUrl.searchParams.get("next"), "/start"), request.nextUrl.origin);
+    if (destination.pathname === "/login") destination.href = new URL("/start", request.nextUrl.origin).href;
+    return NextResponse.redirect(destination);
   }
   return response;
 }
