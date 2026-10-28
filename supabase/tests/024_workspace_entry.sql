@@ -117,7 +117,8 @@ insert into core.memberships(workspace_id,user_id,role_key,created_at) values
 set local role authenticated;
 
 select pg_temp.act_as('dddddddd-3200-0000-0000-000000000011');
-select ok(core.has_permission('workspace.operating'),'fixture: the global union does include the other workspace''s Operating System');
+select ok(core.has_permission_in('99999999-3200-0000-0000-000000000002','workspace.operating'),'fixture: the other workspace''s membership grants the Operating System');
+select ok(not core.has_permission('workspace.operating'),'core.has_permission follows the acting membership, not the union');
 select is((select array_agg(p order by p) from api.my_workspace_permissions() p),array['delivery.read_own','workspace.admin'],'acting permissions are the driver role only');
 select throws_ok($$select api.set_default_area('operating')$$,'42501','permission denied: workspace.operating','a driver here cannot remember the Operating System granted elsewhere');
 select is(api.set_default_area('admin'),'admin','the acting area can still be remembered');
@@ -127,14 +128,11 @@ select pg_temp.act_as('dddddddd-3200-0000-0000-000000000012');
 select ok(not ('delivery.read_own' = any(array(select api.my_workspace_permissions()))),'a sales rep here gets no driver queue from another workspace');
 select throws_ok($$select api.set_default_area('admin')$$,'42501','permission denied: workspace.admin','a sales rep here cannot remember the Admin System granted elsewhere');
 
--- Pre-existing, NOT introduced or fixed here (recorded in
--- docs/admin-beta-workspace-entry-handoff.md): table RLS uses the globally
--- aggregated core.has_permission, so this driver still reads this workspace's
--- sales records through the other membership's sales role.
+-- TILE-62: rows follow the membership in their own workspace, so the sales
+-- role elsewhere reads nothing here (full matrix in 025_workspace_permission_scope).
 select pg_temp.act_as('dddddddd-3200-0000-0000-000000000011');
-select todo_start('pre-existing: RLS aggregates permissions across memberships');
 select is((select count(*)::int from api.leads where workspace_id='11111111-1111-1111-1111-111111111111'),0,'a driver here sees no leads here despite a sales role elsewhere');
-select todo_end();
+select is((select count(*)::int from api.contacts where workspace_id='11111111-1111-1111-1111-111111111111'),0,'a driver here sees no contacts here despite a sales role elsewhere');
 
 select set_config('request.jwt.claims','',true);
 select throws_ok($$select api.set_default_area('admin')$$,'42501',null,'an unauthenticated caller cannot store a preference');

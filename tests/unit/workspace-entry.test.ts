@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ROLE_PERMISSIONS, ROLES, type RoleKey } from "@/lib/rbac/matrix";
-import { areaForPath, areaHome, canRememberDefault, permittedAreas, resolveLanding, scopeEntryPermissions } from "@/lib/workspace/areas";
+import { areaForPath, areaHome, canRememberDefault, permittedAreas, resolveLanding } from "@/lib/workspace/areas";
 import { sidebarRoutes } from "@/lib/nav/routes";
 import { DEFAULT_LOCALE, parseLocale } from "@/lib/i18n/locale";
 import { MESSAGES } from "@/lib/i18n/messages";
@@ -78,17 +78,17 @@ describe("workspace areas", () => {
 });
 
 describe("dual membership", () => {
-  it("takes entry keys from the acting membership only", () => {
-    // Driver in the acting workspace, sales rep in another: the union says
-    // "operating", the acting role does not.
-    const union = [...new Set([...ROLE_PERMISSIONS.driver, ...ROLE_PERMISSIONS.sales_rep])];
-    const scoped = scopeEntryPermissions(union, ROLE_PERMISSIONS.driver);
-    expect(permittedAreas(scoped)).toEqual(["admin"]);
-    expect(resolveLanding(scoped, "operating")).toEqual({ kind: "redirect", href: "/admin/my-deliveries" });
-    // Non-entry keys are passed through untouched (existing behaviour, recorded gap).
-    expect(scoped).toContain("sales.read");
+  it("the session holds the acting membership's permissions and nothing from another workspace", () => {
+    // getSession() reads api.my_workspace_permissions(): a driver here who is a
+    // sales rep elsewhere carries the driver role only — no entry key and no
+    // sales key from the other workspace (TILE-62; the database agrees).
+    const acting = ROLE_PERMISSIONS.driver;
+    expect(permittedAreas(acting)).toEqual(["admin"]);
+    expect(resolveLanding(acting, "operating")).toEqual({ kind: "redirect", href: "/admin/my-deliveries" });
+    expect(acting).not.toContain("sales.read");
+    expect(sidebarRoutes(new Set<string>(acting), "operating")).toEqual([]);
     // And the reverse: a sales rep here who drives elsewhere gets no Admin System.
-    const reverse = scopeEntryPermissions(union, ROLE_PERMISSIONS.sales_rep);
+    const reverse = ROLE_PERMISSIONS.sales_rep;
     expect(permittedAreas(reverse)).toEqual(["operating"]);
     expect(reverse).not.toContain("delivery.read_own");
   });

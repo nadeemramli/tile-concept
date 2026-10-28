@@ -4,7 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { PermissionKey, RoleKey } from "@/lib/rbac/matrix";
-import { isArea, scopeEntryPermissions, type Area } from "@/lib/workspace/areas";
+import { isArea, type Area } from "@/lib/workspace/areas";
 
 export interface AppSession {
   userId: string;
@@ -40,9 +40,8 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
 
   // In parallel, so the preference read adds no round trip. RLS returns only
   // the caller's own row(s); the workspace filter below picks this membership's.
-  const [{ data: membership }, { data: perms }, { data: actingPerms }, { data: profile }, { data: prefs }] = await Promise.all([
+  const [{ data: membership }, { data: perms }, { data: profile }, { data: prefs }] = await Promise.all([
     supabase.rpc("my_membership").maybeSingle(),
-    supabase.rpc("my_permissions"),
     supabase.rpc("my_workspace_permissions"),
     supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_preferences").select("workspace_id, default_area").eq("user_id", user.id),
@@ -62,9 +61,10 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
     defaultLocationId: membership.default_location_id,
     timezone: membership.timezone,
     currency: membership.currency,
-    // Entry keys (workspace.*, overview, admin queues) follow the acting
-    // membership only; see scopeEntryPermissions.
-    permissions: scopeEntryPermissions((perms ?? []) as string[], (actingPerms ?? []) as string[]),
+    // The acting membership's permissions only — the same membership the
+    // database authorizes this session's commands with. A role held in another
+    // workspace never shows up here (TILE-62).
+    permissions: (perms ?? []) as string[],
     defaultArea: isArea(pref) ? pref : null,
   };
 });

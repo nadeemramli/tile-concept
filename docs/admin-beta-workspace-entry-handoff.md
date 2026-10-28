@@ -31,27 +31,47 @@ Read this before extending the Admin System. Mechanics are in
   are "not built" with no numbers. No scheduling, routing/fleet optimisation,
   stock posting or accounting ledger has been built; each needs its own issue.
 - **Not in TILE-32:** sync RPC guards and freshness (queued as TILE-59).
+- **TILE-62:** cross-membership permission borrowing is closed; see below.
 
 ## Membership scope (read before touching auth)
 
-`core.has_permission(perm)` and `api.my_permissions()` OR across **every**
-active membership. Workspace entry does not rely on them:
+A permission held in one workspace never authorizes another (TILE-62,
+`supabase/migrations/20261029000002_workspace_permission_scope.sql`). Until then
+`core.has_permission` and `api.my_permissions()` ORed every active membership,
+so a driver here who was an admin elsewhere read 30 leads and 41 contacts here
+and could write them.
 
-- `api.set_default_area` checks `core.has_permission_in(acting workspace, …)`.
-- `api.my_workspace_permissions()` returns the acting membership's permissions;
-  `getSession()` takes the six entry keys from it (`scopeEntryPermissions`).
-- Tested both ways (driver here / sales rep elsewhere, and the reverse) in
-  `supabase/tests/024_workspace_entry.sql` and `tests/e2e/workspace-entry.spec.ts`.
+| Path | Membership that decides | How |
+| --- | --- | --- |
+| RLS on every table, view and storage object | the row's own workspace | `workspace_id in (select core.permitted_workspace_ids(perm))` — an uncorrelated set, evaluated once per statement |
+| Cross-workspace readers (`report_*`, `entity_timeline`, `lead_followup_rollup`) | the row's own workspace | same predicate |
+| Commands (SECURITY DEFINER RPCs) | the acting membership | `core.has_permission` / `core.require_permission` read the acting membership; `core.require_workspace` admits only the acting workspace |
+| Session mirror (`getSession`, nav, page gates) | the acting membership | `api.my_workspace_permissions()`; `api.my_permissions()` now returns the same |
+| Workspace entry, remembered default | the acting membership | unchanged from TILE-32 |
 
-**Known pre-existing gap, not fixed here:** table RLS and every other permission
-key still use the aggregated `core.has_permission`. A member who is a driver in
-this workspace and holds a sales role in *another* workspace can read this
-workspace's sales records (reproduced locally: 30 leads). It is pinned as a pgTAP
-`TODO` in 024, so it will show up when fixed. It matters only once someone holds
-memberships in two workspaces (the guest trigger already forbids that for
-guests). The fix is to scope RLS/RPC checks with `core.has_permission_in(row
-workspace, …)`. That is a cross-cutting authorization change and needs its own
-issue and review.
+The acting membership is `core.current_workspace_id()`: the oldest active one,
+ties broken by workspace id; `api.my_membership()` uses the same function, so
+the session and the database always act in the same workspace.
+
+Consequences, tested in `supabase/tests/025_workspace_permission_scope.sql`:
+
+- Driver / warehouse / analyst / suspended / no membership in A plus admin or
+  manager in B (either order): no A sales, customer, contact-point, audit or
+  invite rows; no A reveal, search, timeline, summary, insert, update, delete,
+  assign, merge, stage change, invite, role change or shared view; A is
+  unchanged afterwards.
+- Legitimate: each membership still reads and writes its own workspace's rows
+  (a rep in A and B sees both inboxes; an analyst in A gets A's masked reports).
+  Commands run in the acting workspace only — a member of two workspaces cannot
+  run, say, `reveal_contact_points` on a B contact while acting in A. There is
+  no tenant selector, so the app never offers that.
+- Service-role tooling still bypasses RLS and holds no member permissions.
+- Guards: no policy may call `core.has_permission(` and no function may pair
+  `member_workspace_ids` with `has_permission(`; the migration aborts and 025
+  fails if one does. New policies use `core.permitted_workspace_ids(perm)`.
+
+`core.member_workspace_ids()` is unchanged: it still means "workspaces this
+person belongs to" for profiles, memberships, preferences and reference rows.
 
 ## Not applied anywhere hosted
 

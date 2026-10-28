@@ -37,11 +37,11 @@ additionally gains `workspace.admin`, `overview.read`, `admin.coordinate`,
 admin queues but not `overview.read`, so it chooses a default instead. The demo
 `guest` keeps "every permission except `settings.manage`".
 
-Entry keys are read for the **acting membership only**
-(`api.my_workspace_permissions()`, and `core.has_permission_in` inside
-`api.set_default_area`), because `core.has_permission` / `api.my_permissions()`
-OR across all memberships. The remaining aggregated behaviour of other keys is a
-recorded pre-existing gap — see `docs/admin-beta-workspace-entry-handoff.md`.
+Entry keys — like every other key in the session — are read for the **acting
+membership only** (`api.my_workspace_permissions()`, and `core.has_permission_in`
+inside `api.set_default_area`). Since TILE-62 the database agrees everywhere:
+rows follow the membership in their own workspace and commands the acting one
+— see "Membership scope" in `docs/admin-beta-workspace-entry-handoff.md`.
 
 Pages still check their own permission and RLS still decides every read: the
 area is navigation, never a grant. A driver has no `sales.read`, so every sales
