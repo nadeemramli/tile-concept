@@ -206,15 +206,16 @@ export function TopBar({ notifications = [] }: { notifications?: NotificationSou
 
         {chrome.map((r) => {
           const active = isRouteActive(r, pathname);
+          const label = routeLabel(r, locale);
           return (
-            <Hint key={r.key} content={r.label}>
+            <Hint key={r.key} content={label}>
               <Button
                 asChild
                 variant="ghost"
                 size="icon"
                 className={cn("size-8", active && "bg-accent text-accent-foreground")}
               >
-                <Link href={r.path} aria-current={active ? "page" : undefined} aria-label={r.label}>
+                <Link href={r.path} aria-current={active ? "page" : undefined} aria-label={label}>
                   <r.icon className="size-4" aria-hidden />
                 </Link>
               </Button>

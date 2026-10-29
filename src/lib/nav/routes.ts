@@ -17,6 +17,7 @@ import {
   Library,
   ListTodo,
   Megaphone,
+  PhoneCall,
   MessageSquareText,
   Package,
   ScrollText,
@@ -88,6 +89,10 @@ export const ROUTES: RouteDef[] = [
   { key: "walkins", label: "Walk-ins & Purchases", path: "/sales/walk-ins", icon: Store, group: "Sales", status: "live", permission: "sales.read" },
   { key: "feedback", label: "Customer Feedback", path: "/sales/feedback", icon: MessageSquareText, group: "Sales", status: "live", permission: "sales.read" },
   { key: "tasks", label: "Tasks", path: "/sales/tasks", icon: ListTodo, group: "Sales", status: "live", permission: "sales.read", placement: "top-bar" },
+  // A salesperson's own leads, phone first. In the top bar so it is one tap
+  // away on a phone without lengthening the sidebar; the page itself only
+  // needs sales.read, but only members who work leads get the shortcut.
+  { key: "my-leads", label: "My Leads", labels: { ms: "Prospek Saya", en: "My Leads" }, path: "/sales/my-leads", icon: PhoneCall, group: "Customer", status: "live", permission: "sales.write", placement: "top-bar", description: "Your own inquiries: what is due, one next action and quick follow-up updates." },
   // Customer — the resolved identity records behind the sales work
   { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Customer", status: "live", permission: "sales.read" },
   { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
