@@ -25,6 +25,7 @@ export function EnumSelect({ name, options, defaultValue, placeholder = "Selectâ
 export interface MemberOption {
   user_id: string;
   full_name: string;
+  role_key?: string;
 }
 
 export function MemberSelect({ name, members, defaultValue, placeholder = "Unassigned", id }: { name: string; members: MemberOption[]; defaultValue?: string | null; placeholder?: string; id?: string }) {

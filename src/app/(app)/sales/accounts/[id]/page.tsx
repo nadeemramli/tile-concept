@@ -55,7 +55,7 @@ export default async function AccountPage({ params }: PageProps<"/sales/accounts
                 · acquired via <StatusPill map={SOURCE_CHANNEL} value={account.original_acquisition_source} /> {account.original_acquisition_at ? formatDate(account.original_acquisition_at) : ""}
               </span>
             )}
-            {account.owner_id && <span>· owner {memberNames.get(account.owner_id) ?? "—"}</span>}
+            {account.owner_id && <span>· PIC {memberNames.get(account.owner_id) ?? "—"}</span>}
           </span>
         }
       >
@@ -145,7 +145,9 @@ export default async function AccountPage({ params }: PageProps<"/sales/accounts
                 { label: "Company telephone", value: account.telephone ?? "—", mono: true },
                 { label: "Website", value: account.website ?? "—" },
                 { label: "Address", value: [account.address.city, account.address.state].filter(Boolean).join(", ") || "—" },
-                { label: "Owner", value: memberNames.get(account.owner_id ?? "") ?? "—" },
+                { label: "PIC", value: account.owner_id ? memberNames.get(account.owner_id) ?? "—" : "No PIC yet (read-only until assigned)" },
+                { label: "PIC assigned", value: account.owner_assigned_at ? `${formatDateTime(account.owner_assigned_at)} by ${memberNames.get(account.owner_assigned_by ?? "") ?? "—"}` : "—" },
+                { label: "Created by", value: memberNames.get(account.created_by ?? "") ?? "—" },
                 { label: "Created", value: formatDateTime(account.created_at) },
                 { label: "Record id", value: account.id, mono: true },
               ]}

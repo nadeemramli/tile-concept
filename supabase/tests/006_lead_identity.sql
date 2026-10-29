@@ -18,6 +18,11 @@ select is((select raw_email_normalized from sales.leads where id = 'bbbbbbbb-000
 select is((select raw_phone_normalized from sales.leads where id = 'bbbbbbbb-0000-0000-0000-000000000002'),
   '+60179990002', 'the trigger normalises the enquiry phone');
 
+-- Carrying an enquiry's phone onto a contact edits that customer card, which
+-- only its PIC may do (20261029164000), so rep 1 is the PIC of the contact used.
+update identity.contacts set owner_id = 'aaaaaaaa-0000-0000-0000-000000000003'
+where id = (select id from identity.contacts where merged_into_contact_id is null and archived_at is null order by created_at limit 1);
+
 set local role authenticated;
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');  -- rep 1
 

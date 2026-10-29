@@ -145,6 +145,8 @@ export type Database = {
           notes: string | null
           original_acquisition_at: string | null
           original_acquisition_source: string | null
+          owner_assigned_at: string | null
+          owner_assigned_by: string | null
           owner_id: string | null
           registration_number: string | null
           registration_number_key: string | null
@@ -171,6 +173,8 @@ export type Database = {
           notes?: string | null
           original_acquisition_at?: string | null
           original_acquisition_source?: string | null
+          owner_assigned_at?: string | null
+          owner_assigned_by?: string | null
           owner_id?: string | null
           registration_number?: string | null
           registration_number_key?: string | null
@@ -197,6 +201,8 @@ export type Database = {
           notes?: string | null
           original_acquisition_at?: string | null
           original_acquisition_source?: string | null
+          owner_assigned_at?: string | null
+          owner_assigned_by?: string | null
           owner_id?: string | null
           registration_number?: string | null
           registration_number_key?: string | null
@@ -2061,6 +2067,9 @@ export type Database = {
           notes: string | null
           original_acquisition_at: string | null
           original_acquisition_source: string | null
+          owner_assigned_at: string | null
+          owner_assigned_by: string | null
+          owner_id: string | null
           preferred_language: string | null
           salutation: string | null
           updated_at: string | null
@@ -2084,6 +2093,9 @@ export type Database = {
           notes?: string | null
           original_acquisition_at?: string | null
           original_acquisition_source?: string | null
+          owner_assigned_at?: string | null
+          owner_assigned_by?: string | null
+          owner_id?: string | null
           preferred_language?: string | null
           salutation?: string | null
           updated_at?: string | null
@@ -2107,6 +2119,9 @@ export type Database = {
           notes?: string | null
           original_acquisition_at?: string | null
           original_acquisition_source?: string | null
+          owner_assigned_at?: string | null
+          owner_assigned_by?: string | null
+          owner_id?: string | null
           preferred_language?: string | null
           salutation?: string | null
           updated_at?: string | null
@@ -3056,6 +3071,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      customer_card_pic_exceptions: {
+        Row: {
+          card: string | null
+          created_at: string | null
+          created_by: string | null
+          exception: string | null
+          id: string | null
+          lead_owner_ids: string[] | null
+          name: string | null
+          owner_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: []
       }
       data_quality_issues: {
         Row: {
@@ -11400,6 +11429,7 @@ export type Database = {
           p_email?: string
           p_is_provisional?: boolean
           p_notes?: string
+          p_owner_id?: string
           p_phone?: string
           p_source?: string
         }
@@ -12184,6 +12214,15 @@ export type Database = {
       suggest_contact_duplicates: {
         Args: { p_contact_id: string }
         Returns: number
+      }
+      transfer_customer_card: {
+        Args: {
+          p_card: string
+          p_id: string
+          p_owner_id: string
+          p_reason: string
+        }
+        Returns: Json
       }
       unmerge_contacts: {
         Args: { p_merge_event_id: string; p_reason: string }
