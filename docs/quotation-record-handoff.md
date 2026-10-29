@@ -69,3 +69,11 @@ The e2e suite creates and deletes its own workspace and users; it refuses non-lo
 - Whether a quote "sent" requires an SQ number. The model records sends with or without one.
 - Whether outcomes should require a sent version (today: an issued version).
 - Contact and company pages still list quotes through opportunities only.
+
+## TILE-85: per-workspace reads of quotation history
+
+`20261029161100_quotation_history_workspace_reads.sql` changes the read policy on the five tables behind `api.quote_references`, `api.quote_deliveries`, `api.quote_delivery_voids`, `api.quote_events` and `api.visit_quote_evidence_decisions` from `workspace_id in member_workspace_ids() and has_permission('sales.read')` to TILE-62's per-row rule, `workspace_id in (select core.permitted_workspace_ids('sales.read'))`. Under TILE-62, `has_permission` is the acting membership's, so the old pairing let an admin of the acting workspace read another workspace's quotation history through a membership there without `sales.read`, and refused a legitimate reader of a non-acting workspace. Nothing else changes: same single read policy per table, no write path, grant or role change.
+
+`core.permitted_workspace_ids` is TILE-62's. The migration creates it, with TILE-62's byte-identical body, only when it does not exist yet, so it is correct on this stack alone and in the integrated order TILE-62 (`20261029000002`) → quotations (`20261029161000`) → this fix. Do not rerun TILE-62 after the quotation migration instead of applying this fix.
+
+Tests: `supabase/tests/027_quotation_history_workspace_reads.sql` and `tests/e2e/quotation-history-scope.spec.ts` (real password sign-in and PostgREST reads, both mixed-role orientations, suspended and removed membership, an unrelated admin, anonymous).
