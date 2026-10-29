@@ -7725,6 +7725,252 @@ export type Database = {
           },
         ]
       }
+      quote_deliveries: {
+        Row: {
+          channel: string | null
+          evidence: string | null
+          evidence_ref: string | null
+          id: string | null
+          note: string | null
+          quote_id: string | null
+          quote_version_id: string | null
+          recorded_at: string | null
+          recorded_by: string | null
+          request_id: string | null
+          sent_at: string | null
+          sent_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          channel?: string | null
+          evidence?: string | null
+          evidence_ref?: string | null
+          id?: string | null
+          note?: string | null
+          quote_id?: string | null
+          quote_version_id?: string | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          request_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          channel?: string | null
+          evidence?: string | null
+          evidence_ref?: string | null
+          id?: string | null
+          note?: string | null
+          quote_id?: string | null
+          quote_version_id?: string | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          request_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_deliveries_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["current_version_id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_delivery_voids: {
+        Row: {
+          delivery_id: string | null
+          reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          delivery_id?: string | null
+          reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          delivery_id?: string | null
+          reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_delivery_voids_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: true
+            referencedRelation: "quote_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_delivery_voids_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: true
+            referencedRelation: "quote_send_facts"
+            referencedColumns: ["delivery_id"]
+          },
+          {
+            foreignKeyName: "quote_delivery_voids_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quote_delivery_voids_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_events: {
+        Row: {
+          actor_id: string | null
+          delivery_id: string | null
+          details: Json | null
+          event_type: string | null
+          id: string | null
+          occurred_at: string | null
+          quote_id: string | null
+          quote_version_id: string | null
+          reason: string | null
+          recorded_at: string | null
+          request_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          delivery_id?: string | null
+          details?: Json | null
+          event_type?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          quote_id?: string | null
+          quote_version_id?: string | null
+          reason?: string | null
+          recorded_at?: string | null
+          request_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          delivery_id?: string | null
+          details?: Json | null
+          event_type?: string | null
+          id?: string | null
+          occurred_at?: string | null
+          quote_id?: string | null
+          quote_version_id?: string | null
+          reason?: string | null
+          recorded_at?: string | null
+          request_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_events_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "quote_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_events_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "quote_send_facts"
+            referencedColumns: ["delivery_id"]
+          },
+          {
+            foreignKeyName: "quote_events_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_events_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_events_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["current_version_id"]
+          },
+          {
+            foreignKeyName: "quote_events_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quote_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_items: {
         Row: {
           currency: string | null
@@ -7770,7 +8016,227 @@ export type Database = {
             foreignKeyName: "quote_items_quote_version_id_fkey"
             columns: ["quote_version_id"]
             isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["current_version_id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
             referencedRelation: "quote_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_references: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          quote_id: string | null
+          ref_key: string | null
+          ref_kind: string | null
+          ref_text: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          quote_id?: string | null
+          ref_key?: string | null
+          ref_kind?: string | null
+          ref_text?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          quote_id?: string | null
+          ref_key?: string | null
+          ref_kind?: string | null
+          ref_text?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_references_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_references_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_references_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quote_references_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_register: {
+        Row: {
+          account_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          current_currency: string | null
+          current_evidence_state: string | null
+          current_external_ref: string | null
+          current_issued_at: string | null
+          current_prepared_at: string | null
+          current_total_amount: number | null
+          current_valid_until: string | null
+          current_version_id: string | null
+          current_version_no: number | null
+          first_sent_at: string | null
+          first_sent_version_no: number | null
+          issued_versions: number | null
+          last_sent_at: string | null
+          lead_id: string | null
+          lifecycle: string | null
+          opportunity_id: string | null
+          origin: string | null
+          pursuit_key: string | null
+          quote_id: string | null
+          quote_number: string | null
+          send_count: number | null
+          status: string | null
+          updated_at: string | null
+          versions_sent: number | null
+          visit_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quotes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_send_facts: {
+        Row: {
+          channel: string | null
+          delivery_id: string | null
+          evidence: string | null
+          quote_id: string | null
+          quote_version_id: string | null
+          recorded_at: string | null
+          recorded_by: string | null
+          send_kind: string | null
+          sent_at: string | null
+          sent_by: string | null
+          sent_local_date: string | null
+          sent_week_start: string | null
+          version_no: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_deliveries_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["current_version_id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "quote_deliveries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -7780,10 +8246,13 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           currency: string | null
+          evidence_state: string | null
           external_ref: string | null
           id: string | null
           issued_at: string | null
+          issued_by: string | null
           notes: string | null
+          prepared_at: string | null
           quote_id: string | null
           total_amount: number | null
           valid_until: string | null
@@ -7794,10 +8263,13 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
+          evidence_state?: string | null
           external_ref?: string | null
           id?: string | null
           issued_at?: string | null
+          issued_by?: string | null
           notes?: string | null
+          prepared_at?: string | null
           quote_id?: string | null
           total_amount?: number | null
           valid_until?: string | null
@@ -7808,10 +8280,13 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
+          evidence_state?: string | null
           external_ref?: string | null
           id?: string | null
           issued_at?: string | null
+          issued_by?: string | null
           notes?: string | null
+          prepared_at?: string | null
           quote_id?: string | null
           total_amount?: number | null
           valid_until?: string | null
@@ -7819,6 +8294,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quote_versions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["quote_id"]
+          },
           {
             foreignKeyName: "quote_versions_quote_id_fkey"
             columns: ["quote_id"]
@@ -7844,44 +8326,94 @@ export type Database = {
       }
       quotes: {
         Row: {
+          account_id: string | null
+          contact_id: string | null
           created_at: string | null
           created_by: string | null
           current_version_no: number | null
           id: string | null
+          lead_id: string | null
           opportunity_id: string | null
+          origin: string | null
           quote_number: string | null
           status: string | null
           updated_at: string | null
+          visit_id: string | null
           workspace_id: string | null
         }
         Insert: {
+          account_id?: string | null
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_version_no?: number | null
           id?: string | null
+          lead_id?: string | null
           opportunity_id?: string | null
+          origin?: string | null
           quote_number?: string | null
           status?: string | null
           updated_at?: string | null
+          visit_id?: string | null
           workspace_id?: string | null
         }
         Update: {
+          account_id?: string | null
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_version_no?: number | null
           id?: string | null
+          lead_id?: string | null
           opportunity_id?: string | null
+          origin?: string | null
           quote_number?: string | null
           status?: string | null
           updated_at?: string | null
+          visit_id?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quotes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotes_opportunity_id_fkey"
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
           {
@@ -11041,6 +11573,181 @@ export type Database = {
           },
         ]
       }
+      visit_quote_evidence: {
+        Row: {
+          amount: number | null
+          changed_since_decision: boolean | null
+          decided_at: string | null
+          decided_by: string | null
+          decided_resolution: string | null
+          decided_version_id: string | null
+          decision_id: string | null
+          decision_reason: string | null
+          evidence_key: string | null
+          evidence_kind: string | null
+          file_id: string | null
+          file_name: string | null
+          matched_quote_id: string | null
+          quote_id: string | null
+          reference_text: string | null
+          resolution: string | null
+          visit_id: string | null
+          visit_occurred_at: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_references_quote_id_fkey"
+            columns: ["matched_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_references_quote_id_fkey"
+            columns: ["matched_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_quote_version_id_fkey"
+            columns: ["decided_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["current_version_id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_quote_version_id_fkey"
+            columns: ["decided_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visit_quote_evidence_decisions: {
+        Row: {
+          decided_at: string | null
+          decided_by: string | null
+          evidence_key: string | null
+          evidence_kind: string | null
+          file_id: string | null
+          id: string | null
+          quote_id: string | null
+          quote_version_id: string | null
+          reason: string | null
+          resolution: string | null
+          snapshot: Json | null
+          supersedes_id: string | null
+          visit_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          decided_at?: string | null
+          decided_by?: string | null
+          evidence_key?: string | null
+          evidence_kind?: string | null
+          file_id?: string | null
+          id?: string | null
+          quote_id?: string | null
+          quote_version_id?: string | null
+          reason?: string | null
+          resolution?: string | null
+          snapshot?: Json | null
+          supersedes_id?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          decided_at?: string | null
+          decided_by?: string | null
+          evidence_key?: string | null
+          evidence_kind?: string | null
+          file_id?: string | null
+          id?: string | null
+          quote_id?: string | null
+          quote_version_id?: string | null
+          reason?: string | null
+          resolution?: string | null
+          snapshot?: Json | null
+          supersedes_id?: string | null
+          visit_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "visit_quotation_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_register"
+            referencedColumns: ["current_version_id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_quote_version_id_fkey"
+            columns: ["quote_version_id"]
+            isOneToOne: false
+            referencedRelation: "quote_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: true
+            referencedRelation: "visit_quote_evidence"
+            referencedColumns: ["decision_id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: true
+            referencedRelation: "visit_quote_evidence_decisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "visit_quote_evidence_decisions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visits: {
         Row: {
           account_id: string | null
@@ -11788,6 +12495,23 @@ export type Database = {
           p_sort_order?: number
         }
         Returns: string
+      }
+      quote_command: {
+        Args: { p_action: string; p_input: Json; p_request_id: string }
+        Returns: Json
+      }
+      quote_send_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          first_quotes: number
+          quoted_pursuits: number
+          resends: number
+          revisions: number
+          sends_without_pursuit: number
+          unverified_versions_prepared: number
+          versions_prepared: number
+          week_start: string
+        }[]
       }
       record_extraction: {
         Args: {

@@ -188,6 +188,58 @@ export const FEEDBACK_REQUEST_STATUS: StatusMap = {
   revoked: { label: "Revoked", tone: "destructive", hint: "Staff withdrew the request. The link no longer works." },
 };
 
+/** Where a quotation is. Preparation, issue and sending are separate facts. */
+export const QUOTE_LIFECYCLE: StatusMap = {
+  prepared: { label: "Prepared", tone: "neutral", hint: "Drafted but not issued or sent. Not counted as a quotation sent." },
+  issued: { label: "Issued", tone: "info", hint: "A version was finalised, but no send to the customer is recorded yet. Record the send when it actually goes out." },
+  sent: { label: "Sent", tone: "success", hint: "At least one version reached the customer, with its time, channel and sender recorded. This is not a sale." },
+  accepted: { label: "Accepted", tone: "success", hint: "The customer accepted this quote. It does not record a sale or move the opportunity; record the purchase separately." },
+  rejected: { label: "Rejected", tone: "destructive", hint: "The customer turned the quote down, with a reason. Reopen it if they come back." },
+  expired: { label: "Expired", tone: "warning", hint: "The quote lapsed without an answer. Reopen it to revise or resend." },
+};
+
+export const QUOTE_VERSION_STATE: StatusMap = {
+  prepared: { label: "Prepared", tone: "neutral", hint: "Drafted only. Issue it before recording that it was sent." },
+  issued: { label: "Issued", tone: "info", hint: "Finalised and now immutable. A change is a new revision; earlier versions are kept." },
+};
+
+/** How a recorded send counts. */
+export const QUOTE_SEND_KIND: StatusMap = {
+  first_quote: { label: "First quotation", tone: "success", hint: "The first time this quote reached the customer, whichever version that was. Counts once as a quotation sent." },
+  revision: { label: "Revision", tone: "info", hint: "The first send of a later (or different) version. Counts as a revision, not a new quotation." },
+  resend: { label: "Resend", tone: "neutral", hint: "A version the customer already received, sent again. Not counted as a quotation or revision." },
+};
+
+export const QUOTE_CHANNEL: StatusMap = {
+  whatsapp: { label: "WhatsApp", tone: "neutral", hint: "Sent in a WhatsApp chat. Staff record it; the app sends nothing." },
+  email: { label: "Email", tone: "neutral", hint: "Sent by email from staff mail." },
+  in_person: { label: "In person", tone: "neutral", hint: "Handed to the customer at the showroom or site." },
+  printed: { label: "Printed copy", tone: "neutral", hint: "A printed copy was given or posted." },
+  phone_call: { label: "Phone call", tone: "neutral", hint: "Read out or agreed on a call." },
+  other: { label: "Other", tone: "neutral", hint: "Another channel; describe it in the note." },
+};
+
+export const QUOTE_SEND_EVIDENCE: StatusMap = {
+  staff_attested: { label: "Staff confirms", tone: "neutral", hint: "The sender states it went out. The weakest evidence, but it names who and when." },
+  message_reference: { label: "Message reference", tone: "info", hint: "A message or email reference identifies the send. Do not paste phone numbers or addresses." },
+  customer_acknowledged: { label: "Customer acknowledged", tone: "success", hint: "The customer confirmed receiving it." },
+};
+
+export const QUOTE_EVIDENCE_STATE: StatusMap = {
+  staff_entered: { label: "Entered", tone: "neutral", hint: "Recorded by staff from the quotation itself." },
+  unverified_historical: { label: "Unverified", tone: "warning", hint: "Created by a reviewer from a historical visit note or file. Its contents and sending were not confirmed, so it never counts as sent." },
+  legacy: { label: "Legacy", tone: "neutral", hint: "Recorded before quotations had separate issue and send facts. No send evidence is implied." },
+};
+
+/** What a visit's SQ note or quotation file is. */
+export const VISIT_QUOTE_RESOLUTION: StatusMap = {
+  unreviewed: { label: "Needs review", tone: "warning", hint: "A visit note or file nobody has matched to a quote yet. It is evidence only and is not counted." },
+  matched: { label: "Matched by SQ number", tone: "info", hint: "The SQ number on the visit is already a quote reference, so it points at that quote. No new quote was created." },
+  linked: { label: "Linked", tone: "success", hint: "A reviewer linked this evidence to a canonical quote or version." },
+  unresolved: { label: "Unresolved", tone: "destructive", hint: "A reviewer could not tell which quote this is, and said why. It stays out of every count." },
+  not_a_quote: { label: "Not a quote", tone: "neutral", hint: "A reviewer decided this note or file is not a quotation." },
+};
+
 export function statusMeta(map: StatusMap, value: string | null | undefined): StatusMeta {
   if (!value) return { label: "—", tone: "neutral" };
   return map[value] ?? { label: value.replace(/_/g, " "), tone: "neutral" };
