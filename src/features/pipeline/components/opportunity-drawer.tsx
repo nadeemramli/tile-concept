@@ -25,6 +25,7 @@ import { StageChangeDialog } from "@/features/pipeline/components/stage-dialog";
 import { EditOpportunityDialog, QuoteVersionDialog, ReassignDialog } from "@/features/pipeline/components/opportunity-dialogs";
 import { ActivityDialog, TaskDialog } from "@/features/crm/components/dialogs";
 import { PurchasesList, QuotesList } from "@/features/crm/components/detail-sections";
+import { ForecastSection } from "@/features/forecast/components/forecast-section";
 
 type Which = "stage" | "edit" | "quote" | "activity" | "task" | "reassign" | "archive" | null;
 
@@ -140,17 +141,6 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         <FactList
           items={[
             { label: "Estimated value", value: opp.estimated_value !== null ? formatMoney(opp.estimated_value, opp.currency) : "—", mono: true },
-            {
-              label: "Probability",
-              value: opp.probability_band ? (
-                <Hint content="A band set by the owner. The business has not yet agreed the bands, so it is the owner's gut feel, not a forecast weight." focusable>
-                  <span>{titleCase(opp.probability_band)}</span>
-                </Hint>
-              ) : (
-                "—"
-              ),
-            },
-            { label: "Expected close", value: formatDate(opp.expected_close_date) },
             { label: "Owner", value: names.get(opp.owner_id ?? "") ?? "Unassigned" },
             {
               label: "Next action",
@@ -176,6 +166,8 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         />
         {opp.notes && <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-sm">{opp.notes}</p>}
       </DrawerSection>
+
+      <ForecastSection opp={opp} names={names} isOwner={isOwner} />
 
       <DrawerSection title={`Quotes (${opp.quotes.length})`}>
         <QuotesList items={opp.quotes} />
@@ -226,7 +218,7 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
 
       {canWrite && (
         <>
-          <StageChangeDialog open={open === "stage"} onOpenChange={() => setOpen(null)} opportunityId={opp.id} currentStage={opp.stage_key} stages={stages} hasNextAction={!!opp.next_action && !!opp.next_action_due_at} />
+          <StageChangeDialog open={open === "stage"} onOpenChange={() => setOpen(null)} opportunityId={opp.id} currentStage={opp.stage_key} stages={stages} hasNextAction={!!opp.next_action && !!opp.next_action_due_at} forecast={opp} />
           <EditOpportunityDialog open={open === "edit"} onOpenChange={() => setOpen(null)} opp={opp} members={members} canAssign={can("sales.assign")} />
           <QuoteVersionDialog open={open === "quote"} onOpenChange={() => setOpen(null)} opp={opp} suggestedNumber={suggestedQuoteNumber} />
           <ActivityDialog open={open === "activity"} onOpenChange={() => setOpen(null)} links={{ opportunity_id: opp.id, contact_id: opp.contact_id ?? undefined, account_id: opp.account_id ?? undefined, project_id: opp.project_id ?? undefined }} />

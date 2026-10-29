@@ -3,6 +3,7 @@ import "server-only";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getAuditFor, getPurchasesFor, getQuotesForOpportunities, getTimeline, type AuditRow, type PurchaseSummary, type QuoteSummary } from "@/server/queries/contacts";
 import type { TimelineItem } from "@/components/patterns/timeline";
+import { getForecastHistory, type ForecastHistoryEntry } from "@/server/queries/forecast";
 
 export type PipelineView = "open" | "overdue" | "missing-next-action" | "won" | "lost" | "quotes" | "all" | "archived";
 
@@ -23,6 +24,9 @@ export interface OpportunityRow {
   currency: string;
   probability_band: string | null;
   expected_close_date: string | null;
+  forecast_evidence: string | null;
+  forecast_reviewed_at: string | null;
+  forecast_reviewed_by: string | null;
   next_action: string | null;
   next_action_due_at: string | null;
   product_interest: string[];
@@ -59,6 +63,9 @@ function mapRow(o: Record<string, unknown>): OpportunityRow {
     currency: (o.currency as string) ?? "MYR",
     probability_band: (o.probability_band as string | null) ?? null,
     expected_close_date: (o.expected_close_date as string | null) ?? null,
+    forecast_evidence: (o.forecast_evidence as string | null) ?? null,
+    forecast_reviewed_at: (o.forecast_reviewed_at as string | null) ?? null,
+    forecast_reviewed_by: (o.forecast_reviewed_by as string | null) ?? null,
     next_action: (o.next_action as string | null) ?? null,
     next_action_due_at: (o.next_action_due_at as string | null) ?? null,
     product_interest: (o.product_interest as string[] | null) ?? [],
@@ -127,6 +134,7 @@ export interface OpportunityDetail extends OpportunityRow {
   timeline: TimelineItem[];
   audit: AuditRow[];
   photos: { id: string; remark: string; file_name: string; created_at: string; url: string | null }[];
+  forecast_history: ForecastHistoryEntry[];
 }
 
 export async function getOpportunityDetail(id: string): Promise<OpportunityDetail | null> {
@@ -134,7 +142,7 @@ export async function getOpportunityDetail(id: string): Promise<OpportunityDetai
   const { data: o } = await supabase.from("opportunities").select(`${SELECT}, projects(name)`).eq("id", id).maybeSingle();
   if (!o) return null;
   const base = mapRow(o as unknown as Record<string, unknown>);
-  const [quotes, { data: events }, { data: tasks }, purchases, timeline, audit, { data: photoRows }] = await Promise.all([
+  const [quotes, { data: events }, { data: tasks }, purchases, timeline, audit, { data: photoRows }, forecast_history] = await Promise.all([
     getQuotesForOpportunities([id], new Map([[id, base.name]])),
     supabase.from("opportunity_stage_events").select("id, from_stage_key, to_stage_key, is_backward, reason, actor_id, occurred_at").eq("opportunity_id", id).order("occurred_at", { ascending: false }),
     supabase.from("tasks").select("id, title, status, due_at, assignee_id, priority").eq("opportunity_id", id).order("due_at", { ascending: true, nullsFirst: false }),
@@ -142,6 +150,7 @@ export async function getOpportunityDetail(id: string): Promise<OpportunityDetai
     getTimeline("opportunity", id),
     getAuditFor([id]),
     supabase.from("opportunity_photos").select("id,remark,file_name,created_at,object_path").eq("opportunity_id",id).not("uploaded_at","is",null).is("removed_at",null).order("created_at",{ ascending:false }),
+    getForecastHistory(id),
   ]);
   const photos = await Promise.all((photoRows ?? []).map(async (p) => {
     const { data } = await supabase.storage.from("opportunity-photos").createSignedUrl(p.object_path!,300);
@@ -150,6 +159,7 @@ export async function getOpportunityDetail(id: string): Promise<OpportunityDetai
   return {
     ...base,
     photos,
+    forecast_history,
     has_quote: quotes.length > 0,
     project_name: ((o as unknown as { projects: { name: string } | null }).projects)?.name ?? null,
     quotes,

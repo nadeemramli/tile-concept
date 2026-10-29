@@ -8,8 +8,9 @@ import { Field } from "@/components/patterns/field";
 import { FormDialog, formToObject } from "@/features/crm/components/form-dialog";
 import { changeStageAction } from "@/server/commands/opportunities";
 import type { StageRef } from "@/server/queries/reference";
+import { ForecastCaptureFields } from "@/features/forecast/components/forecast-fields";
 
-export function StageChangeDialog({ open, onOpenChange, opportunityId, currentStage, stages, hasNextAction, initialTarget }: { open: boolean; onOpenChange: (o: boolean) => void; opportunityId: string; currentStage: string; stages: StageRef[]; hasNextAction: boolean; initialTarget?: string }) {
+export function StageChangeDialog({ open, onOpenChange, opportunityId, currentStage, stages, hasNextAction, initialTarget, forecast }: { open: boolean; onOpenChange: (o: boolean) => void; opportunityId: string; currentStage: string; stages: StageRef[]; hasNextAction: boolean; initialTarget?: string; forecast?: { expected_close_date: string | null; probability_band: string | null } }) {
   const [target, setTarget] = useState<string>(initialTarget ?? "");
   const current = stages.find((s) => s.key === currentStage);
   const to = stages.find((s) => s.key === target);
@@ -65,6 +66,7 @@ export function StageChangeDialog({ open, onOpenChange, opportunityId, currentSt
           </Field>
         </div>
       )}
+      {to && to.reporting_group === "open" && <ForecastCaptureFields idPrefix="stage" current={forecast} />}
     </FormDialog>
   );
 }

@@ -11,6 +11,7 @@ export const REPORT_ROUTES = [
 ];
 export const SECONDARY_ROUTES = [
   "/sales/record-sale",
+  "/sales/pipeline/forecast",
   "/sales/walk-ins/new",
   "/sales/walk-ins/import",
   "/merchandise/catalog/compare",
@@ -31,7 +32,7 @@ export async function expectHealthyRoute(page: Page, path: string) {
     // Check their explicit messages, rather than the word "error" in legitimate
     // audit entries, glossary text, or connector status descriptions.
     await expect(page.getByRole("heading", {
-      name: /^(?:This page couldn’t load|The Inquiry Inbox could not load|Report unavailable)$/,
+      name: /^(?:This page couldn’t load|The Inquiry Inbox could not load|Report unavailable|Forecast unavailable)$/,
     }), `${path}: application error boundary`).toHaveCount(0);
     await expect(page.locator("main").getByText(/^This report could not be computed:/),
       `${path}: report RPC error`).toHaveCount(0);

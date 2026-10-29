@@ -5431,6 +5431,9 @@ export type Database = {
           deferred_until: string | null
           estimated_value: number | null
           expected_close_date: string | null
+          forecast_evidence: string | null
+          forecast_reviewed_at: string | null
+          forecast_reviewed_by: string | null
           id: string | null
           lead_id: string | null
           lost_at: string | null
@@ -5464,6 +5467,9 @@ export type Database = {
           deferred_until?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
+          forecast_evidence?: string | null
+          forecast_reviewed_at?: string | null
+          forecast_reviewed_by?: string | null
           id?: string | null
           lead_id?: string | null
           lost_at?: string | null
@@ -5497,6 +5503,9 @@ export type Database = {
           deferred_until?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
+          forecast_evidence?: string | null
+          forecast_reviewed_at?: string | null
+          forecast_reviewed_by?: string | null
           id?: string | null
           lead_id?: string | null
           lost_at?: string | null
@@ -5563,6 +5572,100 @@ export type Database = {
           },
           {
             foreignKeyName: "opportunities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_forecast_history: {
+        Row: {
+          actor_id: string | null
+          archived: boolean | null
+          currency: string | null
+          estimated_value: number | null
+          evidence: string | null
+          expected_close_date: string | null
+          id: string | null
+          kind: string | null
+          next_action: string | null
+          next_action_due_at: string | null
+          opportunity_id: string | null
+          owner_id: string | null
+          probability_band: string | null
+          recorded_at: string | null
+          review_context: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          seq: number | null
+          stage_key: string | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          archived?: boolean | null
+          currency?: string | null
+          estimated_value?: number | null
+          evidence?: string | null
+          expected_close_date?: string | null
+          id?: string | null
+          kind?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          opportunity_id?: string | null
+          owner_id?: string | null
+          probability_band?: string | null
+          recorded_at?: string | null
+          review_context?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seq?: number | null
+          stage_key?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          archived?: boolean | null
+          currency?: string | null
+          estimated_value?: number | null
+          evidence?: string | null
+          expected_close_date?: string | null
+          id?: string | null
+          kind?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          opportunity_id?: string | null
+          owner_id?: string | null
+          probability_band?: string | null
+          recorded_at?: string | null
+          review_context?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seq?: number | null
+          stage_key?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_forecast_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_forecast_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "opportunity_forecast_history_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -11552,6 +11655,89 @@ export type Database = {
         Returns: undefined
       }
       flag_stale_suppliers: { Args: never; Returns: number }
+      forecast_queue: {
+        Args: {
+          p_as_of?: string
+          p_limit?: number
+          p_mode?: string
+          p_offset?: number
+          p_owner_id?: string
+          p_queue: string
+          p_stale_days?: number
+          p_week_start?: string
+        }
+        Returns: {
+          account_id: string
+          account_name: string
+          contact_id: string
+          contact_name: string
+          created_at: string
+          currency: string
+          estimated_value: number
+          evidence: string
+          expected_close_date: string
+          id: string
+          name: string
+          next_action: string
+          next_action_due_at: string
+          owner_id: string
+          probability_band: string
+          recorded: boolean
+          reviewed_at: string
+          reviewed_by: string
+          stage_key: string
+          status: string
+          total_count: number
+          version: number
+        }[]
+      }
+      forecast_rows: {
+        Args: { p_as_of?: string; p_mode?: string; p_owner_id?: string }
+        Returns: {
+          account_id: string
+          archived: boolean
+          contact_id: string
+          created_at: string
+          currency: string
+          estimated_value: number
+          evidence: string
+          expected_close_date: string
+          id: string
+          name: string
+          next_action: string
+          next_action_due_at: string
+          owner_id: string
+          probability_band: string
+          project_id: string
+          recorded: boolean
+          reviewed_at: string
+          reviewed_by: string
+          stage_key: string
+          status: string
+          version: number
+        }[]
+      }
+      forecast_week: {
+        Args: {
+          p_as_of?: string
+          p_mode?: string
+          p_owner_id?: string
+          p_stale_days?: number
+          p_week_start?: string
+        }
+        Returns: Json
+      }
+      forecast_window: {
+        Args: { p_as_of?: string; p_mode?: string; p_week_start?: string }
+        Returns: {
+          as_of: string
+          today: string
+          week_end: string
+          week_end_at: string
+          week_start: string
+          week_start_at: string
+        }[]
+      }
       funnel_dashboard: {
         Args: {
           p_as_of: string
@@ -12118,6 +12304,10 @@ export type Database = {
           normalized_value: string
           raw_value: string
         }[]
+      }
+      review_opportunity_forecast: {
+        Args: { p_input: Json; p_opportunity_id: string; p_request_id: string }
+        Returns: Json
       }
       review_shoot_output: {
         Args: { p_decision: string; p_output_id: string; p_reason?: string }
