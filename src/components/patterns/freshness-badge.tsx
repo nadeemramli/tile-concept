@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { formatRelative } from "@/lib/format";
+import { formatDateTime, formatRelative } from "@/lib/format";
+import { useNow } from "@/components/patterns/clock";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const TONE = {
@@ -13,33 +14,43 @@ const TONE = {
 
 export type Freshness = keyof typeof TONE;
 
-export function freshnessOf(lastSuccessAt: string | null | undefined, slaMinutes: number): Freshness {
+/** Before any clock is available (no ClockProvider, not yet mounted): neutral, but never "unknown". */
+const PENDING = "bg-muted text-muted-foreground border-border";
+
+export function freshnessOf(lastSuccessAt: string | null | undefined, slaMinutes: number, now: number = Date.now()): Freshness {
   if (!lastSuccessAt) return "unknown";
-  const ageMin = (Date.now() - new Date(lastSuccessAt).getTime()) / 60_000;
+  const ageMin = (now - new Date(lastSuccessAt).getTime()) / 60_000;
   if (ageMin <= slaMinutes) return "fresh";
   if (ageMin <= slaMinutes * 3) return "aging";
   return "stale";
 }
 
-/** Every source-dependent value can expose "as of" + freshness state (PRD §2.2 #5). */
+/**
+ * Every source-dependent value can expose "as of" + freshness state (PRD §2.2 #5).
+ * Age and tone are read from the shared clock (see clock.tsx), so the server
+ * render and the hydrating client agree, and they advance while mounted.
+ */
 export function FreshnessBadge({ lastSuccessAt, slaMinutes, className, label }: { lastSuccessAt: string | null | undefined; slaMinutes: number; className?: string; label?: string }) {
-  const state = freshnessOf(lastSuccessAt, slaMinutes);
+  const now = useNow();
+  const state = !lastSuccessAt ? "unknown" : now === null ? "pending" : freshnessOf(lastSuccessAt, slaMinutes, now);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn("inline-flex h-5 items-center gap-1 rounded-full border px-2 text-[11px] font-medium tnum", TONE[state], className)}>
+        <span data-freshness={state} className={cn("inline-flex h-5 items-center gap-1 rounded-full border px-2 text-[11px] font-medium tnum", state === "pending" ? PENDING : TONE[state], className)}>
           {label ? `${label} · ` : ""}
-          {lastSuccessAt ? formatRelative(lastSuccessAt) : "never"}
+          {!lastSuccessAt ? "never" : now === null ? formatDateTime(lastSuccessAt) : formatRelative(lastSuccessAt, now)}
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        {state === "fresh"
-          ? `Within the ${slaMinutes >= 60 ? `${Math.round(slaMinutes / 60)}h` : `${slaMinutes}m`} freshness SLA`
-          : state === "aging"
-            ? "Older than the freshness SLA — monitor"
-            : state === "stale"
-              ? "Well past the freshness SLA — data from this source is stale"
-              : "No successful read recorded"}
+        {state === "pending"
+          ? "Checking the age against this device's clock"
+          : state === "fresh"
+            ? `Within the ${slaMinutes >= 60 ? `${Math.round(slaMinutes / 60)}h` : `${slaMinutes}m`} freshness SLA`
+            : state === "aging"
+              ? "Older than the freshness SLA — monitor"
+              : state === "stale"
+                ? "Well past the freshness SLA — data from this source is stale"
+                : "No successful read recorded"}
       </TooltipContent>
     </Tooltip>
   );
