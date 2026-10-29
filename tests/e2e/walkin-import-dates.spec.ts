@@ -112,7 +112,9 @@ for (const timezoneId of ["UTC", "Asia/Kuala_Lumpur"] as const) {
 
       await expect(previewDate(page, FIFTH)).toHaveText("2026-10-05");
       await expect(previewDate(page, TWENTY_FIFTH)).toHaveText("2026-10-25");
-      await expect(previewRow(page, "Date (DD/MM/YYYY)")).toContainText("Bad or missing date");
+      // The real header row lands as data and is refused, not imported.
+      await expect(page.getByText("1 rejected", { exact: true })).toBeVisible();
+      await expect(previewRow(page, "Bad or missing date")).toContainText("Missing/invalid phone");
 
       await page.getByRole("button", { name: "Commit 2 rows" }).click();
       await expect(page.getByText("Import committed")).toBeVisible({ timeout: 30_000 });
