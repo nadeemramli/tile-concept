@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { expectHealthyRoute, PRIMARY_ROUTES, REPORT_ROUTES, SECONDARY_ROUTES } from "./route-smoke";
+import { expectNotAvailable, pipelineContent } from "./denial-checks";
 
 const ADMIN = { email: "demo.admin@tileconcept.test", password: "TileDemo!2026" };
 
@@ -42,7 +43,12 @@ test("global search finds a seeded product", async ({ page }) => {
 });
 
 test("catalog operator cannot open the pipeline", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   await login(page, "demo.catalog@tileconcept.test");
-  await page.goto("/sales/pipeline");
-  await expect(page.getByText(/Not available/)).toBeVisible();
+  const response = await page.goto("/sales/pipeline");
+  expect(response!.status(), "HTTP status").toBeLessThan(400);
+  expect(new URL(page.url()).pathname, "denied in place, not redirected").toBe("/sales/pipeline");
+  await expectNotAvailable(page, "Catalog / pricing operator", pipelineContent(page));
+  expect(pageErrors, "uncaught browser errors").toEqual([]);
 });
