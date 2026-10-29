@@ -28,6 +28,7 @@ import { useSession } from "@/components/shell/session-context";
 import { VIEW_LABELS, whereIsLead } from "@/features/inbox/lib/whereabouts";
 import type { LeadView } from "@/features/inbox/schema";
 import type { IdentityCandidate, IntakeEventRow, LeadRow } from "@/features/inbox/types";
+import type { PursuitOutcome } from "@/features/outcomes/types";
 import type { ProfileRef } from "@/server/queries/reference";
 import {
   assignLeadAction,
@@ -42,6 +43,8 @@ interface Props {
   lead: LeadRow | null;
   intake: IntakeEventRow[];
   timeline: TimelineItem[];
+  /** Recorded losses, rejections and deferrals, newest first. */
+  outcomes: PursuitOutcome[];
   contact: { id: string; display_name: string; lifecycle_state: string; customer_type: string | null } | null;
   /** Intake history and activity are still being read; the lead row itself is already current. */
   loading?: boolean;
@@ -59,7 +62,7 @@ const TIMELINE_PREVIEW = 5;
 
 const MASKED_HINT = "Shown masked because your role does not include contact.reveal. Revealing a phone number or email is audited with who, when and which record.";
 
-export function LeadDrawer({ lead, intake, timeline, contact, loading = false, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
+export function LeadDrawer({ lead, intake, timeline, outcomes, contact, loading = false, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
   const router = useRouter();
   const { can, session } = useSession();
   const [pending, start] = useTransition();
@@ -232,7 +235,11 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
             This customer has been waiting {formatRelative(lead.first_response_due_at).replace(" ago", "")} past the 4-hour reply target. Message them now.
           </p>
         )}
-        {lead.disqualified_reason && <p className="text-sm text-destructive">Lost: {lead.disqualified_reason}</p>}
+        {lead.disqualified_reason && (
+          <p className="text-sm text-destructive">
+            {outcomes.find((o) => o.closes_lead && !o.reopened_at)?.outcome_type === "rejected" ? "Rejected at qualification" : "Lost"}: {lead.disqualified_reason}
+          </p>
+        )}
 
         <div className="@container">
           <div className="grid gap-5 @3xl:grid-cols-[3fr_2fr]">
@@ -326,7 +333,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
 
             {/* Right: what happens next and what has happened */}
             <div className="order-first space-y-5 @3xl:order-last">
-              <InquiryWorkflow key={lead.id} lead={lead} canWrite={canWrite} />
+              <InquiryWorkflow key={lead.id} lead={lead} canWrite={canWrite} outcomes={outcomes} />
 
               <DrawerSection
                 title="Activity"

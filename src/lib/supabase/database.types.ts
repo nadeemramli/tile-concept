@@ -5907,6 +5907,39 @@ export type Database = {
           },
         ]
       }
+      outcome_reasons: {
+        Row: {
+          hint: string | null
+          is_active: boolean | null
+          is_competitor: boolean | null
+          key: string | null
+          label: string | null
+          outcome_type: string | null
+          position: number | null
+          requires_detail: boolean | null
+        }
+        Insert: {
+          hint?: string | null
+          is_active?: boolean | null
+          is_competitor?: boolean | null
+          key?: string | null
+          label?: string | null
+          outcome_type?: string | null
+          position?: number | null
+          requires_detail?: boolean | null
+        }
+        Update: {
+          hint?: string | null
+          is_active?: boolean | null
+          is_competitor?: boolean | null
+          key?: string | null
+          label?: string | null
+          outcome_type?: string | null
+          position?: number | null
+          requires_detail?: boolean | null
+        }
+        Relationships: []
+      }
       packaging_configurations: {
         Row: {
           coverage_per_pack: number | null
@@ -7718,6 +7751,305 @@ export type Database = {
           },
           {
             foreignKeyName: "purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pursuit_outcome_events: {
+        Row: {
+          actor_id: string | null
+          closes_lead: boolean | null
+          closes_opportunity: boolean | null
+          command: Json | null
+          competitor_evidence: string | null
+          competitor_name: string | null
+          competitor_relationship: string | null
+          competitor_relationship_detail: string | null
+          corrects_event_id: string | null
+          duplicate_of_lead_id: string | null
+          effective_date: string | null
+          estimated_currency: string | null
+          estimated_value: number | null
+          id: string | null
+          lead_id: string | null
+          opportunity_id: string | null
+          outcome_type: string | null
+          prior_state: Json | null
+          pursuit_key: string | null
+          quoted_currency: string | null
+          quoted_value: number | null
+          reason_code: string | null
+          reason_detail: string | null
+          reason_set: string | null
+          recorded_at: string | null
+          reopens_event_id: string | null
+          request_id: string | null
+          result: Json | null
+          review_date: string | null
+          review_task_id: string | null
+          seq: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          closes_lead?: boolean | null
+          closes_opportunity?: boolean | null
+          command?: Json | null
+          competitor_evidence?: string | null
+          competitor_name?: string | null
+          competitor_relationship?: string | null
+          competitor_relationship_detail?: string | null
+          corrects_event_id?: string | null
+          duplicate_of_lead_id?: string | null
+          effective_date?: string | null
+          estimated_currency?: string | null
+          estimated_value?: number | null
+          id?: string | null
+          lead_id?: string | null
+          opportunity_id?: string | null
+          outcome_type?: string | null
+          prior_state?: Json | null
+          pursuit_key?: string | null
+          quoted_currency?: string | null
+          quoted_value?: number | null
+          reason_code?: string | null
+          reason_detail?: string | null
+          reason_set?: string | null
+          recorded_at?: string | null
+          reopens_event_id?: string | null
+          request_id?: string | null
+          result?: Json | null
+          review_date?: string | null
+          review_task_id?: string | null
+          seq?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          closes_lead?: boolean | null
+          closes_opportunity?: boolean | null
+          command?: Json | null
+          competitor_evidence?: string | null
+          competitor_name?: string | null
+          competitor_relationship?: string | null
+          competitor_relationship_detail?: string | null
+          corrects_event_id?: string | null
+          duplicate_of_lead_id?: string | null
+          effective_date?: string | null
+          estimated_currency?: string | null
+          estimated_value?: number | null
+          id?: string | null
+          lead_id?: string | null
+          opportunity_id?: string | null
+          outcome_type?: string | null
+          prior_state?: Json | null
+          pursuit_key?: string | null
+          quoted_currency?: string | null
+          quoted_value?: number | null
+          reason_code?: string | null
+          reason_detail?: string | null
+          reason_set?: string | null
+          recorded_at?: string | null
+          reopens_event_id?: string | null
+          request_id?: string | null
+          result?: Json | null
+          review_date?: string | null
+          review_task_id?: string | null
+          seq?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["latest_correction_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["reopened_by_event_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reason_set_reason_code_fkey"
+            columns: ["reason_set", "reason_code"]
+            isOneToOne: false
+            referencedRelation: "outcome_reasons"
+            referencedColumns: ["outcome_type", "key"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["latest_correction_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["reopened_by_event_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_review_task_id_fkey"
+            columns: ["review_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pursuit_outcome_history: {
+        Row: {
+          actor_id: string | null
+          closes_lead: boolean | null
+          closes_opportunity: boolean | null
+          competitor_evidence: string | null
+          competitor_name: string | null
+          competitor_relationship: string | null
+          competitor_relationship_detail: string | null
+          corrected_at: string | null
+          corrected_by: string | null
+          duplicate_of_lead_id: string | null
+          effective_date: string | null
+          effective_week: string | null
+          estimated_currency: string | null
+          estimated_value: number | null
+          id: string | null
+          latest_correction_id: string | null
+          lead_id: string | null
+          opportunity_id: string | null
+          original_effective_date: string | null
+          original_reason_code: string | null
+          outcome_type: string | null
+          pursuit_key: string | null
+          quoted_currency: string | null
+          quoted_value: number | null
+          reason_code: string | null
+          reason_detail: string | null
+          recorded_at: string | null
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          reopened_by_event_id: string | null
+          review_date: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -11789,6 +12121,10 @@ export type Database = {
         }
         Returns: string
       }
+      pursuit_outcome_command: {
+        Args: { p_action: string; p_input: Json; p_request_id: string }
+        Returns: Json
+      }
       record_extraction: {
         Args: {
           p_error?: string
@@ -12039,6 +12375,22 @@ export type Database = {
           products: number
           unreviewed: number
           with_current_price: number
+        }[]
+      }
+      report_pursuit_outcomes: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          events: number
+          lost_estimated_unquoted_value: number
+          lost_quoted_value: number
+          outcome_type: string
+          pursuits: number
+          reason_code: string
+          reason_label: string
+          reopened_later: number
+          value_not_myr: number
+          value_unknown: number
+          week_start: string
         }[]
       }
       report_quotes: {

@@ -3,6 +3,8 @@ import "server-only";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getAuditFor, getPurchasesFor, getQuotesForOpportunities, getTimeline, type AuditRow, type PurchaseSummary, type QuoteSummary } from "@/server/queries/contacts";
 import type { TimelineItem } from "@/components/patterns/timeline";
+import type { PursuitOutcome } from "@/features/outcomes/types";
+import { getPursuitOutcomes } from "@/server/queries/outcomes";
 
 export type PipelineView = "open" | "overdue" | "missing-next-action" | "won" | "lost" | "quotes" | "all" | "archived";
 
@@ -127,6 +129,7 @@ export interface OpportunityDetail extends OpportunityRow {
   timeline: TimelineItem[];
   audit: AuditRow[];
   photos: { id: string; remark: string; file_name: string; created_at: string; url: string | null }[];
+  outcomes: PursuitOutcome[];
 }
 
 export async function getOpportunityDetail(id: string): Promise<OpportunityDetail | null> {
@@ -134,7 +137,7 @@ export async function getOpportunityDetail(id: string): Promise<OpportunityDetai
   const { data: o } = await supabase.from("opportunities").select(`${SELECT}, projects(name)`).eq("id", id).maybeSingle();
   if (!o) return null;
   const base = mapRow(o as unknown as Record<string, unknown>);
-  const [quotes, { data: events }, { data: tasks }, purchases, timeline, audit, { data: photoRows }] = await Promise.all([
+  const [quotes, { data: events }, { data: tasks }, purchases, timeline, audit, { data: photoRows }, outcomes] = await Promise.all([
     getQuotesForOpportunities([id], new Map([[id, base.name]])),
     supabase.from("opportunity_stage_events").select("id, from_stage_key, to_stage_key, is_backward, reason, actor_id, occurred_at").eq("opportunity_id", id).order("occurred_at", { ascending: false }),
     supabase.from("tasks").select("id, title, status, due_at, assignee_id, priority").eq("opportunity_id", id).order("due_at", { ascending: true, nullsFirst: false }),
@@ -142,6 +145,7 @@ export async function getOpportunityDetail(id: string): Promise<OpportunityDetai
     getTimeline("opportunity", id),
     getAuditFor([id]),
     supabase.from("opportunity_photos").select("id,remark,file_name,created_at,object_path").eq("opportunity_id",id).not("uploaded_at","is",null).is("removed_at",null).order("created_at",{ ascending:false }),
+    getPursuitOutcomes({ opportunityId: id }),
   ]);
   const photos = await Promise.all((photoRows ?? []).map(async (p) => {
     const { data } = await supabase.storage.from("opportunity-photos").createSignedUrl(p.object_path!,300);
@@ -150,6 +154,7 @@ export async function getOpportunityDetail(id: string): Promise<OpportunityDetai
   return {
     ...base,
     photos,
+    outcomes,
     has_quote: quotes.length > 0,
     project_name: ((o as unknown as { projects: { name: string } | null }).projects)?.name ?? null,
     quotes,

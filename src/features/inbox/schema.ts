@@ -47,7 +47,8 @@ export const convertLeadSchema = z.object({
 export const inquiryActionSchema = z.object({
   lead_id: uuid(),
   request_id: uuid(),
-  action: z.enum(["whatsapp_sent", "contact_attempt", "customer_replied", "no_response", "schedule", "reschedule", "complete", "no_next_action", "lost", "reopen"]),
+  // Closing and reopening go through the structured outcome dialog (src/features/outcomes).
+  action: z.enum(["whatsapp_sent", "contact_attempt", "customer_replied", "no_response", "schedule", "reschedule", "complete", "no_next_action"]),
   task_id: uuid().optional(),
   due_at: z.iso.datetime({ offset: true }).optional(),
   occurred_at: z.iso.datetime({ offset: true }).optional(),

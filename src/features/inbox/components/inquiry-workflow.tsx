@@ -10,7 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field } from "@/components/patterns/field";
 import { DrawerSection } from "@/components/patterns/record-drawer";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { outcomeReason } from "@/lib/domain/outcome-reasons";
+import { OutcomeDialog } from "@/features/outcomes/components/outcome-dialog";
+import { OutcomeHistory } from "@/features/outcomes/components/outcome-history";
+import type { PursuitOutcome } from "@/features/outcomes/types";
 import { followUpDueAt } from "@/features/inbox/lib/follow-up";
 import type { InquiryAction } from "@/features/inbox/schema";
 import type { LeadRow } from "@/features/inbox/types";
@@ -20,14 +24,14 @@ const LABELS: Record<InquiryAction, string> = {
   contact_attempt: "Log call / email",
   whatsapp_sent: "WhatsApp sent", customer_replied: "Customer replied", no_response: "No response",
   schedule: "Schedule follow-up", reschedule: "Reschedule follow-up", complete: "Follow-up done",
-  lost: "Mark as lost", reopen: "Reopen inquiry", no_next_action: "No next action needed",
+  no_next_action: "No next action needed",
 };
 
 function klInput(iso: string) {
   return new Date(new Date(iso).getTime() + 8 * 3600000).toISOString().slice(0, 16);
 }
 
-export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: boolean }) {
+export function InquiryWorkflow({ lead, canWrite, outcomes = [] }: { lead: LeadRow; canWrite: boolean; outcomes?: PursuitOutcome[] }) {
   const router = useRouter();
   const [action, setAction] = useState<InquiryAction | null>(null);
   const [body, setBody] = useState("");
@@ -39,8 +43,13 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
   const inFlight = useRef(false);
   const retry = useRef<{ payload: string; id: string } | null>(null);
   const closed = lead.confirmed_sales > 0 || ["disqualified", "duplicate"].includes(lead.status);
-  const needsDate = action === "schedule" || action === "reschedule" || action === "reopen";
-  const needsReason = action === "complete" || action === "lost" || action === "reopen" || action === "no_next_action";
+  const [outcome, setOutcome] = useState<null | "close" | "reopen">(null);
+  const needsDate = action === "schedule" || action === "reschedule";
+  const needsReason = action === "complete" || action === "no_next_action";
+  // The outcome the inquiry currently holds, if any (a deferral keeps it open).
+  const held = outcomes.find((o) => o.closes_lead && !o.reopened_at);
+  const deferred = !closed && held?.outcome_type === "deferred" ? held : null;
+  const hasOpportunity = lead.status === "converted" || !!lead.converted_opportunity_id;
 
   function open(next: InquiryAction) {
     setAction(next); setBody(""); setOccurred(""); setChannel(next === "contact_attempt" ? "phone" : "whatsapp"); setError(null);
@@ -83,6 +92,12 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
   return (
     <DrawerSection title="Next action and progress">
       <div className="space-y-3 rounded-md border p-3">
+        {deferred && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning/30 bg-warning/10 px-2 py-1.5 text-sm">
+            <span>Deferred until {formatDate(deferred.review_date)}: {outcomeReason("deferred", deferred.reason_code)?.label ?? deferred.reason_code}</span>
+            <Button size="sm" variant="outline" disabled={!canWrite} onClick={() => setOutcome("reopen")}>Resume now</Button>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div><span className="text-muted-foreground">First WhatsApp sent</span><p>{lead.first_whatsapp_sent_at ? formatDateTime(lead.first_whatsapp_sent_at) : "Not recorded"}</p></div>
           <div><span className="text-muted-foreground">First customer reply</span><p>{lead.first_customer_reply_at ? formatDateTime(lead.first_customer_reply_at) : "Not recorded"}</p></div>
@@ -121,10 +136,21 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
         {!canWrite && <p className="text-xs text-muted-foreground">The assigned salesperson or a sales manager can update this inquiry. The next follow-up is shared with the team.</p>}
         <div className="flex justify-between border-t pt-2">
           <span className="text-xs text-muted-foreground">{lead.completed_follow_ups} follow-ups completed</span>
-          {lead.status === "disqualified" ? <Button size="sm" variant="outline" disabled={!canWrite} onClick={() => open("reopen")}>Reopen inquiry</Button>
-            : !closed && <Button size="sm" variant="ghost" disabled={!canWrite} onClick={() => open("lost")}>Mark as lost</Button>}
+          {["disqualified", "duplicate"].includes(lead.status) ? <Button size="sm" variant="outline" disabled={!canWrite} onClick={() => setOutcome("reopen")}>Reopen inquiry</Button>
+            : !closed && <Button size="sm" variant="ghost" disabled={!canWrite} onClick={() => setOutcome("close")}>Close or defer…</Button>}
         </div>
       </div>
+      <OutcomeHistory items={outcomes} canWrite={canWrite} />
+      {outcome === "close" && (
+        <OutcomeDialog open mode="close" target={{ leadId: lead.id }} onOpenChange={(o) => !o && setOutcome(null)}
+          types={hasOpportunity ? ["lost", "deferred"] : ["lost", "rejected", "deferred"]}
+          linkedNote={hasOpportunity ? "Its active opportunity closes or defers with it, and the pursuit is counted once." : undefined} />
+      )}
+      {outcome === "reopen" && (
+        <OutcomeDialog open mode="reopen" target={{ leadId: lead.id }} onOpenChange={(o) => !o && setOutcome(null)}
+          needsNextAction={!!held?.closes_opportunity}
+          linkedNote={held?.closes_opportunity ? "The opportunity that closed with it reopens too." : undefined} />
+      )}
       <Dialog open={action !== null} onOpenChange={(isOpen) => { if (!isOpen && !pending) setAction(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{action ? LABELS[action] : "Update inquiry"}</DialogTitle>
@@ -133,7 +159,6 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
               : action === "no_response" ? "Record an attempt that received no response. Find it in No response until a later contact attempt or reply is recorded."
               : action === "contact_attempt" ? "Record your outreach. Use Customer replied separately if the customer responded."
               : action === "complete" ? "Record what happened. Completing the reminder does not imply the customer replied."
-              : action === "lost" ? "Record the reason. Outstanding follow-ups will be cancelled and retained in history."
               : "Save the next step and keep the inquiry history up to date."}</DialogDescription>
           </DialogHeader>
           {(action === "customer_replied" || action === "contact_attempt" || action === "no_response") && <Field label={action === "customer_replied" ? "Reply channel" : "Contact channel"}>
