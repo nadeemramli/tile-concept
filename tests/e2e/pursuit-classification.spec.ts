@@ -7,7 +7,8 @@
  * The suite owns its people and records: it creates its own synthetic users
  * (a sales rep, showroom staff and a member of another workspace) and its own
  * customer, signs each in on its own browser context, never signs anyone out
- * globally, and removes everything it made afterwards.
+ * globally, and removes everything it made afterwards — failing, with the
+ * reason, if any of it stays behind.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -56,8 +57,16 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  // Only what this run made, children before parents. The classification,
+  // walk-in and manual-inquiry request records name their actor without a
+  // cascade, so this run's users can only go once their own records have.
+  // Every failed step is reported: a run that leaves anything behind fails.
+  const problems: string[] = [];
+  const reason = (e: unknown) => (e as { stderr?: string }).stderr?.trim() || String(e);
   const leads = `select id from sales.leads where workspace_id='${WORKSPACE}' and raw_name='${INQUIRY}'`;
-  sql(`delete from sales.activities where lead_id in (${leads}) or contact_id='${CONTACT_ID}';
+  const actors = Object.values(users).filter((u) => u.id).map((u) => `'${u.id}'`).join(",") || "null";
+  try {
+    sql(`delete from sales.activities where lead_id in (${leads}) or contact_id='${CONTACT_ID}';
        delete from sales.visits where contact_id='${CONTACT_ID}';
        delete from sales.tasks where lead_id in (${leads}) or contact_id='${CONTACT_ID}';
        update sales.leads set converted_opportunity_id = null where id in (${leads});
@@ -68,8 +77,33 @@ test.afterAll(async () => {
        delete from sales.intake_events where lead_id in (${leads});
        delete from sales.leads where id in (${leads});
        delete from identity.contacts where id='${CONTACT_ID}';
+       delete from sales.classification_requests where actor_id in (${actors});
+       delete from sales.walk_in_requests where actor_id in (${actors});
+       delete from sales.manual_inquiry_requests where actor_id in (${actors});
        delete from core.workspaces where id='${OTHER_WORKSPACE}';`);
-  for (const u of Object.values(users)) if (u.id) await admin.auth.admin.deleteUser(u.id);
+  } catch (e) {
+    problems.push(`database rows: ${reason(e)}`);
+  }
+  for (const [name, u] of Object.entries(users)) {
+    if (!u.id) continue;
+    const { error } = await admin.auth.admin.deleteUser(u.id);
+    if (error) problems.push(`Auth user ${name} ${u.id} (${u.email}): ${error.status ?? "no status"} ${error.message}`);
+  }
+  try {
+    const left = sql(`select string_agg(k||'='||n, ' ') from (values
+       ('users',(select count(*) from auth.users where id in (${actors}))),
+       ('memberships',(select count(*) from core.memberships where user_id in (${actors}))),
+       ('classification_requests',(select count(*) from sales.classification_requests where actor_id in (${actors}))),
+       ('walk_in_requests',(select count(*) from sales.walk_in_requests where actor_id in (${actors}))),
+       ('manual_inquiry_requests',(select count(*) from sales.manual_inquiry_requests where actor_id in (${actors}))),
+       ('leads',(select count(*) from sales.leads where workspace_id='${WORKSPACE}' and raw_name='${INQUIRY}')),
+       ('contact',(select count(*) from identity.contacts where id='${CONTACT_ID}')),
+       ('other_workspace',(select count(*) from core.workspaces where id='${OTHER_WORKSPACE}'))) t(k,n) where n > 0`);
+    if (left) problems.push(`left behind: ${left}`);
+  } catch (e) {
+    problems.push(`residue check: ${reason(e)}`);
+  }
+  if (problems.length) throw new Error(`TILE-4 run ${RUN} did not remove everything it made:\n- ${problems.join("\n- ")}`);
 });
 
 async function signIn(browser: Browser, email: string): Promise<Page> {
