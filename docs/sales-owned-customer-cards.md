@@ -19,7 +19,7 @@ Enquiries keep their own owner (`sales.leads.owner_id`, set through `api.assign_
 
 1. **Create under yourself only.** `api.create_contact` and direct inserts into `api.contacts` and `api.accounts` make the caller the PIC. If the request names anyone else, the whole request fails with `42501 You can only create or edit customer cards assigned to your own account.` and nothing is written. Server actions pass a submitted `owner_id` through to the database, so a forged value is refused rather than silently dropped.
 2. **Only the PIC edits.** Through any `api` view or PostgREST request, only the PIC can update a card's fields, archive it, delete it, change its PIC, or add, change or remove its contact points, aliases or company relationships. A company relationship counts as part of the person's card. Every role is held to this, including `sales_manager`, `admin` and the demo `guest`. `sales.read_all` no longer overrides it for customer cards.
-3. **Transfer is explicit and audited.** `api.transfer_customer_card(card, id, new_owner, reason)` needs `sales.assign` and a reason. The new PIC must be an active member of the workspace with `sales.write`. Each transfer writes one `customer_card.pic_transferred` audit event recording the actor, old PIC, new PIC, reason and time. In the UI it is the **Transfer PIC** button on contact and account pages.
+3. **Transfer is explicit and audited.** `api.transfer_customer_card(card, id, new_owner, reason)` needs `sales.assign` and a reason. Both are judged in the caller's acting workspace (`core.current_workspace_id`, the oldest active membership), and only cards in that workspace can be found (TILE-84, `20261029180000_bind_pic_transfer_to_acting_workspace.sql`). A role held in another workspace never authorizes a transfer, in either direction. The new PIC must be an active member of the workspace with `sales.write`. Each transfer writes one `customer_card.pic_transferred` audit event recording the actor, old PIC, new PIC, reason and time. In the UI it is the **Transfer PIC** button on contact and account pages.
 4. **Reading is unchanged.** Anyone with `sales.read` in the workspace sees every card (phone and email stay masked until revealed). Cards in other workspaces stay invisible and cannot be written.
 5. **Enquiries can't write onto someone else's card.** `api.link_lead_contact` and `api.convert_lead` keep their existing lead-owner rules. If a link would copy the enquiry's phone or email onto a contact, the caller must be that contact's PIC. A link that adds nothing to the card still works for a shared editor.
 
@@ -74,6 +74,17 @@ select card, exception, count(*) from api.customer_card_pic_exceptions group by 
 
 Demo workspace guests are new anonymous users, so the seeded demo cards are read-only to them. A guest holds `sales.assign` and can transfer a card to themselves to try editing it.
 
+## TILE-84: transfers bound to the acting workspace
+
+The first version authorized `sales.assign` through `core.require_permission`. On this base that check ORs every membership. The command then found the card in any workspace and only required the caller to be some member of it. Two mixed-role cases borrowed a role from another workspace, for contacts and accounts alike:
+
+- admin acting in A and sales_rep (no `sales.assign`) in B: B cards were transferred;
+- read-only acting in A and admin in B: A cards were transferred.
+
+The TILE-62 helpers make `core.has_permission` and `core.require_workspace` use only the acting membership, but the command never called the workspace guard, so the first case still went through. The command now resolves the acting workspace first and requires `sales.assign` there through `core.has_permission_in`, which never ORs memberships. It then only finds and locks cards in that workspace. A card elsewhere reads as `Customer card not found` and nothing changes. The body uses neither `core.has_permission` nor `core.require_workspace`, so it behaves the same with or without the TILE-62 helpers. Tests: `supabase/tests/027_customer_card_transfer_scope.sql` and `tests/e2e/customer-card-transfer-scope.spec.ts` (normal sign-in and PostgREST).
+
+Not covered by TILE-84: on this base, `api.create_contact` and the RLS write policies still take `sales.write` from the union of memberships. The TILE-62 helpers fix those generically.
+
 ## Migration order
 
-`20261029164000_sales_owned_customer_cards.sql` comes after `20261016015608_catalog_upload_storage_read_access.sql` and has no dependency on unmerged branches. It drops and recreates `api.create_contact` with an extra trailing `p_owner_id` parameter. Existing callers keep working because the parameter has a default. Regenerate `src/lib/supabase/database.types.ts` after applying it.
+`20261029164000_sales_owned_customer_cards.sql` comes after `20261016015608_catalog_upload_storage_read_access.sql` and has no dependency on unmerged branches. `20261029180000_bind_pic_transfer_to_acting_workspace.sql` follows it and only replaces `api.transfer_customer_card`, with the same signature; it sorts after the TILE-62 migrations (`20261029000001`-`000003`) when both are present. It drops and recreates `api.create_contact` with an extra trailing `p_owner_id` parameter. Existing callers keep working because the parameter has a default. Regenerate `src/lib/supabase/database.types.ts` after applying it.
