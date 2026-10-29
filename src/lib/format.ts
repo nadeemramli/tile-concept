@@ -1,4 +1,4 @@
-import { format, formatDistanceToNowStrict, isValid, parseISO } from "date-fns";
+import { format, formatDistanceStrict, isValid, parseISO } from "date-fns";
 
 export const APP_TZ = "Asia/Kuala_Lumpur";
 
@@ -33,12 +33,13 @@ export function formatDateTime(value: string | Date | null | undefined) {
   return new Intl.DateTimeFormat("en-MY", { dateStyle: "medium", timeStyle: "short", timeZone: APP_TZ }).format(d);
 }
 
-export function formatRelative(value: string | Date | null | undefined) {
+/** `now` defaults to the current time; pass it when two renders must agree (TILE-68). */
+export function formatRelative(value: string | Date | null | undefined, now: number = Date.now()) {
   const d = toDate(value);
   if (!d) return "—";
-  const diff = d.getTime() - Date.now();
+  const diff = d.getTime() - now;
   if (Math.abs(diff) < 45_000) return "just now";
-  const s = formatDistanceToNowStrict(d, { addSuffix: false });
+  const s = formatDistanceStrict(d, now, { addSuffix: false });
   return diff < 0 ? `${s} ago` : `in ${s}`;
 }
 
