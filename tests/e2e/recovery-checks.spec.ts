@@ -5,7 +5,7 @@
  * account is involved.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { expectSignedInAs, expectStable, QUIET_MS } from "./recovery-checks";
+import { expectLanded, expectSignedInAs, expectStable, QUIET_MS } from "./recovery-checks";
 
 const ORIGIN = "http://recovery.test";
 const EMAIL = "e2e.access.none.control@tileconcept.test";
@@ -105,5 +105,80 @@ test.describe("stable", () => {
     await page.goto(`${ORIGIN}/no-access`);
     await expect(expectStable(page)).rejects.toThrow(/requested a new document .*\/no-access/);
     expect(documents.filter((d) => d === "/no-access").length).toBeGreaterThan(1);
+  });
+});
+
+test.describe("landed", () => {
+  /**
+   * The order a streamed redirect can land in (TILE-67 trace): the router lands
+   * softly on /no-access, Next's `meta#__next-page-redirect` streams in while
+   * the old document is still loading (held open here by a slow image), and the
+   * browser loads `target` a second after that load.
+   */
+  async function softLanding(page: Page, target: string, landing = html(signedIn(EMAIL))) {
+    const tag = `<script>setTimeout(() => { const m = document.createElement("meta"); m.id = "__next-page-redirect"; m.httpEquiv = "refresh"; m.content = "1;url=${target}"; document.body.append(m); }, 300)</script>`;
+    // Landing softly renders the explanation into the old document, as the router does.
+    const soft = `<script>setTimeout(() => { history.replaceState(null, "", "/no-access"); document.body.insertAdjacentHTML("beforeend", ${JSON.stringify(signedIn(EMAIL))}); }, 50)</script>`;
+    const documents = await serve(page, { "/sales/inbox": html(`<img src="/slow.gif" alt="">${soft}${tag}`), "/no-access": landing, "/login": html("") });
+    await page.route(`${ORIGIN}/slow.gif`, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      await route.fulfill({ status: 204 });
+    });
+    // From the commit, as the redirect check watches it: the old document is still loading.
+    await page.goto(`${ORIGIN}/sales/inbox`, { waitUntil: "commit" });
+    return documents;
+  }
+
+  test("the quiet window started before the landing fails on a soft landing whose document is still to come", async ({ page }) => {
+    const documents = await softLanding(page, "/no-access");
+    // The order the explanation check used: the URL, the current document's load, the identity, then the quiet window.
+    await expect(page).toHaveURL(/\/no-access$/);
+    await page.waitForLoadState("load");
+    await expectSignedInAs(page, EMAIL);
+    await expect(expectStable(page)).rejects.toThrow(/requested a new document .*\/no-access/);
+    expect(documents).toEqual(["/sales/inbox", "/no-access"]);
+  });
+
+  test("accepts a soft landing once the redirect's own document has loaded", async ({ page }) => {
+    const documents = await softLanding(page, "/no-access");
+    await expectLanded(page, /\/no-access$/);
+    await expectSignedInAs(page, EMAIL);
+    await expectStable(page);
+    // One redirect, one landing document: nothing went round again.
+    expect(documents).toEqual(["/sales/inbox", "/no-access"]);
+  });
+
+  test("accepts a page that never carried the tag at once", async ({ page }) => {
+    const documents = await serve(page, { "/no-access": html(signedIn(EMAIL)) });
+    await page.goto(`${ORIGIN}/no-access`);
+    await expectLanded(page, /\/no-access$/);
+    await expectStable(page);
+    expect(documents).toEqual(["/no-access"]);
+  });
+
+  test("rejects a landing that then moves to another URL", async ({ page }) => {
+    await softLanding(page, "/no-access", html(signedIn(EMAIL), `<script>setTimeout(() => history.pushState(null, "", "/login?reason=no-membership"), 700)</script>`));
+    await expectLanded(page, /\/no-access$/);
+    await expect(expectStable(page)).rejects.toThrow(/moved from .*\/no-access to .*\/login/);
+  });
+
+  test("rejects a landing that reloads itself again", async ({ page }) => {
+    // An ordinary refresh, not Next's redirect tag: nothing excuses it.
+    const documents = await softLanding(page, "/no-access", html(signedIn(EMAIL), `<meta http-equiv="refresh" content="1">`));
+    await expectLanded(page, /\/no-access$/);
+    await expect(expectStable(page)).rejects.toThrow(/requested a new document .*\/no-access/);
+    expect(documents.filter((d) => d === "/no-access").length).toBeGreaterThan(1);
+  });
+
+  test("rejects a streamed redirect that keeps coming back", async ({ page }) => {
+    const documents = await softLanding(page, "/no-access", html(signedIn(EMAIL), `<meta id="__next-page-redirect" http-equiv="refresh" content="1;url=/no-access">`));
+    await expect(expectLanded(page, /\/no-access$/).then(() => expectStable(page))).rejects.toThrow(/the streamed redirect has landed|stable at/);
+    expect(documents.filter((d) => d === "/no-access").length).toBeGreaterThan(1);
+  });
+
+  test("rejects a streamed redirect that lands somewhere else", async ({ page }) => {
+    const documents = await softLanding(page, "/login");
+    await expect(expectLanded(page, /\/no-access$/)).rejects.toThrow(/toHaveURL/);
+    expect(documents).toEqual(["/sales/inbox", "/login"]);
   });
 });
