@@ -14,11 +14,17 @@ import { test, expect, type APIRequestContext, type BrowserContext, type Page } 
 
 const PASSWORD = "TileDemo!2026";
 const WORKSPACE = "11111111-1111-1111-1111-111111111111";
-const ADMIN = "demo.admin@tileconcept.test";
 const run = randomUUID().slice(0, 8);
 const account = (key: string) => ({ id: randomUUID(), email: `e2e.access.${key}.${run}@tileconcept.test`, name: `E2E Access ${key}` });
+// Every account below belongs to this suite: no shared seed account is signed
+// in, signed out or revoked here, so a concurrent suite cannot be affected by
+// (or affect) these sessions.
 // Never had a membership.
 const NONE = account("none");
+// Never had a membership; signs out (which revokes only its own sessions).
+const LEAVER = account("leaver");
+// An admin here: the authorised account switched to after signing out.
+const SWITCHER = account("switcher");
 // A sole sales membership here, suspended after sign-in.
 const SUSPENDED = account("suspended");
 // A sole sales membership here, removed after sign-in.
@@ -27,7 +33,7 @@ const REMOVED = account("removed");
 const ALTERNATE = account("alternate");
 // Signed in, then its Auth sessions are revoked server-side.
 const REVOKED = account("revoked");
-const ALL = [NONE, SUSPENDED, REMOVED, ALTERNATE, REVOKED];
+const ALL = [NONE, LEAVER, SWITCHER, SUSPENDED, REMOVED, ALTERNATE, REVOKED];
 const OTHER_WORKSPACE = randomUUID();
 
 function sql(query: string) {
@@ -50,6 +56,7 @@ test.beforeAll(() => {
        select gen_random_uuid(),id,email,'email',jsonb_build_object('sub',id,'email',email,'email_verified',true),now(),now(),now() from u;
        insert into core.workspaces(id,slug,name) values ('${OTHER_WORKSPACE}','e2e-access-${run}','E2E access other workspace');
        insert into core.memberships(workspace_id,user_id,role_key,created_at) values
+         ('${WORKSPACE}','${SWITCHER.id}','admin',now()),
          ('${WORKSPACE}','${SUSPENDED.id}','sales_rep',now()),
          ('${WORKSPACE}','${REMOVED.id}','sales_rep',now()),
          ('${WORKSPACE}','${REVOKED.id}','sales_rep',now()),
@@ -197,8 +204,8 @@ test.describe("no active membership", () => {
   });
 
   test("sign out recovers, and switching to an authorised account keeps its deep link", async ({ page }) => {
-    await signIn(page, NONE.email);
-    await expectNoAccess(page, NONE.email);
+    await signIn(page, LEAVER.email);
+    await expectNoAccess(page, LEAVER.email);
     await signOutButton(page).click();
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.locator("#password")).toBeVisible();
@@ -215,7 +222,7 @@ test.describe("no active membership", () => {
     // Another account, through a deep link.
     await page.goto("/merchandise/stock?tab=sql");
     await expect(page).toHaveURL(/\/login\?next=/);
-    await submitLogin(page, ADMIN);
+    await submitLogin(page, SWITCHER.email);
     await page.waitForURL(/\/merchandise\/stock\?tab=sql$/);
     await expect(page.getByRole("tab", { name: "SQL Account", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.reload();
@@ -280,7 +287,7 @@ test.describe("anonymous and revoked sessions", () => {
     await expect(page).toHaveURL(/\/login\?next=%2Fno-access$/);
     await page.goto("/login?reason=no-membership&next=https%3A%2F%2Fevil.example%2F");
     await expect(page.locator("#password")).toBeVisible();
-    await submitLogin(page, ADMIN);
+    await submitLogin(page, SWITCHER.email);
     await page.waitForURL((url) => !url.pathname.startsWith("/login"));
     expect(new URL(page.url()).host).toBe(new URL(test.info().project.use.baseURL!).host);
     expect(page.url()).not.toContain("evil.example");
