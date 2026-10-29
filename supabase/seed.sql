@@ -320,10 +320,15 @@ begin
     if sk in ('quote_sent','negotiation','verbal_confirmation','won') then
       declare q_id uuid := gen_random_uuid(); qv_id uuid := gen_random_uuid();
       begin
-        insert into sales.quotes (id, workspace_id, opportunity_id, quote_number, status, current_version_no, created_by)
-        values (q_id, ws, o_id, 'QT-2026-' || lpad(i::text, 4, '0'), case when sk = 'won' then 'accepted' else 'issued' end, 1, owner);
-        insert into sales.quote_versions (id, workspace_id, quote_id, version_no, issued_at, valid_until, total_amount, currency, created_by)
-        values (qv_id, ws, q_id, 1, now() - interval '6 days', current_date + (i % 10), 2500 + (i * 1375 % 40000), 'MYR', owner);
+        insert into sales.quotes (id, workspace_id, opportunity_id, contact_id, account_id, quote_number, status, current_version_no, origin, created_by)
+        values (q_id, ws, o_id, c_id, a_id, 'QT-2026-' || lpad(i::text, 4, '0'), case when sk = 'won' then 'accepted' else 'issued' end, 1, 'pipeline', owner);
+        insert into sales.quote_versions (id, workspace_id, quote_id, version_no, prepared_at, issued_at, issued_by, valid_until, total_amount, currency, evidence_state, created_by)
+        values (qv_id, ws, q_id, 1, now() - interval '7 days', now() - interval '6 days', owner, current_date + (i % 10), 2500 + (i * 1375 % 40000), 'MYR', 'staff_entered', owner);
+        insert into sales.quote_deliveries (workspace_id, quote_id, quote_version_id, sent_at, channel, sent_by, evidence, recorded_by, request_id)
+        values (ws, q_id, qv_id, now() - interval '6 days' + interval '2 hours', 'whatsapp', owner, 'staff_attested', owner, gen_random_uuid());
+        insert into sales.quote_references (workspace_id, ref_key, quote_id, ref_text, ref_kind, created_by)
+        values (ws, core.quote_ref_key('QT-2026-' || lpad(i::text, 4, '0')), q_id, 'QT-2026-' || lpad(i::text, 4, '0'), 'quote_number', owner),
+               (ws, core.quote_ref_key('SQ-' || lpad((4000 + i)::text, 5, '0')), q_id, 'SQ-' || lpad((4000 + i)::text, 5, '0'), 'external_ref', owner);
         insert into sales.quote_items (quote_version_id, product_variant_id, description, quantity, unit, unit_price, currency, line_total, price_snapshot)
         values (qv_id, variant_ids[1], 'Fluted Wall Panel Oak 160', 40, 'pc', 48.00, 'MYR', 1920.00, '{"price_list":"Retail 2026","amount":48.00,"unit":"pc","valid_from":"2026-06-01"}');
         insert into sales.external_document_links (workspace_id, object_type, object_id, system, document_type, document_number, created_by)

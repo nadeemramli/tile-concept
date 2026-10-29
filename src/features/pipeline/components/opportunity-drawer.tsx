@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowRightLeft, FileText, ListTodo, MessageSquarePlus, Pencil, UserCog } from "lucide-react";
+import { ArrowRightLeft, ListTodo, MessageSquarePlus, Pencil, UserCog } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/features/crm/components/form-dialog";
 import { Field } from "@/components/patterns/field";
@@ -22,11 +22,12 @@ import type { OpportunityDetail } from "@/server/queries/opportunities";
 import type { StageRef } from "@/server/queries/reference";
 import type { MemberOption } from "@/features/crm/components/selects";
 import { StageChangeDialog } from "@/features/pipeline/components/stage-dialog";
-import { EditOpportunityDialog, QuoteVersionDialog, ReassignDialog } from "@/features/pipeline/components/opportunity-dialogs";
+import { EditOpportunityDialog, ReassignDialog } from "@/features/pipeline/components/opportunity-dialogs";
+import { QuotePanel } from "@/features/quotes/components/quote-panel";
 import { ActivityDialog, TaskDialog } from "@/features/crm/components/dialogs";
-import { PurchasesList, QuotesList } from "@/features/crm/components/detail-sections";
+import { PurchasesList } from "@/features/crm/components/detail-sections";
 
-type Which = "stage" | "edit" | "quote" | "activity" | "task" | "reassign" | "archive" | null;
+type Which = "stage" | "edit" | "activity" | "task" | "reassign" | "archive" | null;
 
 export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, onClose }: { opp: OpportunityDetail; stages: StageRef[]; members: MemberOption[]; suggestedQuoteNumber: string; onClose: () => void }) {
   const router = useRouter();
@@ -112,11 +113,6 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
           </Button>,
         )}
         {write(
-          <Button variant="outline" size="sm" onClick={() => setOpen("quote")}>
-            <FileText className="size-3.5" aria-hidden /> Quote version
-          </Button>,
-        )}
-        {write(
           <Button variant="outline" size="sm" onClick={() => setOpen("activity")}>
             <MessageSquarePlus className="size-3.5" aria-hidden /> Activity
           </Button>,
@@ -177,8 +173,8 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         {opp.notes && <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-sm">{opp.notes}</p>}
       </DrawerSection>
 
-      <DrawerSection title={`Quotes (${opp.quotes.length})`}>
-        <QuotesList items={opp.quotes} />
+      <DrawerSection title="Quotations">
+        <QuotePanel key={opp.id} anchor={{ opportunity_id: opp.id }} suggestedNumber={suggestedQuoteNumber} defaultAmount={opp.estimated_value} defaultCurrency={opp.currency} />
       </DrawerSection>
 
       <DrawerSection title={`Stage history (${opp.stage_events.length})`}>
@@ -228,7 +224,6 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         <>
           <StageChangeDialog open={open === "stage"} onOpenChange={() => setOpen(null)} opportunityId={opp.id} currentStage={opp.stage_key} stages={stages} hasNextAction={!!opp.next_action && !!opp.next_action_due_at} />
           <EditOpportunityDialog open={open === "edit"} onOpenChange={() => setOpen(null)} opp={opp} members={members} canAssign={can("sales.assign")} />
-          <QuoteVersionDialog open={open === "quote"} onOpenChange={() => setOpen(null)} opp={opp} suggestedNumber={suggestedQuoteNumber} />
           <ActivityDialog open={open === "activity"} onOpenChange={() => setOpen(null)} links={{ opportunity_id: opp.id, contact_id: opp.contact_id ?? undefined, account_id: opp.account_id ?? undefined, project_id: opp.project_id ?? undefined }} />
           <TaskDialog open={open === "task"} onOpenChange={() => setOpen(null)} members={members} links={{ opportunity_id: opp.id, contact_id: opp.contact_id ?? undefined, account_id: opp.account_id ?? undefined, project_id: opp.project_id ?? undefined }} defaultAssignee={session.userId} />
           {can("sales.assign") && <ReassignDialog open={open === "reassign"} onOpenChange={() => setOpen(null)} oppId={opp.id} version={opp.version} members={members} current={opp.owner_id} />}
