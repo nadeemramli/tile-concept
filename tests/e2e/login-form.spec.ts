@@ -80,6 +80,7 @@ test("signs in once the form is revealed from the hidden segment", async ({ page
 
 const FORM = /one visible password sign-in form/, EMAILS = /one visible email field/, PASSWORDS = /one visible password field/;
 const IN_FORM = /the email field is in the form/, SUBMIT = /one submit button in the form/;
+const PASSWORD_IN_FORM = /one password field in the form/, PASSWORD_SHOWN = /the password field in the form is visible/;
 for (const [name, body, reason] of [
   ["two visible password forms", html(`${form()}${form()}`), FORM],
   ["only a hidden form", html(`<div hidden id="S:0">${form()}</div>`), FORM],
@@ -91,13 +92,17 @@ for (const [name, body, reason] of [
   ["the email field outside the form", html(`${email}${form(`${password}${submit}`)}`), IN_FORM],
   ["the submit button outside the form", html(`${form(`${email}${password}`)}${submit}`), SUBMIT],
   ["two submit buttons in the form", html(form(`${email}${password}${submit}${submit}`)), SUBMIT],
+  // The visible password field is outside the form; the form's own one is hidden.
+  ["a hidden password field in the form with the visible one outside it", html(`${form(`${email}<div hidden>${password}</div>${submit}`)}${password}`), PASSWORD_SHOWN],
+  ["a hidden second password field in the form", html(form(`${email}${password}<div hidden>${password}</div>${submit}`)), PASSWORD_IN_FORM],
 ] as const) {
   test(`refuses ${name}`, async ({ page }) => {
     const posts = await open(page, body);
     const values = await page.locator('input:not([type="hidden"])').evaluateAll((inputs) => inputs.map((i) => (i as HTMLInputElement).value));
-    await expect(submitPasswordForm(page, EMAIL, PASSWORD)).rejects.toThrow(reason);
+    const refusal = await submitPasswordForm(page, EMAIL, PASSWORD).then(() => undefined, (error: Error) => error);
     // Refused before anything was typed or sent.
     expect(await page.locator('input:not([type="hidden"])').evaluateAll((inputs) => inputs.map((i) => (i as HTMLInputElement).value))).toEqual(values);
     expect(posts).toEqual([]);
+    expect(refusal?.message).toMatch(reason);
   });
 }
