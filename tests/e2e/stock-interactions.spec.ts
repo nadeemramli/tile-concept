@@ -374,14 +374,22 @@ test.describe("Stock access", () => {
     await page.locator("#email").fill(NO_MEMBER.email);
     await page.locator("#password").fill(PASSWORD);
     await page.locator("form").filter({ has: page.locator("#password") }).locator("button[type=submit]").click();
-    await page.waitForURL((url) => url.pathname === "/start", { timeout: 30_000 });
-    // The Stock route itself answers with the no-membership redirect (streamed
-    // after the loading shell, so the status is 200) and carries no stock.
+    // TILE-67: the account lands on the no-access explanation, not a /start ⇄ /login loop.
+    await page.waitForURL((url) => url.pathname === "/no-access", { timeout: 30_000 });
+    // The Stock route itself answers with the no-access redirect (an HTTP 307,
+    // or streamed after the loading shell with status 200) and carries no stock.
     for (const path of ["/merchandise/stock", "/merchandise/stock?tab=sql&q=MW-HEX-WHT"]) {
       const res = await page.request.get(path, { maxRedirects: 0 });
       const body = await res.text();
-      expect(body).toContain("NEXT_REDIRECT;replace;/login?reason=no-membership;");
+      const target = res.status() === 307 ? res.headers().location : /NEXT_REDIRECT;replace;([^;]+);/.exec(body)?.[1];
+      expect(target).toBe("/no-access");
       for (const leak of ["Hexagon Mosaic White", "Tile Grout White", "Main warehouse", "Demo Tile Trading", "Item mapping"]) expect(body).not.toContain(leak);
+      // And in the browser: the explanation, with no stock and no tabs.
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/no-access$/);
+      await expect(page.getByRole("heading", { level: 1, name: "No workspace access" })).toBeVisible();
+      await expect(page.getByRole("tab", { name: "SQL Account" })).toHaveCount(0);
+      for (const leak of ["Hexagon Mosaic White", "Main warehouse"]) await expect(page.getByText(leak)).toHaveCount(0);
     }
   });
 });

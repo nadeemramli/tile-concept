@@ -81,6 +81,15 @@ const ms = {
       "delivery.read_own": "Penghantaran Saya adalah untuk pemandu penghantaran.",
     },
   },
+  noAccess: {
+    title: "Tiada akses ruang kerja",
+    signedInAs: "Log masuk sebagai",
+    body: "Akaun ini telah log masuk, tetapi tiada keahlian aktif dalam mana-mana ruang kerja Tile Concept. Jemputan mungkin belum diterima, atau akses anda telah digantung atau dibuang.",
+    ask: "Minta pentadbir anda menghantar jemputan atau memulihkan akses anda.",
+    signOut: "Log keluar dan guna akaun lain",
+    retry: "Semak semula",
+    retryHint: "Gunakan Semak semula selepas pentadbir memulihkan akses anda.",
+  },
   login: {
     subtitle: "Ruang kerja dalaman, dengan jemputan sahaja",
     password: "Kata laluan",
@@ -181,6 +190,15 @@ const en: Messages = {
       "preparation.read": "The preparation queue is for warehouse staff, business admin employees, management and platform administrators.",
       "delivery.read_own": "My Deliveries is for delivery drivers.",
     },
+  },
+  noAccess: {
+    title: "No workspace access",
+    signedInAs: "Signed in as",
+    body: "This account is signed in, but it has no active membership in any Tile Concept workspace. The invitation may not have been accepted yet, or your access was suspended or removed.",
+    ask: "Ask your administrator to send an invitation or restore your access.",
+    signOut: "Sign out and use another account",
+    retry: "Check again",
+    retryHint: "Use Check again after an administrator has restored your access.",
   },
   login: {
     subtitle: "Invite-only internal workspace",
