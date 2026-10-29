@@ -14,6 +14,8 @@ interface FormDialogProps<T> {
   description?: string;
   submitLabel?: string;
   destructive?: boolean;
+  /** Navigation on success replaces this dialog without a competing URL update. */
+  closeOnSuccess?: boolean;
   /** Build the payload from the form; return null to abort with a message already shown. */
   action: (formData: FormData) => Promise<ActionResult<T>>;
   onSuccess?: (data: T) => void;
@@ -22,7 +24,7 @@ interface FormDialogProps<T> {
 }
 
 /** Dialog wrapping a native form that posts to a Server Action and toasts the result. */
-export function FormDialog<T>({ open, onOpenChange, title, description, submitLabel = "Save", destructive, action, onSuccess, children, className }: FormDialogProps<T>) {
+export function FormDialog<T>({ open, onOpenChange, title, description, submitLabel = "Save", destructive, closeOnSuccess = true, action, onSuccess, children, className }: FormDialogProps<T>) {
   const [pending, start] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   return (
@@ -33,13 +35,18 @@ export function FormDialog<T>({ open, onOpenChange, title, description, submitLa
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             start(async () => {
-              const res = await action(fd);
+              let res: ActionResult<T>;
+              try { res = await action(fd); }
+              catch {
+                toast.error("Saving could not be confirmed. Keep this form open and retry.");
+                return;
+              }
               if (res.ok) {
                 toast.success(res.message ?? "Saved");
                 setFieldErrors({});
                 // URL-backed dialogs may still be updating their query parameter.
                 // Finish that update before the success handler navigates to a new record.
-                await onOpenChange(false);
+                if (closeOnSuccess) await onOpenChange(false);
                 onSuccess?.(res.data);
               } else {
                 setFieldErrors(res.fieldErrors ?? {});

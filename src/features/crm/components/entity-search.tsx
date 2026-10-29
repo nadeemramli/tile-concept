@@ -3,6 +3,7 @@
 import { useEffect, useState, useId } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { searchProjectIdentitiesAction } from "@/server/commands/projects";
 import { searchAccountsAction, searchContactsAction } from "@/server/commands/contacts";
 
 interface Hit {
@@ -13,7 +14,7 @@ interface Hit {
 }
 
 /** Minimal async search input for picking an account or contact; emits a hidden input with the id. */
-export function EntitySearch({ kind, name, label, defaultId, defaultName, onSelect, className, accountId }: { kind: "account" | "contact"; name: string; label?: string; defaultId?: string; defaultName?: string; onSelect?: (hit: Hit | null) => void; className?: string; accountId?: string }) {
+export function EntitySearch({ kind, name, label, defaultId, defaultName, onSelect, className, accountId, project = false }: { kind: "account" | "contact"; name: string; label?: string; defaultId?: string; defaultName?: string; onSelect?: (hit: Hit | null) => void; className?: string; accountId?: string; project?: boolean }) {
   const [q, setQ] = useState(defaultName ?? "");
   const [hits, setHits] = useState<Hit[]>([]);
   const [selected, setSelected] = useState<Hit | null>(defaultId ? { id: defaultId, name: defaultName ?? "" } : null);
@@ -35,7 +36,7 @@ export function EntitySearch({ kind, name, label, defaultId, defaultName, onSele
         return;
       }
       let res: Hit[];
-      try { res = kind === "account" ? await searchAccountsAction(q) : await searchContactsAction(q, accountId); }
+      try { res = project ? await searchProjectIdentitiesAction(kind, q, accountId) : kind === "account" ? await searchAccountsAction(q) : await searchContactsAction(q, accountId); }
       catch { if (!cancelled) { setHits([]); setError("Search could not load. Try again."); } return; }
       if (cancelled) return;
       setError(""); setHits(res);
@@ -43,7 +44,7 @@ export function EntitySearch({ kind, name, label, defaultId, defaultName, onSele
       setOpen(document.activeElement?.id === inputId);
     }, 200);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [q, kind, selected, accountId, inputId]);
+  }, [q, kind, selected, accountId, inputId, project]);
 
   return (
     <div className={cn("relative", className)}>

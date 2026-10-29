@@ -7263,6 +7263,70 @@ export type Database = {
         }
         Relationships: []
       }
+      project_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string | null
+          id: string | null
+          kind: string | null
+          next_action: string | null
+          next_action_due_at: string | null
+          note: string | null
+          owner_id: string | null
+          previous_owner_id: string | null
+          project_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          note?: string | null
+          owner_id?: string | null
+          previous_owner_id?: string | null
+          project_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          kind?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          note?: string | null
+          owner_id?: string | null
+          previous_owner_id?: string | null
+          project_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "project_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_sites: {
         Row: {
           access_notes: string | null
@@ -7325,7 +7389,11 @@ export type Database = {
           expected_start: string | null
           follow_up_contact_id: string | null
           id: string | null
+          last_follow_up_at: string | null
+          last_follow_up_by: string | null
           name: string | null
+          next_action: string | null
+          next_action_due_at: string | null
           notes: string | null
           owner_id: string | null
           primary_contact_id: string | null
@@ -7345,7 +7413,11 @@ export type Database = {
           expected_start?: string | null
           follow_up_contact_id?: string | null
           id?: string | null
+          last_follow_up_at?: string | null
+          last_follow_up_by?: string | null
           name?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
           notes?: string | null
           owner_id?: string | null
           primary_contact_id?: string | null
@@ -7365,7 +7437,11 @@ export type Database = {
           expected_start?: string | null
           follow_up_contact_id?: string | null
           id?: string | null
+          last_follow_up_at?: string | null
+          last_follow_up_by?: string | null
           name?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
           notes?: string | null
           owner_id?: string | null
           primary_contact_id?: string | null
@@ -11772,6 +11848,18 @@ export type Database = {
       }
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
       preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
+      project_command: {
+        Args: { p_action: string; p_input: Json; p_request_id: string }
+        Returns: Json
+      }
+      project_directory: { Args: { p_id?: string }; Returns: Json }
+      project_identity_search: {
+        Args: { p_account_id?: string; p_kind: string; p_query?: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       publish_price: {
         Args: {
           p_override?: boolean
