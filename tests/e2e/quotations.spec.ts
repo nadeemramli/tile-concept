@@ -72,6 +72,8 @@ async function login(page: Page, email: string) {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/");
 }
+/** A form field by its label; required fields render as "Label *". */
+const field = (name: string) => new RegExp(`^${name}( \\*)?$`);
 const panel = (page: Page) => page.getByTestId("quote-panel");
 const quoteCard = (page: Page, name: string) => panel(page).getByRole("listitem", { name: `Quote ${name}` });
 const quoteId = () => sql(`select id from sales.quotes where workspace_id = '${WS}' and quote_number = 'QT-E2E-${tag}'`);
@@ -85,12 +87,12 @@ test("inbox: prepare, issue last week, send this week, survive a dropped connect
 
   await panel(page).getByRole("button", { name: "Record quote" }).click();
   const dialog = page.getByRole("dialog", { name: "Record quote" });
-  await dialog.getByLabel("Quote number", { exact: true }).fill(`QT-E2E-${tag}`);
-  await dialog.getByLabel("SQL Account SQ number", { exact: true }).fill(SQ);
-  await dialog.getByLabel("Total amount", { exact: true }).fill("1500");
-  await dialog.getByLabel("Prepared", { exact: true }).fill(kl(lastThursday));
-  await dialog.getByLabel("What has happened", { exact: true }).selectOption("issued");
-  await dialog.getByLabel("Issued", { exact: true }).fill(kl(lastFriday));
+  await dialog.getByLabel(field("Quote number")).fill(`QT-E2E-${tag}`);
+  await dialog.getByLabel(field("SQL Account SQ number")).fill(SQ);
+  await dialog.getByLabel(field("Total amount")).fill("1500");
+  await dialog.getByLabel(field("Prepared")).fill(kl(lastThursday));
+  await dialog.getByLabel(field("What has happened")).selectOption("issued");
+  await dialog.getByLabel(field("Issued")).fill(kl(lastFriday));
   await dialog.getByRole("button", { name: "Save and issue" }).click();
   await expect(page.getByText("Quote recorded.")).toBeVisible();
   await expect(quoteCard(page, `QT-E2E-${tag}`)).toContainText("Issued");
@@ -110,8 +112,8 @@ test("inbox: prepare, issue last week, send this week, survive a dropped connect
   });
   await quoteCard(page, `QT-E2E-${tag}`).getByRole("button", { name: "Mark sent" }).click();
   const send = page.getByRole("dialog", { name: /Record a send/ });
-  await send.getByLabel("Sent", { exact: true }).fill(kl(sentThisWeek));
-  await send.getByLabel("Channel", { exact: true }).selectOption("whatsapp");
+  await send.getByLabel(field("Sent")).fill(kl(sentThisWeek));
+  await send.getByLabel(field("Channel")).selectOption("whatsapp");
   await send.getByRole("button", { name: "Record send" }).click();
   await expect(send.getByRole("alert")).toContainText("Retry: the same request is never recorded twice.");
   expect(dropped).toBe(true);
@@ -123,7 +125,7 @@ test("inbox: prepare, issue last week, send this week, survive a dropped connect
 
   // A fresh mark-sent of the same send (new form, new request) is recognised.
   await quoteCard(page, `QT-E2E-${tag}`).getByRole("button", { name: "Mark sent" }).click();
-  await page.getByRole("dialog", { name: /Record a send/ }).getByLabel("Sent", { exact: true }).fill(kl(sentThisWeek));
+  await page.getByRole("dialog", { name: /Record a send/ }).getByLabel(field("Sent")).fill(kl(sentThisWeek));
   await page.getByRole("dialog", { name: /Record a send/ }).getByRole("button", { name: "Record send" }).click();
   await expect(page.getByText("That send was already recorded; nothing new was added.")).toBeVisible();
   expect(sendKinds()).toBe("1:first_quote");
@@ -131,11 +133,11 @@ test("inbox: prepare, issue last week, send this week, survive a dropped connect
   // Revision v2, issued and sent in one step, counts as a revision.
   await quoteCard(page, `QT-E2E-${tag}`).getByRole("button", { name: "Revise" }).click();
   const revise = page.getByRole("dialog", { name: /Revise QT-E2E/ });
-  await revise.getByLabel("Total amount", { exact: true }).fill("1400");
-  await revise.getByLabel("Prepared", { exact: true }).fill(kl(sentThisWeek));
-  await revise.getByLabel("What has happened", { exact: true }).selectOption("sent");
-  await revise.getByLabel("Sent", { exact: true }).fill(kl(revisedThisWeek));
-  await revise.getByLabel("Channel", { exact: true }).selectOption("email");
+  await revise.getByLabel(field("Total amount")).fill("1400");
+  await revise.getByLabel(field("Prepared")).fill(kl(sentThisWeek));
+  await revise.getByLabel(field("What has happened")).selectOption("sent");
+  await revise.getByLabel(field("Sent")).fill(kl(revisedThisWeek));
+  await revise.getByLabel(field("Channel")).selectOption("email");
   await revise.getByRole("button", { name: "Save, issue and record send" }).click();
   await expect(page.getByText("Revision recorded.")).toBeVisible();
   expect(sendKinds()).toBe("1:first_quote,2:revision");
@@ -164,11 +166,11 @@ test("visit: SQ note resolves to the canonical quote, historical note becomes on
   // Hand over a quote at the counter: prepared, issued and sent in one record.
   await panel(page).getByRole("button", { name: "Record quote" }).click();
   const counter = page.getByRole("dialog", { name: "Record quote" });
-  await counter.getByLabel("Quote number", { exact: true }).fill(`QT-E2E-VISIT-${tag}`);
-  await counter.getByLabel("Total amount", { exact: true }).fill("300");
-  await counter.getByLabel("What has happened", { exact: true }).selectOption("sent");
-  await counter.getByLabel("Channel", { exact: true }).selectOption("in_person");
-  await counter.getByLabel("Evidence", { exact: true }).selectOption("customer_acknowledged");
+  await counter.getByLabel(field("Quote number")).fill(`QT-E2E-VISIT-${tag}`);
+  await counter.getByLabel(field("Total amount")).fill("300");
+  await counter.getByLabel(field("What has happened")).selectOption("sent");
+  await counter.getByLabel(field("Channel")).selectOption("in_person");
+  await counter.getByLabel(field("Evidence")).selectOption("customer_acknowledged");
   await counter.getByRole("button", { name: "Save, issue and record send" }).click();
   await expect(page.getByText("Quote recorded.")).toBeVisible();
   expect(sql(`select lead_id || '/' || contact_id from sales.quotes where quote_number = 'QT-E2E-VISIT-${tag}'`)).toBe(`${ids.lead}/${ids.contact}`);
@@ -185,7 +187,7 @@ test("visit: SQ note resolves to the canonical quote, historical note becomes on
   await expect(fileRow).toContainText("Needs review");
   await fileRow.getByRole("button", { name: "Review evidence" }).click();
   const review = page.getByRole("dialog", { name: /Review e2e-quote/ });
-  await review.getByLabel("Quote", { exact: true }).selectOption(quoteId());
+  await review.getByLabel(field("Quote")).selectOption(quoteId());
   await review.getByRole("button", { name: "Save review" }).click();
   await expect(page.getByText("Evidence review saved.")).toBeVisible();
   await expect(panel(page).getByTestId("visit-quote-evidence").getByRole("listitem").filter({ hasText: `e2e-quote-${tag}.pdf` })).toContainText("Linked");
@@ -212,11 +214,11 @@ test("visit: SQ note resolves to the canonical quote, historical note becomes on
   await expect(historic).toContainText("Needs review");
   await historic.getByRole("button", { name: "Review evidence" }).click();
   const create = page.getByRole("dialog", { name: /Review visit note/ });
-  await create.getByLabel("This evidence is", { exact: true }).selectOption("create_prepared");
+  await create.getByLabel(field("This evidence is")).selectOption("create_prepared");
   await create.getByRole("button", { name: "Save review" }).click();
   await expect(create.getByRole("alert")).toContainText("Currency is required"); // never defaulted
-  await create.getByLabel("Currency", { exact: true }).fill("MYR");
-  await create.getByRole("button", { name: /Save review/ }).click();
+  await create.getByLabel(field("Currency")).fill("MYR");
+  await create.getByRole("button", { name: /save review/i }).click();
   await expect(page.getByText("Evidence review saved.")).toBeVisible();
   await page.reload();
   await expect(panel(page).getByTestId("visit-quote-evidence")).toContainText("Linked");
