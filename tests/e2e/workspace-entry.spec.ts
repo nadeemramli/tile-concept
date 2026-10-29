@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import { submitPasswordForm } from "./login-form";
 
 const PASSWORD = "TileDemo!2026";
 const WORKSPACE = "11111111-1111-1111-1111-111111111111";
@@ -78,9 +79,7 @@ test.afterAll(() => {
 
 async function signIn(page: Page, email: string, path = "/login") {
   await page.goto(path);
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.locator("form").filter({ has: page.locator("#password") }).locator("button[type=submit]").click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 30_000 });
 }
 
