@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card } from "@/components/ui/card";
-import type { ChartSpec } from "@/features/reports/registry";
+import type { ChartSpec, ReportGrain } from "@/features/reports/registry";
 import { formatDate, formatNumber } from "@/lib/format";
 
 /**
@@ -10,10 +10,10 @@ import { formatDate, formatNumber } from "@/lib/format";
  * CSS variables so both modes work, and always accompanied by the full table
  * below — the chart never carries information the table lacks.
  */
-export function ReportChart({ spec, rows }: { spec: ChartSpec; rows: Record<string, unknown>[] }) {
+export function ReportChart({ spec, rows, grain }: { spec: ChartSpec; rows: Record<string, unknown>[]; grain?: ReportGrain }) {
   if (rows.length === 0) return null;
   const data = (spec.limit ? rows.slice(0, spec.limit) : rows).map((r) => {
-    const out: Record<string, string | number> = { __label: label(r[spec.category]) };
+    const out: Record<string, string | number> = { __label: label(r[spec.category], grain) };
     for (const s of spec.series) out[s.key] = Number(r[s.key] ?? 0);
     return out;
   });
@@ -85,10 +85,11 @@ export function ReportChart({ spec, rows }: { spec: ChartSpec; rows: Record<stri
   );
 }
 
-function label(v: unknown): string {
+function label(v: unknown, grain?: ReportGrain): string {
   if (v === null || v === undefined) return "—";
   const s = String(v);
-  // Cohort months arrive as dates; render them short.
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return formatDate(s, "MMM yyyy");
+  // Period buckets arrive as dates: the first day of the day, week or month.
+  // Cohort months (no grain) keep their short month label.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return formatDate(s, grain === "day" || grain === "week" ? "d MMM" : "MMM yyyy");
   return s.replace(/_/g, " ");
 }

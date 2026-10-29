@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { REPORTS, type ReportDef } from "@/features/reports/registry";
+import { REPORTS, resolveGrain, type ReportDef, type ReportGrain } from "@/features/reports/registry";
 
 export interface MetricDefinition {
   key: string;
@@ -46,13 +46,24 @@ export interface ReportResult {
   error: string | null;
 }
 
-/** Runs one report RPC. Range parameters are only sent when the report accepts them. */
-export async function runReport(def: ReportDef, from?: string, to?: string): Promise<ReportResult> {
+/**
+ * Runs one report RPC. Range and grain parameters are only sent when the
+ * report accepts them; an unknown grain falls back to the report's default.
+ */
+export async function runReport(def: ReportDef, from?: string, to?: string, grain?: ReportGrain | string | null): Promise<ReportResult> {
   const supabase = await createServerSupabase();
-  const args = def.ranged ? { p_from: from ?? undefined, p_to: to ?? undefined } : undefined;
+  const args: Record<string, unknown> = { ...(def.args ?? {}) };
+  if (def.ranged) {
+    args.p_from = from ?? undefined;
+    args.p_to = to ?? undefined;
+  }
+  if (def.grain) args.p_grain = resolveGrain(def, grain);
   // The generated types give each RPC its own argument shape; the registry is
   // data-driven, so this one call site is deliberately loose.
-  const { data, error } = await (supabase.rpc as unknown as (fn: string, params?: unknown) => Promise<{ data: unknown; error: { message: string } | null }>)(def.rpc, args);
+  const { data, error } = await (supabase.rpc as unknown as (fn: string, params?: unknown) => Promise<{ data: unknown; error: { message: string } | null }>)(
+    def.rpc,
+    Object.keys(args).length ? args : undefined,
+  );
   return {
     rows: Array.isArray(data) ? (data as ReportRow[]) : [],
     computedAt: new Date().toISOString(),

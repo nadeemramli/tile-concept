@@ -1,7 +1,7 @@
 import "server-only";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { funnelSchema, historySchema, type ReportPeriod } from "@/features/reports/funnel-schema";
-import { spendTotalsSchema } from "@/features/marketing/spend-schema";
+import { spendBatchListSchema, spendTotalsSchema } from "@/features/marketing/spend-schema";
 
 export async function getFunnel(period: ReportPeriod, namedHistory: boolean) {
   const db = await createServerSupabase();
@@ -20,12 +20,14 @@ export async function getFunnel(period: ReportPeriod, namedHistory: boolean) {
 }
 export async function getSpend(period: Pick<ReportPeriod, "from" | "to" | "page">) {
   const db = await createServerSupabase();
-  const [list, totals] = await Promise.all([
+  const [list, totals, batches] = await Promise.all([
     db.from("spend_entries").select("*", { count: "exact" }).gte("incurred_on", period.from).lte("incurred_on", period.to)
       .order("incurred_on", { ascending: false }).order("created_at", { ascending: false }).order("id").range((period.page - 1) * 25, period.page * 25 - 1),
     db.rpc("marketing_spend_period", { p_from: period.from, p_to: period.to }),
+    db.from("spend_import_batches").select("id,source_name,status,entry_count,total_before_tax,report_date_from,report_date_to,currency_basis,imported_at,void_reason")
+      .order("imported_at", { ascending: false }).limit(10),
   ]);
-  if (list.error || totals.error) throw list.error ?? totals.error;
-  return { rows: list.data ?? [], total: list.count ?? 0, totals: spendTotalsSchema.parse(totals.data) };
+  if (list.error || totals.error || batches.error) throw list.error ?? totals.error ?? batches.error;
+  return { rows: list.data ?? [], total: list.count ?? 0, totals: spendTotalsSchema.parse(totals.data), batches: spendBatchListSchema.parse(batches.data ?? []) };
 }
 export type SpendData = Awaited<ReturnType<typeof getSpend>>;

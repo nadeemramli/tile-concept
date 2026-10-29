@@ -6706,63 +6706,81 @@ export type Database = {
       product_media: {
         Row: {
           alt_text: string | null
+          archived_at: string | null
           caption: string | null
+          checksum: string | null
           created_at: string | null
           id: string | null
           is_primary: boolean | null
           kind: string | null
           media_asset_id: string | null
           media_asset_variant_link_id: string | null
+          mime_type: string | null
+          original_filename: string | null
           product_id: string | null
           review_state: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          size_bytes: number | null
           sort_order: number | null
           source_ref: string | null
           storage_bucket: string | null
           storage_path: string | null
+          uploaded_by: string | null
           usage_rights_state: string | null
           variant_id: string | null
           workspace_id: string | null
         }
         Insert: {
           alt_text?: string | null
+          archived_at?: string | null
           caption?: string | null
+          checksum?: string | null
           created_at?: string | null
           id?: string | null
           is_primary?: boolean | null
           kind?: string | null
           media_asset_id?: string | null
           media_asset_variant_link_id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
           product_id?: string | null
           review_state?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          size_bytes?: number | null
           sort_order?: number | null
           source_ref?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          uploaded_by?: string | null
           usage_rights_state?: string | null
           variant_id?: string | null
           workspace_id?: string | null
         }
         Update: {
           alt_text?: string | null
+          archived_at?: string | null
           caption?: string | null
+          checksum?: string | null
           created_at?: string | null
           id?: string | null
           is_primary?: boolean | null
           kind?: string | null
           media_asset_id?: string | null
           media_asset_variant_link_id?: string | null
+          mime_type?: string | null
+          original_filename?: string | null
           product_id?: string | null
           review_state?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          size_bytes?: number | null
           sort_order?: number | null
           source_ref?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          uploaded_by?: string | null
           usage_rights_state?: string | null
           variant_id?: string | null
           workspace_id?: string | null
@@ -9749,6 +9767,7 @@ export type Database = {
           entry_key: string | null
           entry_mode: string | null
           id: string | null
+          import_batch_id: string | null
           incurred_on: string | null
           original_amount: number | null
           original_currency: string | null
@@ -9756,6 +9775,7 @@ export type Database = {
           reference: string | null
           status: string | null
           tax: number | null
+          tax_status: string | null
           updated_at: string | null
           vendor: string | null
           version: number | null
@@ -9773,6 +9793,7 @@ export type Database = {
           entry_key?: string | null
           entry_mode?: string | null
           id?: string | null
+          import_batch_id?: string | null
           incurred_on?: string | null
           original_amount?: number | null
           original_currency?: string | null
@@ -9780,6 +9801,7 @@ export type Database = {
           reference?: string | null
           status?: string | null
           tax?: number | null
+          tax_status?: string | null
           updated_at?: string | null
           vendor?: string | null
           version?: number | null
@@ -9797,6 +9819,7 @@ export type Database = {
           entry_key?: string | null
           entry_mode?: string | null
           id?: string | null
+          import_batch_id?: string | null
           incurred_on?: string | null
           original_amount?: number | null
           original_currency?: string | null
@@ -9804,6 +9827,7 @@ export type Database = {
           reference?: string | null
           status?: string | null
           tax?: number | null
+          tax_status?: string | null
           updated_at?: string | null
           vendor?: string | null
           version?: number | null
@@ -9818,6 +9842,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "spend_entries_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "spend_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "spend_entries_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -9826,6 +9857,170 @@ export type Database = {
           },
           {
             foreignKeyName: "spend_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spend_import_batches: {
+        Row: {
+          campaign_count: number | null
+          category: string | null
+          currency: string | null
+          currency_basis: string | null
+          entry_count: number | null
+          entry_mode: string | null
+          excluded_zero_dates: string[] | null
+          id: string | null
+          imported_at: string | null
+          imported_by: string | null
+          parser_version: string | null
+          platform: string | null
+          report_date_from: string | null
+          report_date_to: string | null
+          request_id: string | null
+          source_format: string | null
+          source_name: string | null
+          source_row_count: number | null
+          source_sha256: string | null
+          status: string | null
+          tax_status: string | null
+          total_before_tax: number | null
+          vendor: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          campaign_count?: number | null
+          category?: string | null
+          currency?: string | null
+          currency_basis?: string | null
+          entry_count?: number | null
+          entry_mode?: string | null
+          excluded_zero_dates?: string[] | null
+          id?: string | null
+          imported_at?: string | null
+          imported_by?: string | null
+          parser_version?: string | null
+          platform?: string | null
+          report_date_from?: string | null
+          report_date_to?: string | null
+          request_id?: string | null
+          source_format?: string | null
+          source_name?: string | null
+          source_row_count?: number | null
+          source_sha256?: string | null
+          status?: string | null
+          tax_status?: string | null
+          total_before_tax?: number | null
+          vendor?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          campaign_count?: number | null
+          category?: string | null
+          currency?: string | null
+          currency_basis?: string | null
+          entry_count?: number | null
+          entry_mode?: string | null
+          excluded_zero_dates?: string[] | null
+          id?: string | null
+          imported_at?: string | null
+          imported_by?: string | null
+          parser_version?: string | null
+          platform?: string | null
+          report_date_from?: string | null
+          report_date_to?: string | null
+          request_id?: string | null
+          source_format?: string | null
+          source_name?: string | null
+          source_row_count?: number | null
+          source_sha256?: string | null
+          status?: string | null
+          tax_status?: string | null
+          total_before_tax?: number | null
+          vendor?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spend_import_batches_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "spend_import_batches_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spend_import_lines: {
+        Row: {
+          batch_id: string | null
+          before_tax: number | null
+          campaigns: Json | null
+          incurred_on: string | null
+          source_rows: number[] | null
+          spend_entry_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          before_tax?: number | null
+          campaigns?: Json | null
+          incurred_on?: string | null
+          source_rows?: number[] | null
+          spend_entry_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          before_tax?: number | null
+          campaigns?: Json | null
+          incurred_on?: string | null
+          source_rows?: number[] | null
+          spend_entry_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spend_import_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "spend_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spend_import_lines_spend_entry_id_fkey"
+            columns: ["spend_entry_id"]
+            isOneToOne: true
+            referencedRelation: "spend_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spend_import_lines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "spend_import_lines_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -11492,6 +11687,10 @@ export type Database = {
           title: string
         }[]
       }
+      import_marketing_spend_batch: {
+        Args: { p_input: Json; p_request_id: string }
+        Returns: string
+      }
       inquiry_page: {
         Args: {
           p_owner?: string
@@ -11648,6 +11847,7 @@ export type Database = {
         Returns: string
       }
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
+      preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
       project_command: {
         Args: { p_action: string; p_input: Json; p_request_id: string }
         Returns: Json
@@ -11838,6 +12038,10 @@ export type Database = {
         Args: { p_reason: string; p_review_item_id: string }
         Returns: undefined
       }
+      replace_catalog_media: {
+        Args: { p_new_id: string; p_old_id: string }
+        Returns: undefined
+      }
       replay_intake_event: {
         Args: { p_fields?: Json; p_intake_event_id: string }
         Returns: Json
@@ -11947,6 +12151,26 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      report_walkin_collections: {
+        Args: {
+          p_by_person?: boolean
+          p_from?: string
+          p_grain?: string
+          p_to?: string
+        }
+        Returns: {
+          amount: number
+          collections: number
+          new_customers: number
+          period_end: string
+          period_start: string
+          person: string
+          person_id: string
+          purchases: number
+          unreviewed_payments: number
+          visits: number
+        }[]
+      }
       report_walkins: {
         Args: { p_from?: string; p_to?: string }
         Returns: {
@@ -11999,6 +12223,10 @@ export type Database = {
           p_reason?: string
           p_status: string
         }
+        Returns: undefined
+      }
+      set_primary_catalog_media: {
+        Args: { p_media_id: string; p_product_id: string }
         Returns: undefined
       }
       set_project_readiness: {
@@ -12066,6 +12294,10 @@ export type Database = {
         }
         Returns: string
       }
+      verify_marketing_spend_batch: {
+        Args: { p_batch_id: string }
+        Returns: Json
+      }
       visit_quotation_command: {
         Args: {
           p_action: string
@@ -12073,6 +12305,10 @@ export type Database = {
           p_input?: Json
           p_visit_id: string
         }
+        Returns: string
+      }
+      void_marketing_spend_batch: {
+        Args: { p_batch_id: string; p_reason: string; p_request_id: string }
         Returns: string
       }
       walk_in_inquiries: {

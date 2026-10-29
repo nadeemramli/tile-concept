@@ -12,6 +12,8 @@ export type ReportSlug =
   | "lead-source"
   | "quotes"
   | "walkins"
+  | "walkins-by-person"
+  | "walkins-period"
   | "cohorts"
   | "demand"
   | "price"
@@ -19,7 +21,17 @@ export type ReportSlug =
   | "data-quality"
   | "content";
 
-export type ColumnFormat = "text" | "number" | "money" | "decimal" | "percent" | "date" | "datetime" | "duration" | "tone" | "json";
+export type ColumnFormat = "text" | "number" | "money" | "decimal" | "percent" | "date" | "datetime" | "duration" | "tone" | "json" | "period";
+
+/** Calendar bucket a period report can be grouped on. Buckets follow the Kuala Lumpur calendar; weeks start on Monday. */
+export type ReportGrain = "day" | "week" | "month";
+
+export const GRAINS: ReportGrain[] = ["day", "week", "month"];
+
+export const GRAIN_LABEL: Record<ReportGrain, string> = { day: "Daily", week: "Weekly", month: "Monthly" };
+
+export const GRAIN_HINT =
+  "How rows are grouped in time. Daily is one row per Kuala Lumpur calendar day, Weekly one row per Monday-to-Sunday week, Monthly one row per calendar month.";
 
 export interface ReportColumn {
   key: string;
@@ -27,6 +39,7 @@ export interface ReportColumn {
   format?: ColumnFormat;
   /** Right-align and use tabular numerals. Defaults to true for numeric formats. */
   numeric?: boolean;
+  /** Explains the column's meaning; shown as the column's ⓘ in the table. */
   description?: string;
 }
 
@@ -52,7 +65,15 @@ export interface ReportDef {
   metricKey: string;
   /** Whether the RPC accepts p_from / p_to. */
   ranged: boolean;
-  /** Permission needed on top of report.read, if any. */
+  /**
+   * Whether the RPC accepts p_grain, and which grains the UI offers. A `period`
+   * column renders its `period_start` and the row's `period_end` by this grain.
+   */
+  grain?: { default: ReportGrain; options: ReportGrain[] };
+  /** Fixed extra RPC arguments, sent on every run. */
+  args?: Record<string, string | number | boolean>;
+  /** Row fields that together identify a row. Defaults to the first column. */
+  rowKey?: string[];
   columns: ReportColumn[];
   chart?: ChartSpec;
   /** Shown under the governance header when the data has a known boundary. */
@@ -164,6 +185,57 @@ export const REPORTS: ReportDef[] = [
       caption: "Visits and the purchases recorded against them, per location.",
     },
     scopeNote: "Historical document summary, including unclassified amounts. Use Marketing & showroom dashboard for reviewed net revenue, collections and sale conversion.",
+  },
+  {
+    slug: "walkins-by-person",
+    title: "Walk-in collections by person",
+    question: "Who closed each day's walk-in sales, and how much did each person collect?",
+    rpc: "report_walkin_collections",
+    metricKey: "walkin_person",
+    ranged: true,
+    grain: { default: "day", options: ["day", "week", "month"] },
+    args: { p_by_person: true },
+    rowKey: ["period_start", "person_id"],
+    columns: [
+      { key: "period_start", label: "Period", format: "period", description: "The Kuala Lumpur day, week or month the row covers. Change the grouping above." },
+      { key: "person", label: "Person", description: "The salesperson recorded on the sale (who closed it). Visits on the same row are the ones this person served. Unassigned means no person is recorded." },
+      { key: "visits", label: "Visits served", format: "number", description: "Visits this person served as the showroom staff member (the Daily Tracker SMP)." },
+      { key: "new_customers", label: "New customers", format: "number", description: "Visits served where the customer had no earlier record in the app." },
+      { key: "purchases", label: "Sales closed", format: "number", description: "Walk-in sales where this person is the salesperson on the sale. Voided documents are excluded." },
+      { key: "amount", label: "Document total", format: "money", description: "Sum of the sale documents closed by this person, including unclassified historical records." },
+      { key: "collections", label: "Collections", format: "money", description: "Reviewed payments taken on this person's sales in the period, net of cash refunds, dated by when they were paid." },
+      { key: "unreviewed_payments", label: "Awaiting review", format: "number", description: "Payments in the period still awaiting financial review. They are counted here and left out of Collections." },
+    ],
+    scopeNote: "Collections and sales follow the salesperson on the sale; visits follow the staff member who served them. Historical payments that have not been reviewed are listed under Awaiting review, not in Collections.",
+  },
+  {
+    slug: "walkins-period",
+    title: "Walk-in collections by period",
+    question: "How much did the showroom collect each day, week or month, and from how many visits and sales?",
+    rpc: "report_walkin_collections",
+    metricKey: "walkin_period",
+    ranged: true,
+    grain: { default: "week", options: ["day", "week", "month"] },
+    args: { p_by_person: false },
+    columns: [
+      { key: "period_start", label: "Period", format: "period", description: "The Kuala Lumpur day, week or month the row covers. Change the grouping above." },
+      { key: "visits", label: "Visits", format: "number", description: "Visits recorded in the period, by visit date." },
+      { key: "new_customers", label: "New customers", format: "number", description: "Visits where the customer had no earlier record in the app." },
+      { key: "purchases", label: "Sales", format: "number", description: "Walk-in sales in the period, by purchase date. Voided documents are excluded." },
+      { key: "amount", label: "Document total", format: "money", description: "Sum of the sale documents in the period, including unclassified historical records." },
+      { key: "collections", label: "Collections", format: "money", description: "Reviewed payments taken in the period, net of cash refunds, dated by when they were paid." },
+      { key: "unreviewed_payments", label: "Awaiting review", format: "number", description: "Payments in the period still awaiting financial review. They are counted here and left out of Collections." },
+    ],
+    chart: {
+      kind: "bar",
+      category: "period_start",
+      series: [
+        { key: "collections", label: "Collections", color: "var(--success)" },
+        { key: "amount", label: "Document total", color: "var(--chart-1)" },
+      ],
+      caption: "Reviewed collections against document totals, per period.",
+    },
+    scopeNote: "A sale paid in a later period shows its collection in that later period, so Collections and Document total are not expected to match row by row.",
   },
   {
     slug: "cohorts",
@@ -320,6 +392,17 @@ export function reportBySlug(slug: string): ReportDef | undefined {
 }
 
 export const REPORT_SLUGS = REPORTS.map((r) => r.slug);
+
+/** The grain a report runs at: the requested one when the report offers it, else its default, else none. */
+export function resolveGrain(def: ReportDef, requested: string | null | undefined): ReportGrain | undefined {
+  if (!def.grain) return undefined;
+  return def.grain.options.find((g) => g === requested) ?? def.grain.default;
+}
+
+/** Stable key for a report row; falls back to the first column when the report declares none. */
+export function reportRowKey(def: ReportDef, row: Record<string, unknown>): string {
+  return (def.rowKey ?? [def.columns[0].key]).map((k) => String(row[k] ?? "")).join("|");
+}
 
 /** Tone mapping for the qualitative values these reports return. */
 export const REPORT_TONE: Record<string, "neutral" | "success" | "warning" | "destructive" | "info" | "ai"> = {

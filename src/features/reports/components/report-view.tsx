@@ -7,7 +7,7 @@ import { Download } from "lucide-react";
 import { DataTable } from "@/components/patterns/data-table";
 import { EmptyState } from "@/components/patterns/states";
 import { TonePill } from "@/components/patterns/status-pill";
-import { DisabledHint } from "@/components/patterns/explain";
+import { DisabledHint, InfoTip } from "@/components/patterns/explain";
 import { OPPORTUNITY_STATUS, type StatusMap } from "@/lib/domain/status-maps";
 import { FRESHNESS_STATUS } from "@/features/stock/status";
 import { CONTENT_STATUS_MAP } from "@/features/marketing/lib/status";
@@ -30,7 +30,8 @@ import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/for
 import { useAction } from "@/features/catalog/use-action";
 import { exportReportAction } from "@/server/commands/reports";
 import { ReportChart } from "@/features/reports/components/report-chart";
-import { REPORT_TONE, type ReportColumn, type ReportDef } from "@/features/reports/registry";
+import { formatPeriod } from "@/features/reports/period";
+import { GRAIN_HINT, GRAIN_LABEL, REPORT_TONE, reportRowKey, resolveGrain, type ReportColumn, type ReportDef, type ReportGrain } from "@/features/reports/registry";
 
 const PRESETS: { key: string; label: string; days: number | "ytd" }[] = [
   { key: "7d", label: "7 days", days: 7 },
@@ -49,9 +50,26 @@ function dayFromIso(s: string) {
   return new Date(`${s}T12:00:00Z`);
 }
 
-export function ReportView({ report, rows, currency, error }: { report: ReportDef; rows: Record<string, unknown>[]; currency: string; error: string | null }) {
-  const [from, setFrom] = useQueryState("from", parseAsString.withDefault(""));
-  const [to, setTo] = useQueryState("to", parseAsString.withDefault(""));
+export function ReportView({
+  report,
+  rows,
+  currency,
+  error,
+  grain: serverGrain,
+}: {
+  report: ReportDef;
+  rows: Record<string, unknown>[];
+  currency: string;
+  error: string | null;
+  /** The grain the server ran the report at, when the report has one. */
+  grain?: ReportGrain;
+}) {
+  // The rows are computed on the server from the URL, so every filter change
+  // must reach it (shallow: false); a shallow update would leave stale rows.
+  const [from, setFrom] = useQueryState("from", parseAsString.withDefault("").withOptions({ shallow: false }));
+  const [to, setTo] = useQueryState("to", parseAsString.withDefault("").withOptions({ shallow: false }));
+  const [grainParam, setGrainParam] = useQueryState("grain", parseAsString.withDefault("").withOptions({ shallow: false }));
+  const grain = serverGrain ?? resolveGrain(report, grainParam);
   const [confirming, setConfirming] = useState(false);
 
   const exporter = useAction(exportReportAction, {
@@ -95,9 +113,10 @@ export function ReportView({ report, rows, currency, error }: { report: ReportDe
         id: c.key,
         header: c.label,
         accessorFn: (r) => r[c.key],
-        cell: ({ row }) => <Cell column={c} value={row.original[c.key]} currency={currency} />,
+        meta: c.description ? { hint: c.description } : undefined,
+        cell: ({ row }) => <Cell column={c} value={row.original[c.key]} row={row.original} currency={currency} grain={grain} />,
       })),
-    [report, currency],
+    [report, currency, grain],
   );
 
   return (
@@ -133,6 +152,25 @@ export function ReportView({ report, rows, currency, error }: { report: ReportDe
               All time
             </Button>
           )}
+          {report.grain && grain && (
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 rounded-md border p-0.5" role="group" aria-label="Group rows by">
+                {report.grain.options.map((g) => (
+                  <Button
+                    key={g}
+                    size="sm"
+                    variant={grain === g ? "secondary" : "ghost"}
+                    className="h-7 px-2.5 text-xs"
+                    aria-pressed={grain === g}
+                    onClick={() => setGrainParam(g === report.grain?.default ? null : g)}
+                  >
+                    {GRAIN_LABEL[g]}
+                  </Button>
+                ))}
+              </div>
+              <InfoTip content={GRAIN_HINT} label="How rows are grouped in time" />
+            </div>
+          )}
           <ExportButton disabled={rows.length === 0} onClick={() => setConfirming(true)} />
         </div>
       )}
@@ -156,11 +194,11 @@ export function ReportView({ report, rows, currency, error }: { report: ReportDe
         />
       ) : (
         <>
-          {report.chart && <ReportChart spec={report.chart} rows={rows} />}
+          {report.chart && <ReportChart spec={report.chart} rows={rows} grain={grain} />}
           <DataTable
             columns={columns}
             data={rows}
-            rowKey={(r) => String(r[report.columns[0].key] ?? Math.random())}
+            rowKey={(r) => reportRowKey(report, r)}
             columnToggle
             searchable
             searchPlaceholder="Filter rows…"
@@ -186,6 +224,12 @@ export function ReportView({ report, rows, currency, error }: { report: ReportDe
               <dt className="text-muted-foreground">Period</dt>
               <dd>{report.ranged ? `${from || "start"} → ${to || "today"}` : "Point-in-time"}</dd>
             </div>
+            {grain && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Grouped</dt>
+                <dd>{GRAIN_LABEL[grain]}</dd>
+              </div>
+            )}
             <div>
               <dt className="text-muted-foreground">Columns</dt>
               <dd className="mt-1 flex flex-wrap gap-1">
@@ -205,7 +249,7 @@ export function ReportView({ report, rows, currency, error }: { report: ReportDe
             <Button variant="outline" onClick={() => setConfirming(false)}>
               Cancel
             </Button>
-            <Button disabled={exporter.pending} onClick={() => exporter.run({ slug: report.slug, from, to })}>
+            <Button disabled={exporter.pending} onClick={() => exporter.run({ slug: report.slug, from, to, grain: grain ?? "" })}>
               {exporter.pending ? "Preparing…" : `Download ${rows.length} rows`}
             </Button>
           </DialogFooter>
@@ -224,9 +268,11 @@ function ExportButton({ disabled, onClick }: { disabled: boolean; onClick: () =>
   return <span className="ml-auto">{disabled ? <DisabledHint reason={NO_ROWS}>{button}</DisabledHint> : button}</span>;
 }
 
-function Cell({ column, value, currency }: { column: ReportColumn; value: unknown; currency: string }) {
+function Cell({ column, value, row, currency, grain }: { column: ReportColumn; value: unknown; row: Record<string, unknown>; currency: string; grain?: ReportGrain }) {
   if (value === null || value === undefined || value === "") return <span className="text-muted-foreground">—</span>;
   switch (column.format) {
+    case "period":
+      return <span className="tnum whitespace-nowrap">{formatPeriod(String(value), row.period_end, grain)}</span>;
     case "money":
       return <span className="tnum">{formatMoney(Number(value), currency)}</span>;
     case "number":

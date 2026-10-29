@@ -6,7 +6,7 @@ import { hasPermission, requireSession } from "@/server/session";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { PermissionDenied } from "@/components/patterns/states";
 import { getDefinitionsFor, runReport } from "@/server/queries/reports";
-import { reportBySlug, REPORTS } from "@/features/reports/registry";
+import { GRAIN_LABEL, reportBySlug, REPORTS, resolveGrain } from "@/features/reports/registry";
 import { GovernanceHeader } from "@/features/reports/components/governance-header";
 import { ReportView } from "@/features/reports/components/report-view";
 
@@ -30,13 +30,16 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/i
   const sp = await searchParams;
   const from = typeof sp.from === "string" && sp.from ? sp.from : undefined;
   const to = typeof sp.to === "string" && sp.to ? sp.to : undefined;
+  const grain = resolveGrain(def, typeof sp.grain === "string" ? sp.grain : undefined);
 
-  const [definitions, result] = await Promise.all([getDefinitionsFor(def.metricKey), runReport(def, from, to)]);
+  const [definitions, result] = await Promise.all([getDefinitionsFor(def.metricKey), runReport(def, from, to, grain)]);
 
+  const scope = session.permissions.includes("sales.read_all") ? "" : "; limited to your scope";
+  const grouping = grain ? `; grouped ${GRAIN_LABEL[grain].toLowerCase()}` : "";
   const filters = def.ranged
     ? from || to
-      ? `Created between ${from ?? "the beginning"} and ${to ?? "today"}${session.permissions.includes("sales.read_all") ? "" : "; limited to your scope"}`
-      : `All time${session.permissions.includes("sales.read_all") ? "" : "; limited to your scope"}`
+      ? `Between ${from ?? "the beginning"} and ${to ?? "today"}${grouping}${scope}`
+      : `All time${grouping}${scope}`
     : "None — current state of the workspace";
 
   return (
@@ -48,7 +51,7 @@ export default async function ReportPage({ params, searchParams }: PageProps<"/i
       </div>
       <PageHeader title={def.title} description={def.question} eyebrow="Governed report" />
       <GovernanceHeader report={def} definitions={definitions} computedAt={result.computedAt} filters={filters} />
-      <ReportView report={def} rows={result.rows} currency={session.currency} error={result.error} />
+      <ReportView report={def} rows={result.rows} currency={session.currency} error={result.error} grain={grain} />
     </PageBody>
   );
 }
