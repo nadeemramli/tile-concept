@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { expectHealthyRoute, PRIMARY_ROUTES, REPORT_ROUTES, SECONDARY_ROUTES } from "./route-smoke";
+import { expectNotAvailable, settingsContent } from "./denial-checks";
 
 /**
  * Guest mode is the only path into this app that needs no credentials, which
@@ -62,11 +63,19 @@ for (const path of [...guestRoutes.map((route) => route.path), ...REPORT_ROUTES,
 }
 
 test("a guest cannot manage settings", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   await enterAsGuest(page);
-  await page.goto("/platform/settings");
   // settings.manage is the one permission the guest role does not carry, because
-  // it includes sending invitations.
-  await expect(page.getByText(/Not available/)).toBeVisible();
+  // it includes sending invitations; the invitations tab is deep-linked too.
+  for (const path of ["/platform/settings", "/platform/settings?tab=invites"]) {
+    const response = await page.goto(path);
+    expect(response!.status(), "HTTP status").toBeLessThan(400);
+    const url = new URL(page.url());
+    expect(url.pathname + url.search, "denied in place, not redirected").toBe(path);
+    await expectNotAvailable(page, "Guest (demo)", settingsContent(page));
+  }
+  expect(pageErrors, "uncaught browser errors").toEqual([]);
 });
 
 test("a guest cannot manage lead connectors", async ({ page }) => {
