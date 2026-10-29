@@ -56,11 +56,28 @@ async function login(page: Page, user: FixtureUser) {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("**/");
 }
+const FILE_LABEL = "Choose .xlsx / .csv";
+/**
+ * The import form's file input, bound to the page rendered in main#main.
+ * While Next streams the route, React can hold a hidden copy of the page in a
+ * <div hidden id="S:n"> outside main until it reveals the Suspense boundary,
+ * and the label is screen-reader-only in both copies, so visibility cannot
+ * tell them apart. Before using the input, require that the document holds
+ * exactly one file input, that it is this one, and that React has hydrated it
+ * (an unhydrated input would drop the change event).
+ */
+async function importFileInput(page: Page, timeout?: number) {
+  const input = page.locator("main#main").getByLabel(FILE_LABEL);
+  await expect(page.locator('input[type="file"]'), "exactly one file input in the document").toHaveCount(1, { timeout });
+  await expect(input, "the document's file input is the one in main#main").toHaveCount(1, { timeout });
+  await expect.poll(() => input.evaluate((el) => Object.keys(el).some((key) => key.startsWith("__reactProps$"))), { message: "file input hydrated by React", timeout }).toBe(true);
+  return input;
+}
 async function upload(page: Page, file: { name: string; mimeType: string; buffer: Buffer }) {
   await page.goto("/sales/walk-ins/import");
-  await expect(page.getByRole("heading", { name: "Import walk-in workbook" })).toBeVisible();
-  await page.getByLabel("Choose .xlsx / .csv").setInputFiles(file);
-  await expect(page.getByText(new RegExp(`${file.name.replace(/\./g, "\\.")} · \\d+ rows`))).toBeVisible();
+  await expect(page.locator("main#main").getByRole("heading", { name: "Import walk-in workbook" })).toBeVisible();
+  await (await importFileInput(page)).setInputFiles(file);
+  await expect(page.locator("main#main").getByText(new RegExp(`${file.name.replace(/\./g, "\\.")} · \\d+ rows`))).toBeVisible();
 }
 function mapping(page: Page, label: string): Locator {
   return page.locator("label").filter({ hasText: new RegExp(`^${label}( \\*)?$`) }).locator("xpath=../..").getByRole("combobox");
@@ -192,5 +209,24 @@ for (const timezoneId of ["UTC", "Asia/Kuala_Lumpur"] as const) {
         await expect(previewDate(page, "E2E Workbook ISO text")).toHaveText("2026-10-05");
       });
     }
+
+    test("the upload binding refuses a hidden streamed copy of the form and uses the rendered one", async ({ page }) => {
+      await login(page, importer);
+      await page.goto("/sales/walk-ins/import");
+      await expect(page.locator("main#main").getByRole("heading", { name: "Import walk-in workbook" })).toBeVisible();
+      // The shape root QC's trace captured on eceac25: a second, screen-reader-only
+      // copy of the form in a hidden streaming segment outside main.
+      await page.evaluate((label) => {
+        document.body.insertAdjacentHTML("beforeend", `<div hidden id="S:e2e-copy"><label>${label}<input type="file" class="sr-only"></label></div>`);
+      }, FILE_LABEL);
+      await expect(page.getByLabel(FILE_LABEL), "the unscoped eceac25 binding is ambiguous").toHaveCount(2);
+      await expect(page.locator("main#main").getByLabel(FILE_LABEL)).toHaveCount(1);
+      const refused = await importFileInput(page, 1_000).then(() => null, (error: Error) => error.message);
+      expect(refused, "not ready while a hidden copy exists").toContain("exactly one file input in the document");
+
+      await page.evaluate(() => document.getElementById("S:e2e-copy")?.remove());
+      await (await importFileInput(page)).setInputFiles(csvFile("tile80-binding.csv", DECLARED_CSV));
+      await expect(page.locator("main#main").getByText(/tile80-binding\.csv · 3 rows · 4 columns/)).toBeVisible();
+    });
   });
 }
