@@ -20,14 +20,19 @@ Date (DD/MM/YYYY),Name,Phone,Notes
 const FIFTH = "QC80 Date fifth October";
 const TWENTY_FIFTH = "QC80 Date twenty fifth October";
 
-// Controls the fix must keep: ISO text, a day-first date that does not exist,
-// a leap day, and a written-out date that JavaScript reads in local time.
+// Controls the fix must keep: ISO text, day-first and ISO dates that do not
+// exist, a leap day, a written-out date that JavaScript reads in local time,
+// and a full ISO date-time without an offset, which keeps its existing
+// browser-local reading to the second.
 const TEXT_CONTROLS_CSV = `Date,Customer Name,Contact
 2026-10-05,E2E ISO text,012-700 0301
 31/02/2026,E2E Rollover,012-700 0302
 29/02/2024,E2E Leap day,012-700 0303
 5 Oct 2026,E2E Written date,012-700 0304
+2026-02-30T14:30:00Z,E2E ISO rollover,012-700 0305
+2026-10-05T14:30:45,E2E ISO date-time,012-700 0306
 `;
+const ISO_DATE_TIME_AS_READ = { UTC: "2026-10-05T14:30:45+00:00", "Asia/Kuala_Lumpur": "2026-10-05T06:30:45+00:00" } as const;
 
 /** Typed workbook cells: a date cell, a date-time cell, a bare serial and ISO text. */
 function typedWorkbook(bookType: "xlsx" | "biff8") {
@@ -146,15 +151,34 @@ for (const timezoneId of ["UTC", "Asia/Kuala_Lumpur"] as const) {
       expect(await visits()).toHaveLength(2);
     });
 
-    test("ISO, leap-day and written dates keep their day; an impossible date is refused, not rolled over", async ({ page }) => {
+    test("ISO, leap-day, written dates and ISO date-times persist as read; impossible dates are refused, not rolled over", async ({ page }) => {
       await login(page, importer);
       await upload(page, csvFile("tile80-text-controls.csv", TEXT_CONTROLS_CSV));
       await page.getByRole("button", { name: "Preview rows" }).click();
       await expect(previewDate(page, "E2E ISO text")).toHaveText("2026-10-05");
       await expect(previewDate(page, "E2E Leap day")).toHaveText("2024-02-29");
       await expect(previewDate(page, "E2E Written date")).toHaveText("2026-10-05");
-      await expect(previewDate(page, "E2E Rollover")).toHaveText("—");
-      await expect(previewRow(page, "E2E Rollover")).toContainText("Bad or missing date");
+      await expect(previewDate(page, "E2E ISO date-time")).toHaveText("2026-10-05");
+      for (const refused of ["E2E Rollover", "E2E ISO rollover"]) {
+        await expect(previewDate(page, refused), refused).toHaveText("—");
+        await expect(previewRow(page, refused), refused).toContainText("Bad or missing date");
+      }
+
+      await page.getByRole("button", { name: "Commit 4 rows" }).click();
+      await expect(page.getByText("Import committed")).toBeVisible({ timeout: 30_000 });
+      const service = await fx.serviceClient(importer);
+      const names = ["E2E ISO text", "E2E Leap day", "E2E Written date", "E2E ISO date-time", "E2E Rollover", "E2E ISO rollover"];
+      const { data: contacts, error: contactError } = await service.from("contacts").select("id, display_name").eq("workspace_id", fx.workspaceId).in("display_name", names);
+      expect(contactError).toBeNull();
+      const nameOf = new Map((contacts ?? []).map((c) => [c.id, c.display_name]));
+      const { data: visits, error: visitError } = await service.from("visits").select("contact_id, occurred_at").eq("workspace_id", fx.workspaceId).in("contact_id", [...nameOf.keys()]);
+      expect(visitError).toBeNull();
+      expect(Object.fromEntries((visits ?? []).map((v) => [nameOf.get(v.contact_id!), v.occurred_at]))).toEqual({
+        "E2E ISO text": "2026-10-05T00:00:00+00:00",
+        "E2E Leap day": "2024-02-29T00:00:00+00:00",
+        "E2E Written date": "2026-10-05T00:00:00+00:00",
+        "E2E ISO date-time": ISO_DATE_TIME_AS_READ[timezoneId],
+      });
     });
 
     for (const [bookType, name] of [["xlsx", "tile80-typed.xlsx"], ["biff8", "tile80-typed.xls"]] as const) {

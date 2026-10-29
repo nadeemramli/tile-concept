@@ -34,9 +34,9 @@ afterAll(() => {
 });
 
 describe.each([
-  ["UTC", 0],
-  ["Asia/Kuala_Lumpur", -480],
-] as const)("walk-in import dates with the clock in %s", (tz, offsetMinutes) => {
+  ["UTC", 0, ["2026-10-05T14:30:45.000Z", "2026-10-05T20:30:45.000Z"]],
+  ["Asia/Kuala_Lumpur", -480, ["2026-10-05T06:30:45.000Z", "2026-10-05T12:30:45.000Z"]],
+] as const)("walk-in import dates with the clock in %s", (tz, offsetMinutes, localDateTimes) => {
   const at = (fn: () => void) => () => {
     process.env.TZ = tz;
     expect(new Date(2026, 9, 5).getTimezoneOffset(), "timezone switch took effect").toBe(offsetMinutes);
@@ -75,8 +75,16 @@ describe.each([
     expect(toIsoDate("29/02/2024")).toBe("2024-02-29T00:00:00.000Z");
   }));
 
+  it("keeps full ISO date-times to the second, as before: their offset, or the browser's timezone without one", at(() => {
+    expect(toIsoDate("2026-10-05T14:30:45Z")).toBe("2026-10-05T14:30:45.000Z");
+    expect(toIsoDate("2026-10-05T14:30:45+08:00")).toBe("2026-10-05T06:30:45.000Z");
+    expect(toIsoDate("2026-10-05T14:30:45")).toBe(localDateTimes[0]);
+    expect(toIsoDate("2026-10-05 14:30:45")).toBe(localDateTimes[0]);
+    expect(toIsoDate("2026-10-05T20:30:45")).toBe(localDateTimes[1]);
+  }));
+
   it("refuses dates that do not exist instead of rolling them over", at(() => {
-    for (const v of ["31/02/2026", "29/02/2026", "00/10/2026", "05/13/2026", "32/01/2026", "2026-02-30", "2026-13-01", "not a date", "", null, undefined, 1e12]) {
+    for (const v of ["31/02/2026", "29/02/2026", "00/10/2026", "05/13/2026", "32/01/2026", "2026-02-30", "2026-13-01", "2026-02-30T14:30:00Z", "2026-02-30T14:30:00+08:00", "2026-02-30T14:30:00", "2026-02-30 14:30", "2026-04-31T00:00:00.000Z", "not a date", "", null, undefined, 1e12]) {
       expect(toIsoDate(v), String(v)).toBeNull();
     }
   }));
