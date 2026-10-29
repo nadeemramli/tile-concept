@@ -58,7 +58,7 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
   const [, setView] = useQueryState("view", parseAsString.withDefault("open").withOptions({ shallow: false }));
   const [layout, setLayout] = useQueryState("layout", parseAsString.withDefault("board"));
   const [, setOpp] = useQueryState("opportunity", parseAsString.withOptions({ shallow: false }));
-  const [moving, setMoving] = useState<{ id: string; stage: string; hasNext: boolean; target?: string } | null>(null);
+  const [moving, setMoving] = useState<{ id: string; stage: string; hasNext: boolean; target?: string; forecast: { expected_close_date: string | null; probability_band: string | null } } | null>(null);
   const names = useMemo(() => new Map(members.map((m) => [m.user_id, m.full_name])), [members]);
   const stageByKey = useMemo(() => new Map(stages.map((s) => [s.key, s])), [stages]);
   const canMove = (o: OpportunityRow) => !o.archived_at && can("sales.write") && (can("sales.read_all") || !o.owner_id || o.owner_id === session.userId);
@@ -180,7 +180,7 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
                                   {stages
                                     .filter((t) => t.key !== o.stage_key)
                                     .map((t) => (
-                                      <DropdownMenuItem key={t.key} onSelect={() => setMoving({ id: o.id, stage: o.stage_key, hasNext: !!o.next_action && !!o.next_action_due_at, target: t.key })}>
+                                      <DropdownMenuItem key={t.key} onSelect={() => setMoving({ id: o.id, stage: o.stage_key, hasNext: !!o.next_action && !!o.next_action_due_at, target: t.key, forecast: o })}>
                                         <span className="tnum mr-1 text-muted-foreground">{t.position}.</span>
                                         {t.label}
                                       </DropdownMenuItem>
@@ -226,7 +226,7 @@ export function PipelineView({ rows, stages, members, view, detail, suggestedQuo
         </div>
       )}
 
-      {moving && <StageChangeDialog key={`${moving.id}-${moving.target}`} open onOpenChange={(o) => !o && setMoving(null)} opportunityId={moving.id} currentStage={moving.stage} stages={stages} hasNextAction={moving.hasNext} initialTarget={moving.target} />}
+      {moving && <StageChangeDialog key={`${moving.id}-${moving.target}`} open onOpenChange={(o) => !o && setMoving(null)} opportunityId={moving.id} currentStage={moving.stage} stages={stages} hasNextAction={moving.hasNext} initialTarget={moving.target} forecast={moving.forecast} />}
       {creating && <CreateOpportunityDialog open onOpenChange={setCreating} members={members} />}
       {detail && <OpportunityDrawer key={`${detail.id}-${detail.version}`} opp={detail} stages={stages} members={members} suggestedQuoteNumber={suggestedQuoteNumber} onClose={() => setOpp(null)} />}
       <p className="text-[11px] text-muted-foreground">

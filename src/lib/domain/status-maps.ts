@@ -37,6 +37,34 @@ export const OPPORTUNITY_STATUS: StatusMap = {
 
 export const STAGE_GROUP_TONE: Record<string, StatusTone> = { open: "info", won: "success", lost: "destructive", deferred: "neutral" };
 
+/** Likelihood bands on a forecast. Bands are labels, never probability weights. */
+export const FORECAST_BAND: StatusMap = {
+  high: { label: "High", tone: "success", hint: "The owner judges this likely to close by its expected date. A band, not a percentage: values are never weighted by it." },
+  medium: { label: "Medium", tone: "info", hint: "The owner judges this as uncertain but realistic for its expected date. Not a percentage and never used as a weight." },
+  low: { label: "Low", tone: "warning", hint: "The owner judges this unlikely by its expected date but still open. Not a percentage and never used as a weight." },
+  unknown: { label: "Unknown", tone: "neutral", hint: "No likelihood has been stated. It stays unknown until someone reviews the forecast; nothing fills it in." },
+};
+
+/** The selected-week list and the exception queues on Weekly forecast. */
+export const FORECAST_QUEUE: StatusMap = {
+  week: { label: "Closing this week", tone: "info", hint: "Open, unarchived opportunities whose expected close date falls in the selected Monday-to-Sunday week (Kuala Lumpur), however old they are." },
+  missing_date: { label: "No close date", tone: "warning", hint: "Open work with no expected close date. It cannot appear in any week until someone states one." },
+  missing_band: { label: "No likelihood", tone: "warning", hint: "Open work with no likelihood band. It is counted as Unknown, never spread across the bands." },
+  missing_value: { label: "No value", tone: "warning", hint: "Open work with no estimated value. Counted in totals as unknown, never as zero." },
+  overdue_date: { label: "Close date passed", tone: "destructive", hint: "The expected close date is before today and the work is still open. Dates never roll forward on their own: review it, set a new date, or close it." },
+  stale_review: { label: "Stale review", tone: "warning", hint: "Reviewed before, but not within the chosen number of days. Review it to confirm or correct the forecast." },
+  never_reviewed: { label: "Never reviewed", tone: "neutral", hint: "Nobody has reviewed this forecast since forecast reviews began, including work created before then. Its fields may still have values from earlier edits." },
+  not_recorded: { label: "Not recorded", tone: "neutral", hint: "As-recorded view only: the opportunity existed then, but forecast history had no state for it yet. Nothing is guessed for it." },
+};
+
+/** What kind of change a forecast history row records. */
+export const FORECAST_HISTORY_KIND: StatusMap = {
+  review: { label: "Reviewed", tone: "success", hint: "Someone reviewed the forecast and stated its date, likelihood, value, evidence and next step." },
+  change: { label: "Changed", tone: "info", hint: "A forecast field, stage or status changed through another action, such as an edit or a stage move. Not a review." },
+  created: { label: "Created", tone: "neutral", hint: "The opportunity was created with these values." },
+  baseline: { label: "History began", tone: "neutral", hint: "The state when forecast history started. Earlier changes were not recorded." },
+};
+
 export const TASK_STATUS: StatusMap = {
   open: { label: "Open", tone: "info", hint: "Still to do. Overdue once the due date passes." },
   done: { label: "Done", tone: "success", hint: "Completed. The outcome was appended to the linked record's timeline." },

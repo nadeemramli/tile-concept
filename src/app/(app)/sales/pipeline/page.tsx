@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { hasPermission, requireSession } from "@/server/session";
 import { PermissionDenied } from "@/components/patterns/states";
 import { getOpportunityDetail, listOpportunities, nextQuoteNumber, type PipelineView as View } from "@/server/queries/opportunities";
@@ -19,7 +21,11 @@ export default async function PipelinePage({ searchParams }: PageProps<"/sales/p
   const [rows, stages, members, detail, quoteNo] = await Promise.all([listOpportunities(view), getStages(), getMembers(), oppId ? getOpportunityDetail(oppId) : Promise.resolve(null), nextQuoteNumber()]);
   return (
     <PageBody>
-      <PageHeader title="Pipeline" description="Every active opportunity has a stage, owner, next action and due date. Won/Lost/Deferred and backward moves require a reason." />
+      <PageHeader title="Pipeline" description="Every active opportunity has a stage, owner, next action and due date. Won/Lost/Deferred and backward moves require a reason.">
+        <Button asChild variant="outline" size="sm">
+          <Link href="/sales/pipeline/forecast">Weekly forecast</Link>
+        </Button>
+      </PageHeader>
       <PipelineView rows={rows} stages={stages} members={members} view={view} detail={detail} suggestedQuoteNumber={quoteNo} />
     </PageBody>
   );
