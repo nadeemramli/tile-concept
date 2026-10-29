@@ -20,7 +20,8 @@ import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/rec
 import { Field } from "@/components/patterns/field";
 import { ViewsBar } from "@/features/inbox/components/views-bar";
 import { TASK_PRIORITY, TASK_STATUS } from "@/lib/domain/status-maps";
-import { formatDateTime, formatRelative, isOverdue } from "@/lib/format";
+import { formatDateTime, formatRelative } from "@/lib/format";
+import { dueLabel, isDuePast, useDueClock } from "@/features/tasks/due";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
 import { cancelTaskAction, completeTaskAction, createTaskAction, reopenTaskAction, updateTaskAction } from "@/server/commands/tasks";
@@ -34,6 +35,8 @@ interface Props {
   counts: { mine: number; overdue: number; open: number; doneWeek: number };
   members: ProfileRef[];
   prefill: { contact_id?: string; opportunity_id?: string; lead_id?: string; account_id?: string; project_id?: string };
+  /** The server's request time (ISO); Due labels are measured from it until mount. */
+  renderedAt: string;
 }
 
 const COLUMN_HINTS = {
@@ -56,7 +59,7 @@ function toLocalInput(iso: string | null) {
   return d.toISOString().slice(0, 16);
 }
 
-export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
+export function TasksClient({ view, tasks, counts, members, prefill, renderedAt }: Props) {
   const router = useRouter();
   const { session, can } = useSession();
   const [taskId, setTaskId] = useQueryState("task");
@@ -64,6 +67,7 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
   const [pending, start] = useTransition();
   const [outcome, setOutcome] = useState("");
   const [completing, setCompleting] = useState(false);
+  const now = useDueClock(renderedAt);
 
   const task = tasks.find((t) => t.id === taskId) ?? null;
 
@@ -90,8 +94,8 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
         cell: ({ row }) => {
           const t = row.original;
           if (!t.due_at) return <span className="text-muted-foreground">—</span>;
-          const over = t.status === "open" && isOverdue(t.due_at);
-          return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")} title={formatDateTime(t.due_at)}>{formatRelative(t.due_at)}</span>;
+          const over = t.status === "open" && isDuePast(t.due_at, now);
+          return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")} title={formatDateTime(t.due_at)}>{dueLabel(t.due_at, now)}</span>;
         },
       },
       { accessorKey: "assignee_name", header: "Assignee", meta: { hint: COLUMN_HINTS.assignee }, cell: ({ row }) => row.original.assignee_name ?? <span className="text-muted-foreground">Unassigned</span> },
@@ -110,7 +114,7 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
       },
       { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={TASK_STATUS} value={row.original.status} /> },
     ],
-    [],
+    [now],
   );
 
   return (
