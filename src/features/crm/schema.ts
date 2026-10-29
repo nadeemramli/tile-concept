@@ -19,6 +19,8 @@ export const createContactSchema = z.object({
   customer_type: z.enum(CUSTOMER_TYPES).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   source: z.enum(SOURCE_CHANNELS).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   account_id: optionalUuid,
+  /** The card PIC. The database accepts only the caller; anything else is refused, not ignored. */
+  owner_id: optionalUuid,
   notes: optionalStr,
 });
 export type CreateContactInput = z.input<typeof createContactSchema>;
@@ -31,6 +33,8 @@ export const updateContactSchema = z.object({
   customer_type: z.enum(CUSTOMER_TYPES).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   preferred_language: optionalStr,
   notes: optionalStr,
+  /** Only sent when a caller tries to change it; the PIC changes through transferCustomerCardAction. */
+  owner_id: optionalUuid,
 });
 
 export const createAccountSchema = z.object({
@@ -47,6 +51,15 @@ export const createAccountSchema = z.object({
 });
 
 export const updateAccountSchema = createAccountSchema.extend({ id: uuid() });
+
+export const CUSTOMER_CARDS = ["contact", "account"] as const;
+
+export const transferCustomerCardSchema = z.object({
+  card: z.enum(CUSTOMER_CARDS),
+  id: uuid(),
+  owner_id: uuid(),
+  reason: z.string().trim().min(3, "Say why the PIC is changing").max(1000),
+});
 
 export const addActivitySchema = z.object({
   kind: z.enum(ACTIVITY_KINDS),

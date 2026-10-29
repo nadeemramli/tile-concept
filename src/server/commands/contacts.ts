@@ -22,6 +22,7 @@ export async function createContactAction(input: unknown): Promise<ActionResult<
     p_account_id: v.account_id,
     p_is_provisional: false,
     p_notes: v.notes,
+    p_owner_id: v.owner_id,
   });
   if (error || !id) return fail(error ?? "Could not create contact");
   const { data: dup } = await supabase.rpc("suggest_contact_duplicates", { p_contact_id: id });
@@ -37,11 +38,13 @@ export async function updateContactAction(input: unknown): Promise<ActionResult>
   const session = await requireSession();
   const v = parsed.data;
   const supabase = await createServerSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("contacts")
-    .update({ display_name: v.display_name, given_name: v.given_name ?? null, family_name: v.family_name ?? null, customer_type: v.customer_type ?? null, preferred_language: v.preferred_language ?? null, notes: v.notes ?? null, updated_by: session.userId })
-    .eq("id", v.id);
+    .update({ display_name: v.display_name, given_name: v.given_name ?? null, family_name: v.family_name ?? null, customer_type: v.customer_type ?? null, preferred_language: v.preferred_language ?? null, notes: v.notes ?? null, updated_by: session.userId, ...(v.owner_id ? { owner_id: v.owner_id } : {}) })
+    .eq("id", v.id)
+    .select("id");
   if (error) return fail(error);
+  if (!data?.length) return fail("This contact is outside your access scope.");
   revalidatePath(`/sales/contacts/${v.id}`);
   revalidatePath("/sales/accounts");
   return ok(undefined, "Contact updated.");
@@ -53,7 +56,10 @@ export async function addContactPointAction(input: { contact_id: string; kind: "
   if (!raw) return fail("Value is required");
   const normalized = input.kind === "email" ? raw.toLowerCase() : input.kind === "other" ? raw : normalizePhone(raw) ?? raw;
   const supabase = await createServerSupabase();
-  if (input.is_primary) await supabase.from("contact_points").update({ is_primary: false }).eq("contact_id", input.contact_id).eq("kind", input.kind);
+  if (input.is_primary) {
+    const { error: primaryError } = await supabase.from("contact_points").update({ is_primary: false }).eq("contact_id", input.contact_id).eq("kind", input.kind);
+    if (primaryError) return fail(primaryError);
+  }
   const { error } = await supabase.from("contact_points").insert({ workspace_id: session.workspaceId, contact_id: input.contact_id, kind: input.kind, raw_value: raw, normalized_value: normalized, label: input.label ?? null, is_primary: !!input.is_primary, source: "manual" });
   if (error) return fail(error);
   await supabase.rpc("suggest_contact_duplicates", { p_contact_id: input.contact_id });

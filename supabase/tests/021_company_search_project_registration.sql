@@ -6,11 +6,12 @@ insert into identity.accounts(id,workspace_id,name,telephone) values
  ('aaaaaaaa-3431-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Helix Build','03-7777 8877'),
  ('aaaaaaaa-3431-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','Synthetic Helix Design',null),
  ('aaaaaaaa-3431-0000-0000-000000000099','99999999-3431-0000-0000-000000000099','Synthetic Helix Foreign','03-7777 8877');
-insert into identity.contacts(id,workspace_id,display_name) values
- ('bbbbbbbb-3431-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Aina'),
- ('bbbbbbbb-3431-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','Synthetic Ben'),
- ('bbbbbbbb-3431-0000-0000-000000000003','11111111-1111-1111-1111-111111111111','Synthetic Unlinked'),
- ('bbbbbbbb-3431-0000-0000-000000000099','99999999-3431-0000-0000-000000000099','Synthetic Foreign PIC');
+-- The acting rep is the card PIC of the contacts whose relationships it edits.
+insert into identity.contacts(id,workspace_id,display_name,owner_id) values
+ ('bbbbbbbb-3431-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Aina','aaaaaaaa-0000-0000-0000-000000000003'),
+ ('bbbbbbbb-3431-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','Synthetic Ben','aaaaaaaa-0000-0000-0000-000000000003'),
+ ('bbbbbbbb-3431-0000-0000-000000000003','11111111-1111-1111-1111-111111111111','Synthetic Unlinked','aaaaaaaa-0000-0000-0000-000000000003'),
+ ('bbbbbbbb-3431-0000-0000-000000000099','99999999-3431-0000-0000-000000000099','Synthetic Foreign PIC',null);
 insert into identity.contact_points(workspace_id,contact_id,kind,raw_value,normalized_value,is_primary) values
  ('11111111-1111-1111-1111-111111111111','bbbbbbbb-3431-0000-0000-000000000001','phone','0128877001','+60128877001',true),
  ('11111111-1111-1111-1111-111111111111','bbbbbbbb-3431-0000-0000-000000000002','phone','0128877002','+60128877002',true),

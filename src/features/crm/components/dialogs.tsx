@@ -14,8 +14,10 @@ import { FormDialog, formToObject } from "@/features/crm/components/form-dialog"
 import { EntitySearch } from "@/features/crm/components/entity-search";
 import { EnumSelect, MemberSelect, clean, type MemberOption } from "@/features/crm/components/selects";
 import { ACCOUNT_TYPES, ACTIVITY_KINDS, CUSTOMER_TYPES, PRODUCT_INTERESTS, PROJECT_STATUSES, PROJECT_TYPES, SOURCE_CHANNELS } from "@/features/crm/schema";
+import { ROLE_PERMISSIONS, type RoleKey } from "@/lib/rbac/matrix";
 import { addActivityAction, addConsentAction, addContactPointAction, addTaskAction, createContactAction, linkContactAccountAction, revealContactPointsAction, updateContactAction } from "@/server/commands/contacts";
 import { addAccountAliasAction, createAccountAction, updateAccountAction } from "@/server/commands/accounts";
+import { transferCustomerCardAction } from "@/server/commands/customer-cards";
 import { addProjectSiteAction, createProjectOpportunityAction, updateProjectAction } from "@/server/commands/projects";
 import type { ContactDetail } from "@/server/queries/contacts";
 import type { AccountDetail } from "@/server/queries/accounts";
@@ -225,6 +227,34 @@ export function ConsentDialog({ open, onOpenChange, contactId }: DialogProps & {
   );
 }
 
+/* ------------------------------------------------------------------ customer card PIC */
+
+export const PIC_HINT = "The salesperson who owns this customer card. Only the PIC can edit it; a sales manager changes the PIC with Transfer PIC.";
+
+export function TransferPicDialog({ open, onOpenChange, card, id, currentOwnerId, members }: DialogProps & { card: "contact" | "account"; id: string; currentOwnerId: string | null; members: MemberOption[] }) {
+  const router = useRouter();
+  // Only people who can hold a customer card (sales.write) are offered.
+  const salespeople = members.filter((m) => m.user_id !== currentOwnerId && m.role_key && ROLE_PERMISSIONS[m.role_key as RoleKey]?.includes("sales.write"));
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Transfer PIC"
+      description={`Hand this ${card} card to another salesperson. Only the new PIC will be able to edit it. The change is audited with your name, the old and new PIC, the time and your reason.`}
+      submitLabel="Transfer"
+      action={async (fd) => transferCustomerCardAction({ card, id, ...clean(formToObject(fd)) })}
+      onSuccess={() => router.refresh()}
+    >
+      <Field label="New PIC" required>
+        <MemberSelect name="owner_id" members={salespeople} placeholder="Choose a salesperson" />
+      </Field>
+      <Field label="Reason" htmlFor="reason" required hint="Recorded in the audit trail.">
+        <Textarea id="reason" name="reason" rows={2} required minLength={3} />
+      </Field>
+    </FormDialog>
+  );
+}
+
 /* ------------------------------------------------------------------ accounts */
 
 export function NewAccountDialog({ open, onOpenChange, members }: DialogProps & { members: MemberOption[] }) {
@@ -271,8 +301,8 @@ function AccountFields({ members, account }: { members: MemberOption[]; account?
         <Field label="Website" htmlFor="website">
           <Input id="website" name="website" defaultValue={account?.website ?? ""} />
         </Field>
-        <Field label="Owner">
-          <MemberSelect name="owner_id" members={members} defaultValue={account?.owner_id} />
+        <Field label="PIC" tip={PIC_HINT}>
+          <p className="flex h-9 items-center text-sm">{account ? (members.find((m) => m.user_id === account.owner_id)?.full_name ?? "No PIC yet") : "You"}</p>
         </Field>
       </div>
       {!account && (
