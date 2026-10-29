@@ -18,14 +18,17 @@ using(workspace_id in(select core.member_workspace_ids()) and (select core.has_p
 -- All project mutations go through the versioned command, including assignment.
 revoke insert,update,delete on identity.projects,api.projects from authenticated;
 
+-- Workspace foreign keys cascade: core.reset_demo_workspace() deletes the demo
+-- workspace and relies on every reference into it cascading. Events keep the
+-- default restriction on project_id so history cannot be deleted with a project.
 create table identity.project_requests(
- workspace_id uuid not null references core.workspaces(id),request_id uuid not null,actor_id uuid not null references auth.users(id),
+ workspace_id uuid not null references core.workspaces(id) on delete cascade,request_id uuid not null,actor_id uuid not null references auth.users(id),
  payload jsonb not null,result jsonb not null,primary key(workspace_id,request_id)
 );
 alter table identity.project_requests enable row level security;
 revoke all on identity.project_requests from anon,authenticated;
 create table identity.project_events(
- id uuid primary key default gen_random_uuid(),workspace_id uuid not null references core.workspaces(id),
+ id uuid primary key default gen_random_uuid(),workspace_id uuid not null references core.workspaces(id) on delete cascade,
  project_id uuid not null references identity.projects(id),actor_id uuid not null references auth.users(id),
  kind text not null check(kind in('registered','enriched','assigned','follow_up')),note text check(length(note)<=4000),
  previous_owner_id uuid references auth.users(id),owner_id uuid references auth.users(id),
@@ -63,6 +66,8 @@ create function api.project_identity_search(p_kind text,p_query text default '',
 returns table(id uuid,name text) language plpgsql stable security definer set search_path='' as $$
 declare ws uuid:=core.current_workspace_id(); q text:=coalesce(core.normalize_text(btrim(p_query)),''); digits text:=regexp_replace(coalesce(p_query,''),'[^0-9]','','g');
 begin
+ -- Matching a personal phone number is a CRM lookup; staff without sales access search by name only.
+ if not core.has_permission('sales.read') then digits:=''; end if;
  perform core.require_permission('projects.write'); perform core.require_workspace(ws);
  if length(q)>200 or p_kind not in ('account','contact') then raise exception 'Invalid search' using errcode='23514'; end if;
  if length(q)<2 and p_account_id is null then return; end if;
@@ -91,7 +96,9 @@ declare
  note text:=nullif(btrim(p_input->>'note'),''); title text:=btrim(p_input->>'name'); event_kind text;
 begin
  perform core.require_permission('projects.write'); perform core.require_workspace(ws);
- if p_action not in('create','edit','assign','follow_up') or p_request_id is null then raise exception 'Invalid project command' using errcode='23514'; end if;
+ -- A NULL action would make every comparison below NULL and skip its guard, so
+ -- reject it (and any unknown action) before anything else runs.
+ if p_action is null or p_action not in('create','edit','assign','follow_up') or p_request_id is null then raise exception 'Invalid project command' using errcode='23514'; end if;
  if p_action in('assign','follow_up') then perform core.require_permission('projects.follow_up'); end if;
  perform pg_advisory_xact_lock(hashtextextended(ws::text||p_request_id::text,0));
  select * into prior from identity.project_requests where workspace_id=ws and request_id=p_request_id;
@@ -121,7 +128,7 @@ begin
      if (aid is distinct from p.account_id or cid is distinct from p.primary_contact_id) and exists(select 1 from sales.opportunities o where o.project_id=pid and o.workspace_id=ws and ((o.account_id is not null and o.account_id is distinct from aid) or (o.contact_id is not null and o.contact_id is distinct from cid))) then
        raise exception 'This change conflicts with an existing opportunity customer. Keep the linked customer or register a separate project.' using errcode='23514';
      end if;
-     update identity.projects set name=title,account_id=aid,primary_contact_id=cid,follow_up_contact_id=pic,project_type=coalesce(nullif(p_input->>'project_type',''),'other'),status=coalesce(nullif(p_input->>'status',''),p.status),area=nullif(p_input->>'area',''),product_specification=nullif(btrim(p_input->>'product_specification'),''),expected_start=nullif(p_input->>'expected_start','')::date,expected_completion=nullif(p_input->>'expected_completion','')::date,notes=nullif(p_input->>'notes','') where id=pid;
+     update identity.projects set name=title,account_id=aid,primary_contact_id=cid,follow_up_contact_id=pic,project_type=coalesce(nullif(p_input->>'project_type',''),'other'),status=coalesce(nullif(p_input->>'status',''),p.status),area=nullif(p_input->>'area',''),product_specification=nullif(btrim(p_input->>'product_specification'),''),expected_start=nullif(p_input->>'expected_start','')::date,expected_completion=nullif(p_input->>'expected_completion','')::date,notes=nullif(p_input->>'notes','') where id=pid and workspace_id=ws;
      event_kind:='enriched';
    end if;
    if p_input ? 'site_address' then
@@ -134,17 +141,19 @@ begin
    end if;
  elsif p_action='assign' then
    if p.owner_id is not null and handler is distinct from p.owner_id and note is null then raise exception 'Add a handover reason when changing the handler' using errcode='23514'; end if;
-   update identity.projects set owner_id=handler where id=pid;
+   update identity.projects set owner_id=handler where id=pid and workspace_id=ws;
    event_kind:='assigned';
- else
+ elsif p_action='follow_up' then
    if note is null or length(note)>4000 then raise exception 'Describe the follow-up (up to 4000 characters)' using errcode='23514'; end if;
    if nullif(p_input->>'next_action_due_at','') is not null and nullif(btrim(p_input->>'next_action'),'') is null then raise exception 'Describe the next action for its due date' using errcode='23514'; end if;
-   update identity.projects set last_follow_up_at=now(),last_follow_up_by=uid,next_action=nullif(btrim(p_input->>'next_action'),''),next_action_due_at=nullif(p_input->>'next_action_due_at','')::timestamptz where id=pid;
+   update identity.projects set last_follow_up_at=now(),last_follow_up_by=uid,next_action=nullif(btrim(p_input->>'next_action'),''),next_action_due_at=nullif(p_input->>'next_action_due_at','')::timestamptz where id=pid and workspace_id=ws;
    event_kind:='follow_up';
+ else
+   raise exception 'Invalid project command' using errcode='23514';
  end if;
  insert into identity.project_events(workspace_id,project_id,actor_id,kind,note,previous_owner_id,owner_id,next_action,next_action_due_at)
- select ws,pid,uid,event_kind,note,p.owner_id,x.owner_id,x.next_action,x.next_action_due_at from identity.projects x where x.id=pid;
- select jsonb_build_object('project_id',id,'version',version) into result from identity.projects where id=pid;
+ select ws,pid,uid,event_kind,note,p.owner_id,x.owner_id,x.next_action,x.next_action_due_at from identity.projects x where x.id=pid and x.workspace_id=ws;
+ select jsonb_build_object('project_id',id,'version',version) into result from identity.projects where id=pid and workspace_id=ws;
  insert into identity.project_requests values(ws,p_request_id,uid,payload,result);
  return result;
 end $$;

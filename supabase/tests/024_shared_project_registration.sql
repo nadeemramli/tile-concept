@@ -10,6 +10,7 @@ insert into identity.projects(id,workspace_id,name) values('bbbbbbbb-3422-0000-0
 insert into identity.accounts(id,workspace_id,name) values('aaaaaaaa-3422-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Registration Company');
 insert into identity.contacts(id,workspace_id,display_name) values('cccccccc-3422-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Registration Contact');
 insert into identity.account_contact_relationships(workspace_id,account_id,contact_id) values('11111111-1111-1111-1111-111111111111','aaaaaaaa-3422-0000-0000-000000000001','cccccccc-3422-0000-0000-000000000001');
+insert into identity.contact_points(workspace_id,contact_id,kind,raw_value,normalized_value) values('11111111-1111-1111-1111-111111111111','cccccccc-3422-0000-0000-000000000001','phone','+60 12-934 2271','60129342271');
 set local role authenticated;
 -- Catalog staff have project access without receiving general CRM write or assignment permissions.
 select pg_temp.login('aaaaaaaa-0000-0000-0000-000000000006');
@@ -25,12 +26,34 @@ select lives_ok($$select api.project_command('edit',pg_temp.input('{"name":"Synt
 select is((api.project_directory(pg_temp.pid())->0->>'account_name'),'Synthetic Registration Company','project directory exposes linked company display name');
 select is((select count(*) from api.project_identity_search('contact','Registration')),1::bigint,'project-only identity lookup works without general sales access');
 select is((select count(*) from api.contacts where id='cccccccc-3422-0000-0000-000000000001'),0::bigint,'project lookup does not grant raw CRM access');
+select is((select count(*) from api.project_identity_search('contact','9342271')),0::bigint,'staff without sales access cannot find a customer by phone digits');
 select throws_ok($$select api.project_command('assign',pg_temp.input('{"owner_id":"aaaaaaaa-0000-0000-0000-000000000006"}'),gen_random_uuid())$$,'42501',null,'non-sales staff cannot claim projects');
 select throws_ok($$select api.project_command('follow_up',pg_temp.input('{"note":"No rights"}'),gen_random_uuid())$$,'42501',null,'non-sales staff cannot record sales follow-up');
+-- A NULL or unknown action must not fall through to the follow-up branch.
+reset role;
+create temp table snapshot as select (select to_jsonb(p) from identity.projects p where p.id=pg_temp.pid()) own,(select to_jsonb(p) from identity.projects p where p.id='bbbbbbbb-3422-0000-0000-000000000099') foreign_row,(select count(*) from identity.project_events) events,(select count(*) from identity.project_requests) requests;
+set local role authenticated;
+select throws_ok($$select api.project_command(null,jsonb_build_object('id',pg_temp.pid(),'note','NULL action, no version'),gen_random_uuid())$$,'23514','Invalid project command','NULL action on own project without version rejected');
+select throws_ok($$select api.project_command(null,jsonb_build_object('id',pg_temp.pid(),'version',99,'note','NULL action, stale version'),gen_random_uuid())$$,'23514','Invalid project command','NULL action on own project with stale version rejected');
+select throws_ok($$select api.project_command(null,'{"id":"bbbbbbbb-3422-0000-0000-000000000099","note":"NULL action, foreign"}',gen_random_uuid())$$,'23514','Invalid project command','NULL action on foreign project rejected');
+select throws_ok($$select api.project_command('delete',jsonb_build_object('id',pg_temp.pid(),'note','Unknown action'),gen_random_uuid())$$,'23514','Invalid project command','unknown action rejected');
+reset role;
+select ok((select own=(select to_jsonb(p) from identity.projects p where p.id=pg_temp.pid()) and foreign_row=(select to_jsonb(p) from identity.projects p where p.id='bbbbbbbb-3422-0000-0000-000000000099') and events=(select count(*) from identity.project_events) and requests=(select count(*) from identity.project_requests) from snapshot),'non-sales malformed actions changed no project, event or request rows');
+set local role authenticated;
 select lives_ok($$select api.project_command('create','{"name":"Synthetic direct assignment","owner_id":"aaaaaaaa-0000-0000-0000-000000000003"}',gen_random_uuid())$$,'registrar can route a new project directly to an eligible salesperson');
 select throws_ok($$select api.project_command('create','{"name":"Synthetic invalid assignment","owner_id":"aaaaaaaa-0000-0000-0000-000000000006"}',gen_random_uuid())$$,'23514','Choose an active salesperson in this company','registrar cannot assign follow-up to a non-sales member');
 select pg_temp.login('aaaaaaaa-0000-0000-0000-000000000003');
 select ok(not core.has_permission('sales.assign') and core.has_permission('projects.follow_up'),'salespeople gain project assignment without lead assignment rights');
+reset role;
+drop table snapshot;
+create temp table snapshot as select (select to_jsonb(p) from identity.projects p where p.id=pg_temp.pid()) own,(select to_jsonb(p) from identity.projects p where p.id='bbbbbbbb-3422-0000-0000-000000000099') foreign_row,(select count(*) from identity.project_events) events,(select count(*) from identity.project_requests) requests;
+set local role authenticated;
+select throws_ok($$select api.project_command(null,'{"id":"bbbbbbbb-3422-0000-0000-000000000099","note":"NULL action, foreign"}',gen_random_uuid())$$,'23514','Invalid project command','salesperson NULL action on foreign project rejected');
+select throws_ok($$select api.project_command(null,jsonb_build_object('id',pg_temp.pid(),'note','NULL action, no version'),gen_random_uuid())$$,'23514','Invalid project command','salesperson NULL action without version rejected');
+reset role;
+select ok((select own=(select to_jsonb(p) from identity.projects p where p.id=pg_temp.pid()) and foreign_row=(select to_jsonb(p) from identity.projects p where p.id='bbbbbbbb-3422-0000-0000-000000000099') and events=(select count(*) from identity.project_events) and requests=(select count(*) from identity.project_requests) from snapshot),'salesperson malformed actions changed no project, event or request rows');
+set local role authenticated;
+select is((select count(*) from api.project_identity_search('contact','9342271')),1::bigint,'salespeople can still find a customer by phone digits');
 select lives_ok($$select api.project_command('assign',pg_temp.input('{"owner_id":"aaaaaaaa-0000-0000-0000-000000000003","note":"Claimed"}'),'dddddddd-3422-0000-0000-000000000002')$$,'salesperson claims an unassigned project');
 select throws_ok($$select api.project_command('assign',jsonb_build_object('id',pg_temp.pid(),'version',2,'owner_id','aaaaaaaa-0000-0000-0000-000000000004','note','Claimed from stale list'),gen_random_uuid())$$,'40001','Project changed. Refresh before saving or assigning it.','stale concurrent claim cannot overwrite current handler');
 select throws_ok($$update api.projects set owner_id='aaaaaaaa-0000-0000-0000-000000000004' where id=pg_temp.pid()$$,'42501',null,'direct update cannot bypass assignment history or concurrency checks');
@@ -54,5 +77,10 @@ select is((select count(*) from sales.opportunities where project_id=pg_temp.pid
 select ok(not has_function_privilege('anon','api.project_command(text,jsonb,uuid)','EXECUTE'),'anonymous registration denied');
 select ok(not has_function_privilege('anon','api.project_directory(uuid)','EXECUTE'),'shared directory is not public internet access');
 select ok(not has_table_privilege('authenticated','identity.project_requests','SELECT'),'idempotency payloads are private');
+select throws_ok($$delete from identity.projects where id=pg_temp.pid()$$,'23503',null,'project history cannot be deleted by deleting its project');
+-- The weekly demo reset deletes the demo workspace; a guest-registered project must not block it.
+select set_config('request.jwt.claims','{"sub":"00000000-9999-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select api.project_command('create','{"name":"Synthetic guest project"}',gen_random_uuid())$$,'guest registers a project in the demo workspace');
+select lives_ok($$select core.reset_demo_workspace()$$,'demo reset still deletes a workspace holding project requests and events');
 select * from finish();
 rollback;
