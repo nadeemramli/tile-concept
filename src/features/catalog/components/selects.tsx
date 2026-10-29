@@ -10,10 +10,10 @@ export interface Option {
 const NONE = "__none__";
 
 /** Select with an optional "None" entry; value "" means none. */
-export function SimpleSelect({ value, onChange, options, placeholder = "Select…", allowNone = true, noneLabel = "None", className, id, disabled }: { value: string | null | undefined; onChange: (v: string) => void; options: Option[]; placeholder?: string; allowNone?: boolean; noneLabel?: string; className?: string; id?: string; disabled?: boolean }) {
+export function SimpleSelect({ value, onChange, options, placeholder = "Select…", allowNone = true, noneLabel = "None", className, id, disabled, ariaLabel }: { value: string | null | undefined; onChange: (v: string) => void; options: Option[]; placeholder?: string; allowNone?: boolean; noneLabel?: string; className?: string; id?: string; disabled?: boolean; ariaLabel?: string }) {
   return (
     <Select value={value ? value : allowNone ? NONE : undefined} onValueChange={(v) => onChange(v === NONE ? "" : v)} disabled={disabled}>
-      <SelectTrigger id={id} className={className ?? "h-8 w-full text-sm"}>
+      <SelectTrigger id={id} className={className ?? "h-8 w-full text-sm"} aria-label={ariaLabel}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
