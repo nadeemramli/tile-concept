@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 assert(["127.0.0.1", "localhost"].includes(new URL(status.API_URL).hostname), "This test refuses hosted targets");
@@ -54,7 +54,7 @@ const card = {
 };
 const allCards = Object.values(card);
 
-async function signIn(p: Person): Promise<SupabaseClient> {
+async function signIn(p: Person) {
   const client = createClient(status.API_URL, status.PUBLISHABLE_KEY ?? status.ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false }, db: { schema: "api" } });
   const { error } = await client.auth.signInWithPassword({ email: email(p), password: PASSWORD });
   if (error) throw error;
