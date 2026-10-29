@@ -7,6 +7,8 @@
  * shows it on hover and focus, and Help & glossary lists it, so the wording
  * lives here and nowhere else.
  */
+import { COMPETITOR_EVIDENCE as EVIDENCE, COMPETITOR_RELATIONSHIPS as RELATIONSHIPS, OUTCOME_REASONS } from "@/lib/domain/outcome-reasons";
+
 export type StatusTone = "neutral" | "success" | "warning" | "destructive" | "info" | "ai";
 
 export interface StatusMeta {
@@ -23,16 +25,16 @@ export const LEAD_STATUS: StatusMap = {
   contact_attempted: { label: "Contact attempted", tone: "warning", hint: "Someone tried to reach the customer but has not spoken to them yet." },
   contacted: { label: "Contacted", tone: "info", hint: "A conversation happened. The first-response clock has stopped." },
   qualified: { label: "Qualified", tone: "success", hint: "A real need with a budget and timing. Ready to convert into a project and opportunity." },
-  disqualified: { label: "Lost", tone: "neutral", hint: "Closed without a sale, with a recorded reason. History remains searchable; reopen when the customer returns." },
+  disqualified: { label: "Lost / rejected", tone: "neutral", hint: "Closed without a sale: either a sales loss or rejected at qualification (spam, test, not a buying inquiry). The drawer shows which, the reason and the effective date. Reopening keeps the earlier outcome in history." },
   converted: { label: "Opportunity created", tone: "info", hint: "A project and opportunity were created. This does not mean a purchase was recorded." },
-  duplicate: { label: "Duplicate", tone: "neutral", hint: "The same person already had a lead or contact. This one is linked, not deleted." },
+  duplicate: { label: "Duplicate", tone: "neutral", hint: "Rejected at qualification because the same buying need is already handled. Linked or explained, not deleted, and never counted as a sales loss." },
 };
 
 export const OPPORTUNITY_STATUS: StatusMap = {
   open: { label: "Open", tone: "info", hint: "Still being worked. Counts toward open pipeline value." },
   won: { label: "Won", tone: "success", hint: "Closed with a sale. A reason is recorded when the stage is set." },
-  lost: { label: "Lost", tone: "destructive", hint: "Closed without a sale. The reason is required and kept." },
-  deferred: { label: "Deferred", tone: "neutral", hint: "Parked by the customer, not lost. Leaves open pipeline until reopened." },
+  lost: { label: "Lost", tone: "destructive", hint: "Closed without a sale. A listed reason and the date it took effect are required; reopening keeps this loss in history." },
+  deferred: { label: "Deferred", tone: "neutral", hint: "Parked by the customer with a review date, not lost. Leaves open pipeline until reopened or closed." },
 };
 
 export const STAGE_GROUP_TONE: Record<string, StatusTone> = { open: "info", won: "success", lost: "destructive", deferred: "neutral" };
@@ -187,6 +189,24 @@ export const FEEDBACK_REQUEST_STATUS: StatusMap = {
   expired: { label: "Expired", tone: "destructive", hint: "The 7-day private link lapsed before the customer answered." },
   revoked: { label: "Revoked", tone: "destructive", hint: "Staff withdrew the request. The link no longer works." },
 };
+
+/** What happened to a pursuit. Each outcome is kept as an event; reopening adds one instead of erasing. */
+export const PURSUIT_OUTCOME: StatusMap = {
+  lost: { label: "Lost", tone: "destructive", hint: "A genuine sales loss, with a listed reason and the date it took effect. Counted in loss reports for that week even if reopened later." },
+  rejected: { label: "Rejected at qualification", tone: "neutral", hint: "Not a valid buying inquiry: spam, test, duplicate, out of area or out of scope. Never counted as a sales loss." },
+  deferred: { label: "Deferred", tone: "warning", hint: "The customer is not ready. A review date and a reminder are set; it is neither lost nor dropped." },
+  reopened: { label: "Reopened", tone: "info", hint: "Work resumed. The earlier outcome, its reason, who recorded it and its evidence remain in history." },
+};
+
+const reasonMap = (type: keyof typeof OUTCOME_REASONS, tone: StatusTone): StatusMap =>
+  Object.fromEntries(OUTCOME_REASONS[type].map((r) => [r.key, { label: r.label, tone, hint: r.hint }]));
+
+/** Reason picklists shared with core.outcome_reasons; see src/lib/domain/outcome-reasons.ts. */
+export const LOSS_REASON: StatusMap = reasonMap("lost", "destructive");
+export const REJECTION_REASON: StatusMap = reasonMap("rejected", "neutral");
+export const DEFERRAL_REASON: StatusMap = reasonMap("deferred", "warning");
+export const COMPETITOR_RELATIONSHIP: StatusMap = Object.fromEntries(RELATIONSHIPS.map((r) => [r.key, { label: r.label, tone: "neutral" as const, hint: r.hint }]));
+export const COMPETITOR_EVIDENCE: StatusMap = Object.fromEntries(EVIDENCE.map((r) => [r.key, { label: r.label, tone: "neutral" as const, hint: r.hint }]));
 
 export function statusMeta(map: StatusMap, value: string | null | undefined): StatusMeta {
   if (!value) return { label: "—", tone: "neutral" };

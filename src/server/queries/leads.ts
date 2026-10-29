@@ -5,6 +5,8 @@ import { getMemberMap } from "@/server/queries/reference";
 import type { InboxCounts, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { LeadView } from "@/features/inbox/schema";
 import type { TimelineItem } from "@/components/patterns/timeline";
+import type { PursuitOutcome } from "@/features/outcomes/types";
+import { getPursuitOutcomes } from "@/server/queries/outcomes";
 
 type RawLead = Record<string, unknown>;
 
@@ -160,6 +162,7 @@ export interface InquiryDetail {
   lead: LeadRow;
   intake: IntakeEventRow[];
   timeline: TimelineItem[];
+  outcomes: PursuitOutcome[];
   contact: Awaited<ReturnType<typeof getLinkedContactSummary>>;
 }
 
@@ -169,8 +172,8 @@ export interface InquiryDetail {
  * on the lead row; only the linked contact summary depends on it.
  */
 export async function getInquiryDetail(leadId: string): Promise<InquiryDetail | null> {
-  const [lead, intake, timeline] = await Promise.all([getLead(leadId), getLeadIntakeEvents(leadId), getLeadTimeline(leadId)]);
+  const [lead, intake, timeline, outcomes] = await Promise.all([getLead(leadId), getLeadIntakeEvents(leadId), getLeadTimeline(leadId), getPursuitOutcomes({ leadId })]);
   if (!lead) return null;
   const contact = await getLinkedContactSummary(lead.contact_id);
-  return { lead, intake, timeline, contact };
+  return { lead, intake, timeline, outcomes, contact };
 }
