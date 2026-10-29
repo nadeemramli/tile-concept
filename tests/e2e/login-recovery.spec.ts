@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { test, expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
-import { expectSignedInAs, expectStable, QUIET_MS } from "./recovery-checks";
+import { expectLanded, expectSignedInAs, expectStable, QUIET_MS } from "./recovery-checks";
 
 const PASSWORD = "TileDemo!2026";
 const WORKSPACE = "11111111-1111-1111-1111-111111111111";
@@ -102,11 +102,11 @@ const signOutButton = (page: Page) => page.getByRole("button", { name: /^(Sign o
 /**
  * The explanation, readable and stable, with the way out — checked on the
  * finished page: the redirect has landed and its document has loaded, so the
- * identity is the one a person reads, not a hidden streamed copy.
+ * identity is the one a person reads, not a hidden streamed copy, and the
+ * quiet window starts after the landing rather than inside it.
  */
 async function expectNoAccess(page: Page, email: string) {
-  await expect(page).toHaveURL(/\/no-access$/);
-  await page.waitForLoadState("load");
+  await expectLanded(page, /\/no-access$/);
   await expect(noAccessHeading(page)).toBeVisible();
   await expectSignedInAs(page, email);
   await expect(signOutButton(page)).toBeVisible();
@@ -188,8 +188,9 @@ test.describe("no active membership", () => {
     // Watched from the commit, before the explanation hydrates. The router then
     // records its state with replaceState on the same URL: a navigation event
     // that the previous check ("no framenavigated at all") failed on, although
-    // the page never moved.
+    // the page never moved. The quiet window starts once the redirect has landed.
     const anyNavigation = page.waitForEvent("framenavigated", { timeout: QUIET_MS });
+    await expectLanded(page, /\/no-access$/);
     await expectStable(page);
     expect((await anyNavigation).url()).toMatch(/\/no-access$/);
     // One redirect, one document each: nothing went round again.

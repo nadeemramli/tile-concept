@@ -1,7 +1,8 @@
 /**
- * TILE-67 checks for a recovery screen: who it says is signed in, and that it
- * stays put. Shared by login-recovery.spec.ts and its controls in
- * recovery-checks.spec.ts, which prove each check fails on the case it guards.
+ * TILE-67 checks for a recovery screen: that the redirect to it has landed,
+ * who it says is signed in, and that it stays put. Shared by
+ * login-recovery.spec.ts and its controls in recovery-checks.spec.ts, which
+ * prove each check fails on the case it guards.
  */
 import { expect, type Page } from "@playwright/test";
 
@@ -21,6 +22,27 @@ export async function expectSignedInAs(page: Page, email: string, { timeout }: {
   await expect(identity, "one visible signed-in identity").toHaveCount(1, { timeout });
   await expect(identity).toHaveText(new RegExp(`${SIGNED_IN_AS.source}${email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`), { timeout });
   await expect(page.getByText(email, { exact: true }).filter({ visible: true }), "the email is shown once").toHaveCount(1, { timeout });
+}
+
+/**
+ * The redirect to `url` has landed. Next delivers a redirect raised after the
+ * response started streaming — every page here streams, the root providers
+ * wrap it in <Suspense> — twice: in the RSC payload, which the client router
+ * follows, and as `<meta id="__next-page-redirect" http-equiv="refresh"
+ * content="1;url=…">` for a browser without JavaScript. When the router follows
+ * it before that tag has streamed in, it lands softly on `url` and the browser
+ * still loads `url` once more, a second after the old document's load. That
+ * document is the same redirect landing, so it is waited for here; once the
+ * tag's document is gone, any navigation is the page moving, which
+ * expectStable rejects.
+ */
+export async function expectLanded(page: Page, url: RegExp) {
+  await expect(page).toHaveURL(url);
+  // The old document has streamed in full, so a pending tag is in it by now.
+  await page.waitForLoadState("load");
+  await expect(page.locator("meta#__next-page-redirect"), "the streamed redirect has landed").toHaveCount(0);
+  await expect(page).toHaveURL(url);
+  await page.waitForLoadState("load");
 }
 
 /**
