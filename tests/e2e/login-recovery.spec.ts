@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { test, expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import { expectSignedInAs, expectStable, QUIET_MS } from "./recovery-checks";
 
 const PASSWORD = "TileDemo!2026";
 const WORKSPACE = "11111111-1111-1111-1111-111111111111";
@@ -75,69 +76,13 @@ test.afterAll(() => {
 
 /** Every page error fails the test. */
 let browserErrors: string[] = [];
-// TILE-67 DIAGNOSTIC (temporary): the main frame's navigation lifecycle, so a
-// navigation inside expectStable's window can be told apart (document load,
-// same-document history update, or a redirect loop).
-let navLog: string[] = [];
-let t0 = 0;
-const stamp = () => `${String(Date.now() - t0).padStart(6)}ms`;
-test.beforeEach(async ({ page }) => {
+test.beforeEach(({ page }) => {
   browserErrors = [];
   page.on("pageerror", (error) => browserErrors.push(error.message));
-  navLog = [];
-  t0 = Date.now();
-  await page.addInitScript(() => {
-    const w = window as unknown as { __tcDoc: string; __tcHist: string[] };
-    w.__tcDoc = Math.random().toString(36).slice(2, 8);
-    w.__tcHist = [];
-    for (const fn of ["pushState", "replaceState"] as const) {
-      const original = history[fn].bind(history);
-      history[fn] = (data: unknown, unused: string, url?: string | URL | null) => {
-        w.__tcHist.push(`${Math.round(performance.now())} ${fn} ${url ?? "(same)"} -> doc ${w.__tcDoc}`);
-        return original(data, unused, url);
-      };
-    }
-    document.addEventListener("DOMContentLoaded", () => w.__tcHist.push(`${Math.round(performance.now())} DOMContentLoaded doc ${w.__tcDoc} ${location.pathname}`));
-  });
-  page.on("request", (r) => {
-    if (r.isNavigationRequest() && r.frame() === page.mainFrame()) navLog.push(`${stamp()} document request ${r.method()} ${new URL(r.url()).pathname}${new URL(r.url()).search}`);
-  });
-  page.on("response", (r) => {
-    if (r.request().isNavigationRequest() && r.frame() === page.mainFrame()) navLog.push(`${stamp()} document response ${r.status()} ${new URL(r.url()).pathname}`);
-  });
-  page.on("framenavigated", (f) => {
-    if (f === page.mainFrame()) navLog.push(`${stamp()} framenavigated ${new URL(f.url()).pathname}${new URL(f.url()).search}`);
-  });
-  page.on("domcontentloaded", () => navLog.push(`${stamp()} domcontentloaded ${new URL(page.url()).pathname}`));
-  page.on("load", () => navLog.push(`${stamp()} load ${new URL(page.url()).pathname}`));
 });
-test.afterEach(async ({ page }, testInfo) => {
-  if (navLog.length) {
-    const hist = await page.evaluate(() => (window as unknown as { __tcHist?: string[] }).__tcHist ?? []).catch((e) => [`(unreadable: ${String(e).slice(0, 80)})`]);
-    console.log(`[TILE-67 diag] ${testInfo.title}\n  ${navLog.join("\n  ")}\n  -- history/DOM log of the last document --\n  ${hist.join("\n  ")}`);
-  }
+test.afterEach(() => {
   expect(browserErrors).toEqual([]);
 });
-
-/** TILE-67 DIAGNOSTIC (temporary): every element whose text is the email, and why it is or is not visible. */
-async function logIdentity(page: Page, email: string, where: string) {
-  const rows = await page
-    .evaluate((email) => {
-      const out: string[] = [];
-      const w = window as unknown as { __tcDoc?: string };
-      out.push(`doc ${w.__tcDoc} readyState=${document.readyState} meta-redirect=${!!document.getElementById("__next-page-redirect")} url=${location.pathname}${location.search}`);
-      for (const el of Array.from(document.querySelectorAll("body *"))) {
-        if (el.children.length === 0 && el.textContent === email) {
-          const hidden = el.closest("[hidden]");
-          const r = el.getBoundingClientRect();
-          out.push(`<${el.tagName.toLowerCase()} class="${el.getAttribute("class")}"> hiddenAncestor=${hidden ? `${hidden.tagName}#${hidden.id}` : "none"} rect=${Math.round(r.width)}x${Math.round(r.height)}`);
-        }
-      }
-      return out;
-    }, email)
-    .catch((e) => [`(unreadable: ${String(e).slice(0, 80)})`]);
-  navLog.push(`${stamp()} identity @${where}: ${rows.join(" | ")}`);
-}
 
 async function submitLogin(page: Page, email: string) {
   await page.locator("#email").fill(email);
@@ -154,22 +99,16 @@ async function signIn(page: Page, email: string, path = "/login") {
 const noAccessHeading = (page: Page) => page.getByRole("heading", { level: 1, name: /^(No workspace access|Tiada akses ruang kerja)$/ });
 const signOutButton = (page: Page) => page.getByRole("button", { name: /^(Sign out and use another account|Log keluar dan guna akaun lain)$/ });
 
-/** The page stays put: no further navigation in the window, which a loop never allows. */
-async function expectStable(page: Page) {
-  navLog.push(`${stamp()} expectStable window opens at ${new URL(page.url()).pathname}`);
-  try {
-    await expect(page.waitForEvent("framenavigated", { timeout: 2_000 })).rejects.toThrow(/Timeout/);
-  } finally {
-    navLog.push(`${stamp()} expectStable window closes`);
-  }
-}
-
-/** The explanation, readable and stable, with the way out. */
+/**
+ * The explanation, readable and stable, with the way out — checked on the
+ * finished page: the redirect has landed and its document has loaded, so the
+ * identity is the one a person reads, not a hidden streamed copy.
+ */
 async function expectNoAccess(page: Page, email: string) {
   await expect(page).toHaveURL(/\/no-access$/);
+  await page.waitForLoadState("load");
   await expect(noAccessHeading(page)).toBeVisible();
-  await logIdentity(page, email, "before email assertion");
-  await expect(page.getByText(email)).toBeVisible();
+  await expectSignedInAs(page, email);
   await expect(signOutButton(page)).toBeVisible();
   await expectStable(page);
   // No app shell, no workspace, no business data.
@@ -235,6 +174,28 @@ test.describe("no active membership", () => {
       await expect(page.getByText("MW-HEX-WHT")).toHaveCount(0);
     }
     await expectNoWorkspaceData(context);
+  });
+
+  test("a redirect to the explanation ends in one same-URL history update, not a loop", async ({ page }) => {
+    await signIn(page, NONE.email);
+    await expectNoAccess(page, NONE.email);
+    const documents: string[] = [];
+    page.on("request", (r) => {
+      if (r.isNavigationRequest() && r.frame() === page.mainFrame()) documents.push(new URL(r.url()).pathname);
+    });
+    await page.goto("/merchandise/stock?tab=sql&q=MW-HEX-WHT", { waitUntil: "commit" });
+    await page.waitForURL(/\/no-access$/, { waitUntil: "commit" });
+    // Watched from the commit, before the explanation hydrates. The router then
+    // records its state with replaceState on the same URL: a navigation event
+    // that the previous check ("no framenavigated at all") failed on, although
+    // the page never moved.
+    const anyNavigation = page.waitForEvent("framenavigated", { timeout: QUIET_MS });
+    await expectStable(page);
+    expect((await anyNavigation).url()).toMatch(/\/no-access$/);
+    // One redirect, one document each: nothing went round again.
+    expect(documents).toEqual(["/merchandise/stock", "/no-access"]);
+    await expectNoAccess(page, NONE.email);
+    await expect(page.getByText("MW-HEX-WHT")).toHaveCount(0);
   });
 
   test("real SSR with the session cookies settles in a few hops, never a /start ⇄ /login cycle", async ({ page }) => {
