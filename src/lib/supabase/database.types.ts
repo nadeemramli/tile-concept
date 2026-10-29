@@ -11624,6 +11624,10 @@ export type Database = {
       }
     }
     Functions: {
+      sync_meta_spend: { Args: { p_workspace: string; p_actor: string; p_account: string; p_rows: Json }; Returns: Json };
+      meta_sync_failed: { Args: { p_workspace: string; p_account: string }; Returns: undefined };
+      meta_sync_status: { Args: Record<PropertyKey, never>; Returns: Json };
+      marketing_journey: { Args: { p_from: string; p_to: string; p_as_of: string; p_location?: string }; Returns: Json };
       accept_intake: {
         Args: {
           p_external_id: string

@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { MarketingJourney } from "./marketing-journey";
+import type { Journey, MetaStatus } from "../journey-schema";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
@@ -15,7 +17,7 @@ const money = (n: number) => new Intl.NumberFormat("en-MY", { style: "currency",
 const selector = "h-9 rounded-md border bg-background px-2 text-sm";
 type Channel = FunnelData["channels"][number]; type Staff = FunnelData["staff"][number]; type HistoryRow = FunnelHistory["rows"][number];
 
-export function FunnelDashboard({ data, history, period, locations, canSpend }: { data: FunnelData; history: FunnelHistory | null; period: ReportPeriod; locations: { id: string; name: string }[]; canSpend: boolean }) {
+export function FunnelDashboard({ data, journey, metaStatus, history, period, locations, canSpend }: { data: FunnelData; journey: Journey; metaStatus: MetaStatus; history: FunnelHistory | null; period: ReportPeriod; locations: { id: string; name: string }[]; canSpend: boolean }) {
   const router = useRouter(); const s = data.summary;
   function href(changes: Partial<ReportPeriod> = {}, anchor = "history") {
     const params = new URLSearchParams();
@@ -55,8 +57,9 @@ export function FunnelDashboard({ data, history, period, locations, canSpend }: 
     { accessorKey: "notes", header: "Remarks", cell: ({ row }) => <span className="block max-w-80 whitespace-normal text-xs">{row.original.notes || "—"}</span> },
   ];
   const periodInfo = { grain: `${period.from} to ${period.to} · Asia/Kuala_Lumpur`, freshness: formatDateTime(data.computed_at) };
-  return <PageBody><PageHeader title="Marketing & showroom dashboard" description="Follow spending, inquiry outcomes and the showroom customer journey."><div className="flex flex-wrap gap-2">{canSpend && <Button variant="outline" asChild><Link href={`/marketing/spend?from=${period.from}&to=${period.to}`}>Enter marketing spend</Link></Button>}<Button variant="outline" onClick={() => router.refresh()}>Refresh dashboard</Button></div></PageHeader>
+  return <PageBody><PageHeader title="Marketing performance" description="See what you spend, who responds and which inquiries become invoices."><div className="flex flex-wrap gap-2">{canSpend && <Button variant="outline" asChild><Link href={`/marketing/spend?from=${period.from}&to=${period.to}`}>Enter marketing spend</Link></Button>}<Button variant="outline" onClick={() => router.refresh()}>Refresh dashboard</Button></div></PageHeader>
     <form method="get" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4"><label className="grid gap-1 text-xs font-medium">Period from<Input type="date" name="from" defaultValue={period.from} required /></label><label className="grid gap-1 text-xs font-medium">Period to<Input type="date" name="to" defaultValue={period.to} max={reportingToday()} required /></label><label className="grid gap-1 text-xs font-medium">Outcomes through<Input type="date" name="asof" defaultValue={period.asof} max={reportingToday()} required /></label><label className="grid gap-1 text-xs font-medium">Showroom<select name="location" defaultValue={period.location || ""} className={selector}><option value="">All locations</option>{locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label><Button>Apply filters</Button><span className="text-xs text-muted-foreground">Updated {formatDateTime(data.computed_at)}</span></form>
+    <MarketingJourney journey={journey} metaStatus={metaStatus} data={data} period={period} />
     <div className="space-y-3"><h2 className="text-base font-semibold">Business activity during the period</h2><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <MetricCard label="Marketing spend" value={money(s.spend)} hint={!s.spend_complete ? "Partial · spending coverage incomplete" : s.spend_tax_unreported > 0 ? `Excludes tax not reported on ${s.spend_tax_unreported} ${s.spend_tax_unreported === 1 ? "cost" : "costs"}` : "All cost groups checked"} tone={s.spend_complete && s.spend_tax_unreported === 0 ? "neutral" : "warning"} info={{ ...periodInfo, definition: "Incurred advertising and shared marketing invoice costs including tax, less dated credits. All locations.", source: "Marketing cost ledger", caveat: "Missing days do not imply zero spend, and a tax a source did not report is not zero: it is left out and flagged until a reviewer states it. Unallocated creative and influencer costs are included in total marketing spend." }} />
       <MetricCard label="Recorded net sales" value={money(s.revenue)} hint="Discounts and revenue credits deducted · tax excluded" info={{ ...periodInfo, definition: "Sum of dated sale confirmation, credit and void revenue events in this period, excluding sales tax.", source: "Reviewed sales and sales events", caveat: `${s.unclassified_sales} historical sales documents remain unclassified and excluded.` }} />
