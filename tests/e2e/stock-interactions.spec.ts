@@ -13,9 +13,12 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PASSWORD = "TileDemo!2026";
 const WORKSPACE = "11111111-1111-1111-1111-111111111111";
-const ADMIN = "demo.admin@tileconcept.test";
 const run = randomUUID().slice(0, 8);
+// Every account here belongs to this spec. A shared seed administrator would be
+// signed out under these tests whenever a spec running alongside signs it out,
+// since sign-out ends every session of an account (TILE-65 CI interference).
 const USERS = {
+  admin: { id: randomUUID(), email: `e2e.stock.admin.${run}@tileconcept.test`, name: "E2E Stock Admin" },
   management: { id: randomUUID(), email: `e2e.stock.management.${run}@tileconcept.test`, name: "E2E Stock Management" },
   sales_rep: { id: randomUUID(), email: `e2e.stock.rep.${run}@tileconcept.test`, name: "E2E Stock Rep" },
   analyst: { id: randomUUID(), email: `e2e.stock.analyst.${run}@tileconcept.test`, name: "E2E Stock Analyst" },
@@ -80,9 +83,12 @@ test.beforeAll(() => {
 });
 
 test.afterAll(() => {
-  sql(`delete from core.workspaces where id='${OTHER_WORKSPACE}';
-       delete from auth.users where id in (${ALL_USERS.map((u) => `'${u.id}'`).join(",")});`);
-  assert.equal(sql(`select count(*) from auth.users where id in (${ALL_USERS.map((u) => `'${u.id}'`).join(",")})`), "0");
+  const ids = ALL_USERS.map((u) => `'${u.id}'`).join(",");
+  sql(`delete from core.user_preferences where user_id in (${ids});
+       delete from core.workspaces where id='${OTHER_WORKSPACE}';
+       delete from auth.users where id in (${ids});`);
+  assert.equal(sql(`select count(*) from auth.users where id in (${ids})`), "0");
+  assert.equal(sql(`select count(*) from core.memberships where user_id in (${ids})`), "0");
   // Reading, searching and switching tabs never writes stock.
   assert.equal(stockFingerprint(), before, "stock tables changed during a read-only spec");
 });
@@ -160,7 +166,7 @@ async function choose(page: Page, control: RegExp, option: string) {
 
 test.describe("Stock tabs", () => {
   test("every tab shows its own content on click, and URL, reload and history agree", async ({ page }) => {
-    await signIn(page, ADMIN);
+    await signIn(page, USERS.admin.email);
     await page.goto("/merchandise/stock");
     await expectTab(page, "overview");
     await expectRows(page, expectedCodes());
@@ -193,7 +199,7 @@ test.describe("Stock tabs", () => {
   });
 
   test("the SQL Account tab states that saving a DO in SQL Account deducts stock, once", async ({ page }) => {
-    await signIn(page, ADMIN);
+    await signIn(page, USERS.admin.email);
     await page.goto("/merchandise/stock?tab=sql");
     await expectTab(page, "sql");
     const copy = page.getByTestId("sql-stock-authority");
@@ -203,7 +209,7 @@ test.describe("Stock tabs", () => {
   });
 
   test("switching tabs keeps the Overview search and filters", async ({ page }) => {
-    await signIn(page, ADMIN);
+    await signIn(page, USERS.admin.email);
     const supplier = supplierId("Demo Tile Trading");
     await page.goto(`/merchandise/stock?supplier=${supplier}&q=MW`);
     const want = expectedCodes(`a.supplier_id='${supplier}' and (a.product_code || ' ' || a.product_name || ' ' || coalesce(a.supplier_name,'') || ' ' || a.source_name) ilike '%MW%'`);
@@ -222,7 +228,7 @@ test.describe("Stock tabs", () => {
 
 test.describe("Stock search and filters", () => {
   test("search, changed search, no matches and clear return the server's rows immediately", async ({ page }) => {
-    await signIn(page, ADMIN);
+    await signIn(page, USERS.admin.email);
     await page.goto("/merchandise/stock");
     const all = expectedCodes();
     expect(all.length).toBeGreaterThan(2);
@@ -269,7 +275,7 @@ test.describe("Stock search and filters", () => {
   });
 
   test("source, supplier, category and availability filters, alone and combined, agree with reload", async ({ page }) => {
-    await signIn(page, ADMIN);
+    await signIn(page, USERS.admin.email);
     await page.goto("/merchandise/stock");
     const supplier = supplierId("Demo Tile Trading");
     const mosaic = categoryId("Mosaic");
@@ -321,7 +327,7 @@ test.describe("Stock search and filters", () => {
   });
 
   test("a deep link with a search and filters renders exactly those rows", async ({ page }) => {
-    await signIn(page, ADMIN);
+    await signIn(page, USERS.admin.email);
     await page.goto("/merchandise/stock?q=MW-HEX-WHT&sourceKind=in_house");
     await expect(searchBox(page)).toHaveValue("MW-HEX-WHT");
     await expect(combo(page, /source/i)).toHaveText("In-house");

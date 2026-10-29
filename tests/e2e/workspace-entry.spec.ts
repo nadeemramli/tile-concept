@@ -11,10 +11,16 @@ import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 
 const PASSWORD = "TileDemo!2026";
 const WORKSPACE = "11111111-1111-1111-1111-111111111111";
-const ADMIN_ID = "aaaaaaaa-0000-0000-0000-000000000001";
-const ADMIN = "demo.admin@tileconcept.test";
+// The seeded administrator, only as a lead owner in a refused command: this
+// spec never signs it in, out, or writes its preferences.
+const SEED_ADMIN_ID = "aaaaaaaa-0000-0000-0000-000000000001";
 const REP = "demo.rep1@tileconcept.test";
 const run = randomUUID().slice(0, 8);
+// An administrator here, owned by this spec: it signs out (which ends every
+// session of that account) and stores a default area, so a shared seed account
+// in its place would be signed out under, and re-routed for, the specs running
+// alongside this one.
+const CHOOSER = { id: randomUUID(), email: `e2e.chooser.${run}@tileconcept.test`, name: "E2E Chooser" };
 const USERS = {
   management: { id: randomUUID(), email: `e2e.management.${run}@tileconcept.test`, name: "E2E Management" },
   driver: { id: randomUUID(), email: `e2e.driver.${run}@tileconcept.test`, name: "E2E Driver" },
@@ -26,6 +32,7 @@ const DUAL = { id: randomUUID(), email: `e2e.dual.${run}@tileconcept.test`, name
 // The reverse (TILE-62): admin in another workspace (acting) and driver here.
 const REVERSE = { id: randomUUID(), email: `e2e.reverse.${run}@tileconcept.test`, name: "E2E Reverse" };
 const OTHER_WORKSPACE = randomUUID();
+const OWNED = [...Object.values(USERS), DUAL, REVERSE, CHOOSER];
 
 function sql(query: string) {
   return execFileSync("docker", ["exec", process.env.E2E_DB_CONTAINER ?? "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8" }).trim();
@@ -38,14 +45,13 @@ const PUBLISHABLE_KEY: string = status.PUBLISHABLE_KEY ?? status.ANON_KEY;
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(() => {
-  const all = [...Object.values(USERS), DUAL, REVERSE];
-  const values = all.map((u) => `('${u.id}'::uuid,'${u.email}','${u.name}')`).join(",");
+  const values = OWNED.map((u) => `('${u.id}'::uuid,'${u.email}','${u.name}')`).join(",");
   sql(`with u(id,email,name) as (values ${values})
        insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
          confirmation_token,recovery_token,email_change,email_change_token_new,email_change_token_current,phone_change,phone_change_token,reauthentication_token,is_sso_user)
        select '00000000-0000-0000-0000-000000000000',id,'authenticated','authenticated',email,extensions.crypt('${PASSWORD}',extensions.gen_salt('bf')),now(),
          '{"provider":"email","providers":["email"]}',jsonb_build_object('full_name',name),now(),now(),'','','','','','','','',false from u;
-       with u(id,email) as (values ${all.map((u) => `('${u.id}'::uuid,'${u.email}')`).join(",")})
+       with u(id,email) as (values ${OWNED.map((u) => `('${u.id}'::uuid,'${u.email}')`).join(",")})
        insert into auth.identities(id,user_id,provider_id,provider,identity_data,last_sign_in_at,created_at,updated_at)
        select gen_random_uuid(),id,email,'email',jsonb_build_object('sub',id,'email',email,'email_verified',true),now(),now(),now() from u;
        insert into core.memberships(workspace_id,user_id,role_key) values
@@ -55,15 +61,19 @@ test.beforeAll(() => {
          ('${WORKSPACE}','${DUAL.id}','driver',now()-interval '1 day'),
          ('${OTHER_WORKSPACE}','${DUAL.id}','sales_rep',now()),
          ('${OTHER_WORKSPACE}','${REVERSE.id}','admin',now()-interval '1 day'),
-         ('${WORKSPACE}','${REVERSE.id}','driver',now());
-       delete from core.user_preferences where user_id='${ADMIN_ID}';`);
+         ('${WORKSPACE}','${REVERSE.id}','driver',now()),
+         ('${WORKSPACE}','${CHOOSER.id}','admin',now());`);
 });
 
 test.afterAll(() => {
+  const ids = OWNED.map((u) => `'${u.id}'`).join(",");
   // The other workspace first: the lead the reverse admin created there references its author.
-  sql(`delete from core.user_preferences where user_id='${ADMIN_ID}';
+  sql(`delete from core.user_preferences where user_id in (${ids});
        delete from core.workspaces where id='${OTHER_WORKSPACE}';
-       delete from auth.users where id in (${[...Object.values(USERS), DUAL, REVERSE].map((u) => `'${u.id}'`).join(",")});`);
+       delete from auth.users where id in (${ids});`);
+  assert.equal(sql(`select count(*) from auth.users where id in (${ids})`), "0");
+  assert.equal(sql(`select count(*) from core.memberships where user_id in (${ids})`), "0");
+  assert.equal(sql(`select count(*) from core.user_preferences where user_id in (${ids})`), "0");
 });
 
 async function signIn(page: Page, email: string, path = "/login") {
@@ -74,7 +84,13 @@ async function signIn(page: Page, email: string, path = "/login") {
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 30_000 });
 }
 
+/**
+ * Sign-out ends every session of the account, in every browser. Only an
+ * account this spec owns may be signed out here; see CHOOSER.
+ */
 async function signOut(page: Page) {
+  const { sub } = JSON.parse(Buffer.from((await accessToken(page.context())).split(".")[1], "base64url").toString("utf8"));
+  assert(OWNED.some((u) => u.id === sub), `signing out ${sub} would end the sessions of an account this spec does not own`);
   await page.getByRole("button", { name: "User menu" }).click();
   await page.getByRole("menuitem", { name: /Sign out|Log keluar/ }).click();
   await page.waitForURL("**/login**");
@@ -123,7 +139,7 @@ async function expectNoBorrowedAccess(context: BrowserContext) {
   expect((await rest(context, "GET", `contacts?workspace_id=eq.${WORKSPACE}&select=id`)).body).toBe("[]");
   expect((await rest(context, "GET", `contact_points?workspace_id=eq.${WORKSPACE}&select=id`)).body).toBe("[]");
   expect((await rpc(context, "reveal_contact_points", { p_contact_id: contact })).status).toBe(403);
-  expect((await rpc(context, "assign_lead", { p_lead_id: lead, p_owner_id: ADMIN_ID })).status).toBe(403);
+  expect((await rpc(context, "assign_lead", { p_lead_id: lead, p_owner_id: SEED_ADMIN_ID })).status).toBe(403);
   expect((await rest(context, "POST", "leads", { workspace_id: WORKSPACE, source_channel: "other" })).status).toBe(403);
   expect((await rest(context, "PATCH", `contacts?workspace_id=eq.${WORKSPACE}`, { display_name: "Borrowed" })).body).toBe("[]");
   expect((await rest(context, "POST", "membership_invites", { workspace_id: WORKSPACE, email: `e2e.borrowed.${run}@tileconcept.test`, role_key: "admin" })).status).toBe(403);
@@ -280,31 +296,31 @@ test.describe("management and dual-area members", () => {
   });
 
   test("a dual-area member chooses, and the remembered default survives reload and sign-in", async ({ page }) => {
-    await signIn(page, ADMIN);
+    await signIn(page, CHOOSER.email);
     await expect(page).toHaveURL(/\/start$/);
     await expect(page.getByRole("heading", { name: "Choose a workspace" })).toBeVisible();
     await page.getByText("Remember my choice").click();
     await page.getByRole("button", { name: "Enter: Admin System" }).click();
     await expect(page).toHaveURL(/\/admin$/);
-    expect(sql(`select default_area from core.user_preferences where user_id='${ADMIN_ID}'`)).toBe("admin");
+    expect(sql(`select default_area from core.user_preferences where user_id='${CHOOSER.id}'`)).toBe("admin");
 
     await page.reload();
     await expect(page.getByRole("heading", { name: "Admin System", level: 1 })).toBeVisible();
     await signOut(page);
-    await signIn(page, ADMIN);
+    await signIn(page, CHOOSER.email);
     await expect(page).toHaveURL(/\/admin$/);
 
     // Change it from the switcher; the radio reflects the stored value after reload.
     await page.getByRole("button", { name: "Workspace: Admin System" }).click();
     await page.getByRole("menuitemradio", { name: "Operating System" }).click();
     await expect(page.getByText("Start page saved.")).toBeVisible();
-    await expect.poll(() => sql(`select default_area from core.user_preferences where user_id='${ADMIN_ID}'`)).toBe("operating");
+    await expect.poll(() => sql(`select default_area from core.user_preferences where user_id='${CHOOSER.id}'`)).toBe("operating");
     await page.reload();
     await page.getByRole("button", { name: "Workspace: Admin System" }).click();
     await expect(page.getByRole("menuitemradio", { name: "Operating System" })).toHaveAttribute("aria-checked", "true");
     await page.keyboard.press("Escape");
     await signOut(page);
-    await signIn(page, ADMIN);
+    await signIn(page, CHOOSER.email);
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("heading", { name: "Command Centre" })).toBeVisible();
 
@@ -316,7 +332,7 @@ test.describe("management and dual-area members", () => {
     await page.getByRole("button", { name: "Workspace: Operating System" }).click();
     await page.getByRole("menuitemradio", { name: "Ask me each time" }).click();
     await expect(page.getByText("You will be asked each time you sign in.")).toBeVisible();
-    await expect.poll(() => sql(`select coalesce(default_area,'∅') from core.user_preferences where user_id='${ADMIN_ID}'`)).toBe("∅");
+    await expect.poll(() => sql(`select coalesce(default_area,'∅') from core.user_preferences where user_id='${CHOOSER.id}'`)).toBe("∅");
     await page.goto("/start");
     await expect(page.getByRole("heading", { name: "Choose a workspace" })).toBeVisible();
     // The chooser is not the Management Overview, and the switcher says so.
