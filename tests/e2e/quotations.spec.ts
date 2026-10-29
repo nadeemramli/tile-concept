@@ -197,9 +197,9 @@ test("visit: SQ note resolves to the canonical quote, historical note becomes on
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: `Download e2e-quote-${tag}.pdf` }).click();
   expect((await download).suggestedFilename()).toBe(`e2e-quote-${tag}.pdf`);
-  const anon = createClient(status.API_URL, PUBLIC_KEY, { auth: { persistSession: false } });
+  const anon = createClient(status.API_URL, PUBLIC_KEY, { db: { schema: "api" }, auth: { persistSession: false } });
   expect((await anon.storage.from("visit-quotations").download(path)).error).not.toBeNull();
-  const foreign = createClient(status.API_URL, PUBLIC_KEY, { auth: { persistSession: false } });
+  const foreign = createClient(status.API_URL, PUBLIC_KEY, { db: { schema: "api" }, auth: { persistSession: false } });
   await foreign.auth.signInWithPassword({ email: emails.foreign, password: PASSWORD });
   expect((await foreign.storage.from("visit-quotations").download(path)).error).not.toBeNull();
   const version = sql(`select v.id from sales.quote_versions v join sales.quotes q on q.id = v.quote_id where q.quote_number = 'QT-E2E-${tag}' and v.version_no = 2`);
@@ -236,7 +236,7 @@ test("a role without sales.write sees quotations with explained, disabled action
   await expect(panel(page).getByRole("button", { name: "Record quote" })).toBeDisabled();
   await expect(quoteCard(page, `QT-E2E-VISIT-${tag}`).getByRole("button", { name: "Mark sent" })).toBeDisabled();
   const before = sql(`select count(*) from sales.quote_events where workspace_id = '${WS}'`);
-  const reader = createClient(status.API_URL, PUBLIC_KEY, { auth: { persistSession: false } });
+  const reader = createClient(status.API_URL, PUBLIC_KEY, { db: { schema: "api" }, auth: { persistSession: false } });
   await reader.auth.signInWithPassword({ email: emails.reader, password: PASSWORD });
   const denied = await reader.rpc("quote_command", { p_action: "accept", p_input: { quote_id: quoteId() }, p_request_id: randomUUID() });
   expect(denied.error?.code).toBe("42501");
