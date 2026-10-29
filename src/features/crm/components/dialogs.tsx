@@ -17,6 +17,8 @@ import { ACCOUNT_TYPES, ACTIVITY_KINDS, CUSTOMER_TYPES, PRODUCT_INTERESTS, PROJE
 import { addActivityAction, addConsentAction, addContactPointAction, addTaskAction, createContactAction, linkContactAccountAction, revealContactPointsAction, updateContactAction } from "@/server/commands/contacts";
 import { addAccountAliasAction, createAccountAction, updateAccountAction } from "@/server/commands/accounts";
 import { addProjectSiteAction, createProjectOpportunityAction, updateProjectAction } from "@/server/commands/projects";
+import { CONTACT_CUSTOMER_TYPE_LABEL, UNKNOWN_CLASSIFICATION, type ClassificationValues } from "@/features/classification/taxonomy";
+import { ClassificationFields } from "@/features/classification/components/classification-fields";
 import type { ContactDetail } from "@/server/queries/contacts";
 import type { AccountDetail } from "@/server/queries/accounts";
 import type { ProjectDetail } from "@/server/queries/projects";
@@ -55,7 +57,7 @@ export function NewContactDialog({ open, onOpenChange, members, defaultAccountId
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Customer type">
-          <EnumSelect name="customer_type" options={CUSTOMER_TYPES} />
+          <EnumSelect name="customer_type" options={CUSTOMER_TYPES.filter((t) => t !== "homeowner" && t !== "designer")} labels={CONTACT_CUSTOMER_TYPE_LABEL} placeholder="Type not stated" />
         </Field>
         <Field label="Acquisition source">
           <EnumSelect name="source" options={SOURCE_CHANNELS} />
@@ -85,7 +87,7 @@ export function EditContactDialog({ open, onOpenChange, contact }: DialogProps &
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Customer type">
-          <EnumSelect name="customer_type" options={CUSTOMER_TYPES} defaultValue={contact.customer_type} />
+          <EnumSelect name="customer_type" options={CUSTOMER_TYPES.filter((t) => (t !== "homeowner" && t !== "designer") || t === contact.customer_type)} labels={CONTACT_CUSTOMER_TYPE_LABEL} defaultValue={contact.customer_type} placeholder="Type not stated" />
         </Field>
         <Field label="Preferred language" htmlFor="preferred_language">
           <Input id="preferred_language" name="preferred_language" defaultValue={contact.preferred_language ?? ""} />
@@ -361,6 +363,7 @@ export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults
   const router = useRouter();
   const [withOpp, setWithOpp] = useState(true);
   const [projectAccountId, setProjectAccountId] = useState(defaults?.account_id ?? "");
+  const [classification, setClassification] = useState<ClassificationValues>(UNKNOWN_CLASSIFICATION);
   const request = useRef<string | null>(null);
   return (
     <FormDialog
@@ -376,9 +379,10 @@ export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults
         o.request_id = request.current;
         o.create_opportunity = withOpp;
         o.product_interest = fd.getAll("product_interest[]");
+        if (withOpp) o.classification = classification;
         return createProjectOpportunityAction(o);
       }}
-      onSuccess={(d) => { request.current = null; router.push(d.opportunity_id ? `/sales/pipeline?opportunity=${d.opportunity_id}` : `/sales/projects/${d.project_id}`); }}
+      onSuccess={(d) => { request.current = null; setClassification(UNKNOWN_CLASSIFICATION); router.push(d.opportunity_id ? `/sales/pipeline?opportunity=${d.opportunity_id}` : `/sales/projects/${d.project_id}`); }}
     >
       <Field label="Project title" htmlFor="project_name" required>
         <Input id="project_name" name="project_name" required autoFocus placeholder="Condo renovation — Cheras" />
@@ -438,6 +442,11 @@ export function ProjectOpportunityDialog({ open, onOpenChange, members, defaults
               ))}
             </div>
           </Field>
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-medium">Who is buying and what for</legend>
+            <p className="text-[11px] text-muted-foreground">For this opportunity only. Leave Unknown for anything not yet known; it stays in Classification Review until filled.</p>
+            <ClassificationFields idPrefix="project-opportunity" value={classification} onChange={setClassification} />
+          </fieldset>
         </div>
       )}
     </FormDialog>

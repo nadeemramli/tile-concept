@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { uuid } from "@/lib/zod";
+import { CONTACT_CUSTOMER_TYPES } from "@/features/classification/taxonomy";
+import { classificationValuesSchema } from "@/features/classification/schema";
 
-export const CUSTOMER_TYPES = ["homeowner", "contractor", "designer", "developer", "retailer", "architect", "other"] as const;
+/** A person's own customer type (not a pursuit's buyer role). Mirrors identity.contacts_customer_type_check. */
+export const CUSTOMER_TYPES = CONTACT_CUSTOMER_TYPES;
 export const ACCOUNT_TYPES = ["contractor", "developer", "designer", "retailer", "corporate", "government", "other"] as const;
 export const PROJECT_TYPES = ["residential", "commercial", "renovation", "new_build", "hospitality", "other"] as const;
 export const PROJECT_STATUSES = ["planning", "active", "completed", "on_hold", "cancelled"] as const;
@@ -90,6 +93,8 @@ export const createProjectOpportunitySchema = z.object({
   next_action_due_at: optionalStr,
   product_interest: z.array(z.enum(PRODUCT_INTERESTS)).default([]),
   source_channel: z.enum(SOURCE_CHANNELS).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
+  /** The new opportunity's classification, saved through api.classify_pursuit after it is created. */
+  classification: classificationValuesSchema.optional(),
 });
 
 export const linkContactAccountSchema = z.object({

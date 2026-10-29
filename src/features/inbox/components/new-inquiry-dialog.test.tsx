@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { NewInquiryDialog } from "./new-inquiry-dialog";
 
 const mock = vi.hoisted(() => ({ create: vi.fn(), error: vi.fn(), success: vi.fn() }));
@@ -16,8 +17,9 @@ describe("manual inquiry save recovery", () => {
     mock.create.mockRejectedValueOnce(new Error("Network unavailable")).mockResolvedValueOnce({ ok: true, message: "Saved for review", data: {
       lead_id: "eeeeeeee-2109-0015-0100-000000000001", identity_state: "needs_review", suggestions: [],
     } });
-    render(<NewInquiryDialog open onOpenChange={vi.fn()} members={[]} locations={[]} defaultLocationId={null}
-      defaultOwnerId="aaaaaaaa-0000-0000-0000-000000000003" onCreated={created} />);
+    // The app shell provides tooltips; the classification fields explain themselves with them.
+    render(<TooltipProvider><NewInquiryDialog open onOpenChange={vi.fn()} members={[]} locations={[]} defaultLocationId={null}
+      defaultOwnerId="aaaaaaaa-0000-0000-0000-000000000003" onCreated={created} /></TooltipProvider>);
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Recovery fixture");
     await user.click(await screen.findByRole("button", { name: "Save inquiry" }));
     await waitFor(() => expect(mock.error).toHaveBeenCalledWith(expect.stringContaining("Retry with the same fields")));
@@ -25,6 +27,8 @@ describe("manual inquiry save recovery", () => {
     await waitFor(() => expect(created).toHaveBeenCalledOnce());
     expect(mock.create).toHaveBeenCalledTimes(2);
     expect(mock.create.mock.calls[0][1]).toBe(mock.create.mock.calls[1][1]);
+    // Nothing was stated, so the inquiry is saved with explicit Unknowns and no arrival override.
+    expect(mock.create.mock.calls[0][0]).toMatchObject({ buyer_role: "unknown", project_use: "unknown", work_type: "unknown", glc_involvement: "unknown", arrived_at: "" });
     expect(screen.getByText(/identifiers are shared, conflicting or provisional/)).toBeInTheDocument();
     expect(screen.queryByText(/Linked to the uniquely matched customer/)).not.toBeInTheDocument();
   });

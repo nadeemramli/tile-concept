@@ -1,8 +1,11 @@
 import {
   APP_MODE,
   APPROVAL_ACTION,
+  ARRIVAL_BASIS,
   CANDIDATE_CONFIDENCE,
   CANDIDATE_STATUS,
+  CLASSIFICATION_BASIS,
+  CLASSIFICATION_STATE,
   CONNECTOR_STATUS,
   FEEDBACK_REQUEST_STATUS,
   INVITE_STATUS,
@@ -39,6 +42,7 @@ import { AVAILABILITY_STATUS, CASE_STATUS, CHANNEL_HINT, CHANNEL_LABEL, FRESHNES
 import { ASSET_KIND, ASSET_STATUS, CONFIDENCE_HINT, ITEM_TYPE, JOB_STATUS, REVIEW_ITEM_STATUS } from "@/features/sources/status-maps";
 import { INTAKE_STATUS } from "@/features/connectors/status";
 import { titleCase } from "@/lib/format";
+import { CLASSIFICATION_OPTIONS, DIMENSION_HINT, DIMENSION_LABEL, REQUIRED_DIMENSIONS } from "@/features/classification/taxonomy";
 import { CREATIVE_STAGE_META, CREATIVE_CONDITION_META, PUBLICATION_META } from "@/features/creative/presentation";
 
 /**
@@ -75,6 +79,15 @@ export const GLOSSARY: GlossaryGroup[] = [
       { id: "lead-status", title: "Lead status", intro: "Where an enquiry is between arriving and becoming a project. The first-response clock runs from New until Contacted.", map: LEAD_STATUS },
       { id: "opportunity-status", title: "Opportunity status", intro: "The outcome group of an opportunity. Stages within Open are configured in Settings; Won, Lost and Deferred each need a reason.", map: OPPORTUNITY_STATUS },
       { id: "source-channel", title: "Source channel", intro: "Where a lead or customer first came from. The original source is kept even after a merge.", map: SOURCE_CHANNEL },
+      { id: "arrival-basis", title: "Inquiry arrival", intro: "When the customer actually got in touch, kept separate from when it was recorded. Response times are measured from the arrival, and a correction can never place it after a reply or visit already recorded.", map: ARRIVAL_BASIS },
+      ...[...REQUIRED_DIMENSIONS, "glc_party_role" as const].map((d) => ({
+        id: `classification-${d.replace(/_/g, "-")}`,
+        title: DIMENSION_LABEL[d],
+        intro: DIMENSION_HINT[d],
+        map: listMap(CLASSIFICATION_OPTIONS[d].map((o) => ({ value: o.key, label: o.legacy ? `${o.label} (earlier records)` : o.label, hint: o.hint }))),
+      })),
+      { id: "classification-state", title: "Classification state", intro: "Each buying pursuit (an inquiry and, once converted, its opportunity) is classified once, however many people, visits or messages it involves.", map: CLASSIFICATION_STATE },
+      { id: "classification-basis", title: "Classification basis", intro: "How the current classification was last set. Every change is kept in the pursuit's classification history.", map: CLASSIFICATION_BASIS },
       { id: "task-status", title: "Task status", map: TASK_STATUS },
       { id: "task-priority", title: "Task priority", map: TASK_PRIORITY },
       { id: "purchase-status", title: "Purchase status", intro: "Purchases recorded at the counter. Corrections are permissioned and audited.", map: PURCHASE_STATUS },

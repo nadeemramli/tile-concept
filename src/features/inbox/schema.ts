@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { uuid } from "@/lib/zod";
+import { BUYER_ROLES, GLC_INVOLVEMENT, GLC_PARTY_ROLES, PROJECT_USES, WORK_TYPES } from "@/features/classification/taxonomy";
+
+const listed = (keys: readonly string[]) => z.string().refine((v) => keys.includes(v), "Choose a listed value.");
 
 export const SOURCE_CHANNELS = ["tiktok", "facebook", "instagram", "meta", "google_ads", "website", "whatsapp", "dm", "call", "email", "referral", "walk_in", "other"] as const;
 export const PRODUCT_INTERESTS = ["wall_panel", "tile", "cut_tile", "mosaic", "finishing", "accessory"] as const;
@@ -19,9 +22,19 @@ export const newInquirySchema = z.object({
   owner_id: uuid().optional().or(z.literal("")),
   notes: z.string().trim().max(4000).optional().or(z.literal("")),
   raw_text: z.string().max(8000).optional().or(z.literal("")),
+  /** Malaysia wall-clock time the customer got in touch, when earlier than now. Empty means it arrived just now. */
+  arrived_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Enter a date and time.").optional().or(z.literal("")),
+  buyer_role: listed(BUYER_ROLES),
+  project_use: listed(PROJECT_USES),
+  work_type: listed(WORK_TYPES),
+  glc_involvement: listed(GLC_INVOLVEMENT),
+  glc_party_role: listed(GLC_PARTY_ROLES).nullable().optional(),
 }).refine((v) => (v.raw_name && v.raw_name.length > 0) || (v.raw_phone && v.raw_phone.length > 0) || (v.raw_email && v.raw_email.length > 0), {
   message: "Provide at least a name, phone, or email.",
   path: ["raw_name"],
+}).refine((v) => !v.arrived_at || new Date(`${v.arrived_at}:00+08:00`).getTime() <= Date.now() + 5 * 60_000, {
+  message: "An inquiry cannot arrive in the future.",
+  path: ["arrived_at"],
 });
 export type NewInquiryInput = z.infer<typeof newInquirySchema>;
 

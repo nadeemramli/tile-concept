@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { uuid } from "@/lib/zod";
+import { BUYER_ROLES } from "@/features/classification/taxonomy";
 
 export const PAYMENT_METHODS = ["cash", "card", "bank_transfer", "ewallet", "cheque", "credit_terms", "other"] as const;
 export const VISIT_PURPOSES = ["browse", "consultation", "sample", "purchase", "collection", "follow_up", "other"] as const;
-export const CUSTOMER_TYPES = ["homeowner", "contractor", "designer", "developer", "retailer", "architect", "other"] as const;
+/** The buyer role stated at a visit. It fills the inquiry's Unknown and never overwrites a recorded role. */
+const VISIT_BUYER_ROLES = BUYER_ROLES.filter((k) => k !== "unknown");
 export const PRODUCT_INTERESTS = ["wall_panel", "tile", "cut_tile", "mosaic", "finishing", "accessory"] as const;
 
 export const paymentSchema = z.object({
@@ -39,7 +41,7 @@ export const walkInSchema = z.object({
   occurred_at: z.iso.datetime({ offset: true }),
   location_id: uuid().optional().or(z.literal("")),
   staff_user_id: uuid().optional().or(z.literal("")),
-  customer_type: z.enum(CUSTOMER_TYPES).optional().or(z.literal("")),
+  customer_type: z.string().refine((v) => v === "" || VISIT_BUYER_ROLES.includes(v), "Choose a listed buyer role.").optional(),
   origin_area: z.string().trim().max(120).optional().or(z.literal("")),
   renovation_area: z.string().trim().max(200).optional().or(z.literal("")),
   inquiry_source: z.string().trim().max(40).optional().or(z.literal("")),
