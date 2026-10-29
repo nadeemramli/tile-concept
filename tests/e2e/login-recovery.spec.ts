@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { test, expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import { expectSignedInAs, expectStable, QUIET_MS } from "./recovery-checks";
 
 const PASSWORD = "TileDemo!2026";
 const WORKSPACE = "11111111-1111-1111-1111-111111111111";
@@ -98,16 +99,16 @@ async function signIn(page: Page, email: string, path = "/login") {
 const noAccessHeading = (page: Page) => page.getByRole("heading", { level: 1, name: /^(No workspace access|Tiada akses ruang kerja)$/ });
 const signOutButton = (page: Page) => page.getByRole("button", { name: /^(Sign out and use another account|Log keluar dan guna akaun lain)$/ });
 
-/** The page stays put: no further navigation in the window, which a loop never allows. */
-async function expectStable(page: Page) {
-  await expect(page.waitForEvent("framenavigated", { timeout: 2_000 })).rejects.toThrow(/Timeout/);
-}
-
-/** The explanation, readable and stable, with the way out. */
+/**
+ * The explanation, readable and stable, with the way out — checked on the
+ * finished page: the redirect has landed and its document has loaded, so the
+ * identity is the one a person reads, not a hidden streamed copy.
+ */
 async function expectNoAccess(page: Page, email: string) {
   await expect(page).toHaveURL(/\/no-access$/);
+  await page.waitForLoadState("load");
   await expect(noAccessHeading(page)).toBeVisible();
-  await expect(page.getByText(email)).toBeVisible();
+  await expectSignedInAs(page, email);
   await expect(signOutButton(page)).toBeVisible();
   await expectStable(page);
   // No app shell, no workspace, no business data.
@@ -173,6 +174,28 @@ test.describe("no active membership", () => {
       await expect(page.getByText("MW-HEX-WHT")).toHaveCount(0);
     }
     await expectNoWorkspaceData(context);
+  });
+
+  test("a redirect to the explanation ends in one same-URL history update, not a loop", async ({ page }) => {
+    await signIn(page, NONE.email);
+    await expectNoAccess(page, NONE.email);
+    const documents: string[] = [];
+    page.on("request", (r) => {
+      if (r.isNavigationRequest() && r.frame() === page.mainFrame()) documents.push(new URL(r.url()).pathname);
+    });
+    await page.goto("/merchandise/stock?tab=sql&q=MW-HEX-WHT", { waitUntil: "commit" });
+    await page.waitForURL(/\/no-access$/, { waitUntil: "commit" });
+    // Watched from the commit, before the explanation hydrates. The router then
+    // records its state with replaceState on the same URL: a navigation event
+    // that the previous check ("no framenavigated at all") failed on, although
+    // the page never moved.
+    const anyNavigation = page.waitForEvent("framenavigated", { timeout: QUIET_MS });
+    await expectStable(page);
+    expect((await anyNavigation).url()).toMatch(/\/no-access$/);
+    // One redirect, one document each: nothing went round again.
+    expect(documents).toEqual(["/merchandise/stock", "/no-access"]);
+    await expectNoAccess(page, NONE.email);
+    await expect(page.getByText("MW-HEX-WHT")).toHaveCount(0);
   });
 
   test("real SSR with the session cookies settles in a few hops, never a /start ⇄ /login cycle", async ({ page }) => {
