@@ -46,7 +46,7 @@ function view(row: ContactListRow) {
   // tooltip provider normally comes from the app shell (src/app/providers.tsx).
   return (
     <TooltipProvider delayDuration={200}>
-      <AccountsContactsView contacts={[row]} accounts={[]} members={[]} includeMerged={false} renderedAt={SERVER_NOW} />
+      <AccountsContactsView contacts={[row]} accounts={[]} members={[]} includeMerged={false} renderedAt={new Date(SERVER_NOW).toISOString()} />
     </TooltipProvider>
   );
 }
