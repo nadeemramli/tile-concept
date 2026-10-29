@@ -68,3 +68,16 @@ Run on a local Supabase stack (`pnpm db:start` / `pnpm db:reset`; stop with `pnp
 - `pnpm exec playwright test tests/e2e/pursuit-classification.spec.ts` — creates its own rep, showroom and other-workspace users and its own customer, then: backdated inquiry with Unknowns → reload → qualification refused until flagged → Classification Review link → classify → correction with reason and history → convert (inherited) → showroom walk-in through the wizard creates a held conflict → counter staff cannot decide or see the rep's opportunity → owner resolves with reason → reload; another workspace sees nothing. It removes what it created.
 
 Known limits: the Daily Tracker still stores the visit itself at noon Kuala Lumpur (visits have no precision column); the arrival of the inquiry it creates is date-only. `identity.projects.project_type` still mixes use and work type and is not used by the new report.
+
+## TILE-86: per-workspace report reads (forward repair)
+
+`20261029160003_report_workspace_reads.sql` rebinds `api.report_pursuit_segments` and `api.report_lead_source` to TILE-62's per-row rule, `workspace_id in (select core.permitted_workspace_ids('report.read'))`. Without it, a report reader in one workspace saw another workspace's aggregates. Ordered after TILE-62, a legitimate reader whose acting membership lacks report.read was refused. `160001` had also replaced TILE-62's per-row lead-source reader. The bodies are otherwise identical. Segmentation is still refused (42501) when no active membership grants report.read, and lead source still returns no rows then. The helper is created with TILE-62's identical body only where TILE-62 is absent.
+
+Ordered integration is TILE-62 (`20261029000002`) → PR49 (`160000`–`160002`) → `160003`. Never re-run TILE-62 after PR49 to mask the regression.
+
+Evidence:
+- `supabase/tests/026_report_workspace_reads.sql`.
+- `tests/integration/report-workspace-reads.mts`: normal sign-in and PostgREST, with synthetic fixtures removed to zero.
+- `tests/e2e/report-workspace-reads.spec.ts`.
+
+Separate PR49 finding, not changed here: in the ordered integration, TILE-62's suite test 178 fails on `sales.classification_events.member_read`. That PR49 policy pairs `member_workspace_ids()` with the acting-membership `core.has_permission('sales.read')`. Its TILE-62-shaped repair would be `workspace_id in (select core.permitted_workspace_ids('sales.read'))` in place of those two terms, keeping the lead/opportunity visibility subqueries.
