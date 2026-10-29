@@ -22,8 +22,20 @@
  * payment rows; the sheet's free-text purpose, its New/Existing status, and
  * anything the app has no column for (Vsoft demo, TI service, slab enquiry,
  * an unrecognised SMP) are kept verbatim in the visit notes.
+ *
+ * Customer type maps through the shared classification taxonomy
+ * (src/features/classification/taxonomy.ts, the mirror of
+ * core.classification_values). A spelling it does not know stays Unknown —
+ * never "other" — and the sheet's own wording is kept in the visit notes.
+ *
+ * Arrival: a visit that starts a new inquiry gives that inquiry a date-only
+ * arrival with basis "tracker" (the sheet has no time of day), set through
+ * api.set_inquiry_arrival. An existing inquiry the visit is linked to keeps
+ * its own arrival.
  */
+import { randomUUID } from "node:crypto";
 import XLSX from "xlsx";
+import { classificationKey } from "../../src/features/classification/taxonomy.ts";
 import { adminClient, args, counter, log, money, noonKl, norm, normalizePhone, readWorkbook, serialToIsoDate, target, text, userClient, yes } from "./lib.mts";
 
 const WORKSPACE_ID = process.env.TC_INTAKE_WORKSPACE_ID ?? "638c7f4d-39f2-420b-96d7-6e403cf51cc3";
@@ -34,14 +46,16 @@ const LOCATIONS: { match: RegExp; code: string; name: string; active: boolean }[
   { match: /elmina lakeside|creative lab|^cl /i, code: "cl-elmina", name: "CL Elmina Lakeside", active: false },
 ];
 
-const CUSTOMER_TYPE: [RegExp, string][] = [
-  [/home ?owner/i, "homeowner"],
-  [/contractor/i, "contractor"],
-  [/designer|\bid\b/i, "designer"],
-  [/architect/i, "architect"],
-  [/developer/i, "developer"],
-  [/retail/i, "retailer"],
-];
+/** The sheet's customer type as a buyer role key, or null when it says nothing we recognise. */
+function buyerRole(raw: string | null): string | null {
+  const key = classificationKey("buyer_role", raw);
+  return key === "unknown" ? null : key;
+}
+
+/** Start of the Kuala Lumpur day, the stored form of a date-only arrival. */
+function klDayStart(isoDate: string): string {
+  return new Date(`${isoDate}T00:00:00+08:00`).toISOString();
+}
 
 const INQUIRY_SOURCE: [RegExp, string][] = [
   [/passing/i, "walk_in"],
@@ -274,7 +288,8 @@ async function main() {
       continue;
     }
     if (r.phone && !existingContact) newPhones.add(r.phone);
-    c.add(`customer type: ${mapOne(CUSTOMER_TYPE, r.customerType, "other")}`);
+    const role = buyerRole(r.customerType);
+    c.add(r.customerType ? (role ? `buyer role: ${role}` : `buyer role: unknown (sheet says "${r.customerType}", kept in notes)`) : "buyer role: not stated");
     c.add(`heard: ${mapOne(INQUIRY_SOURCE, r.heard, r.walkIn === false && r.online ? "website" : "walk_in")}`);
     const hasPurchase = r.amount !== null && r.amount > 0;
     c.add(`purpose: ${purposeFor(r.purposeText, hasPurchase, r.walkIn !== false)}`);
@@ -310,7 +325,7 @@ async function main() {
       done.add("skipped (already recorded)");
       continue;
     }
-    const customerType = mapOne(CUSTOMER_TYPE, r.customerType, null);
+    const customerType = buyerRole(r.customerType);
     const heard = mapOne(INQUIRY_SOURCE, r.heard, r.walkIn === false && r.online ? "website" : "walk_in");
     if (!contactId) {
       const { data: id, error } = await me.rpc("create_contact", {
@@ -336,6 +351,7 @@ async function main() {
     const noteParts = [
       `Imported from Daily Tracker ${r.sheet} row ${r.rowNo}`,
       r.status ? `Sheet status: ${r.status}` : null,
+      r.customerType ? `Customer type (sheet): ${r.customerType}` : null,
       r.purposeText ? `Purpose: ${r.purposeText}` : null,
       r.walkIn !== null ? `Walk in: ${r.walkIn ? "Yes" : "No"}` : null,
       r.online !== null ? `Online enquiry: ${r.online ? "Yes" : "No"}` : null,
@@ -361,6 +377,7 @@ async function main() {
       };
     }
 
+    const callStarted = Date.now() - 5_000;
     const { data: res, error } = await me.rpc("record_walk_in", {
       p_contact_id: contactId,
       p_location_id: locationId.get(r.location.code),
@@ -393,9 +410,24 @@ async function main() {
       const { error: pe } = await me.from("visits").update(patch).eq("id", out.visit_id);
       if (pe) errors.push(`${r.sheet} row ${r.rowNo}: visit patch: ${pe.message}`);
     }
-    // The inbox copy of the visit dates from the visit, not from today.
-    await me.from("leads").update({ created_at: noonKl(r.date) }).eq("id", out.lead_id);
-    if (!staff) await me.from("leads").update({ owner_id: null }).eq("id", out.lead_id);
+    // A new inquiry started by this visit arrived on the sheet's date. The
+    // sheet has no time of day, so the arrival is date-only.
+    if (out.lead_id) {
+      const { data: lead } = await me.from("leads").select("recorded_at, arrival_basis").eq("id", out.lead_id).maybeSingle();
+      if (lead?.recorded_at && new Date(lead.recorded_at).getTime() >= callStarted) {
+        const { error: ae } = await me.rpc("set_inquiry_arrival", {
+          p_lead_id: out.lead_id,
+          p_arrived_at: klDayStart(r.date),
+          p_basis: "tracker",
+          p_precision: "date",
+          p_reason: `Daily Tracker ${r.sheet} row ${r.rowNo} gives the visit date only`,
+          p_request_id: randomUUID(),
+        });
+        if (ae) errors.push(`${r.sheet} row ${r.rowNo}: arrival: ${ae.message}`);
+        else done.add("new inquiry dated from the sheet (date only)");
+      }
+      if (!staff) await me.from("leads").update({ owner_id: null }).eq("id", out.lead_id);
+    }
   }
   log(done.table());
   if (errors.length) {

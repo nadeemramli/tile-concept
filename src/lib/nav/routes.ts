@@ -99,6 +99,8 @@ export const ROUTES: RouteDef[] = [
   // Identity Review is a periodic clean-up queue, not daily work, so it sits
   // with the other administration surfaces rather than in the sidebar.
   { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Platform", status: "live", permission: "sales.read" },
+  // The classification correction queue is periodic review work too.
+  { key: "classification", label: "Classification Review", path: "/sales/classification-review", icon: Tags, group: "Platform", status: "live", permission: "sales.read" },
   { key: "integrations", label: "Integrations", path: "/platform/integrations", icon: Cable, group: "Platform", status: "live", permission: "audit.read" },
   { key: "connectors", label: "Lead Connectors", path: "/platform/connectors", icon: Webhook, group: "Platform", status: "live", permission: "settings.manage" },
   { key: "data-health", label: "Data Health", path: "/platform/data-health", icon: Activity, group: "Platform", status: "live", permission: "audit.read" },

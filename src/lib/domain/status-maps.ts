@@ -188,6 +188,32 @@ export const FEEDBACK_REQUEST_STATUS: StatusMap = {
   revoked: { label: "Revoked", tone: "destructive", hint: "Staff withdrew the request. The link no longer works." },
 };
 
+export const CLASSIFICATION_STATE: StatusMap = {
+  unreviewed: { label: "Not reviewed", tone: "neutral", hint: "Saved with whatever was known, possibly all Unknown. Nobody has confirmed or flagged it yet; qualification asks." },
+  complete: { label: "Classified", tone: "success", hint: "Buyer role, project use, work type and GLC involvement are all stated." },
+  missing_flagged: { label: "Missing, flagged", tone: "warning", hint: "Someone qualified the work while some values were still unknown and said why. It stays in Classification Review until they are filled." },
+  conflict: { label: "Conflicting source", tone: "destructive", hint: "A later source, such as a showroom visit, disagreed with a recorded value. The recorded value stands until someone decides and gives a reason." },
+};
+
+export const CLASSIFICATION_BASIS: StatusMap = {
+  legacy: { label: "Before classification", tone: "neutral", hint: "Recorded before classification existed and not yet reviewed. Historical coverage only: shown as Unknown, never inferred." },
+  capture: { label: "Captured", tone: "info", hint: "Stated when the inquiry or opportunity was entered." },
+  qualification: { label: "Qualification", tone: "success", hint: "Confirmed or flagged when the inquiry was qualified." },
+  correction: { label: "Correction", tone: "warning", hint: "Changed after it was first recorded. A reason is kept whenever a known value changed." },
+  walk_in: { label: "Showroom visit", tone: "info", hint: "The buyer role recorded at a showroom visit for this inquiry. It fills an Unknown; it never overwrites a recorded value." },
+  import: { label: "Import", tone: "info", hint: "Supplied by an import. The original source wording is kept with the record." },
+  inherited: { label: "From inquiry", tone: "info", hint: "Carried over when the inquiry became an opportunity. The two stay in step." },
+  backfill: { label: "Reviewed backfill", tone: "ai", hint: "Filled from evidence already held, after a dry run was reviewed and the write was authorised." },
+};
+
+export const ARRIVAL_BASIS: StatusMap = {
+  native: { label: "Live", tone: "success", hint: "Recorded as the inquiry arrived. Arrival and recording time are the same moment." },
+  backdated: { label: "Backdated", tone: "warning", hint: "Entered later with the time the customer actually got in touch. Response times are measured from that arrival." },
+  import: { label: "Imported", tone: "info", hint: "The arrival time came from the provider's export or connector, not from when it was imported." },
+  tracker: { label: "Daily Tracker", tone: "info", hint: "The showroom Daily Tracker gave the date only. It is stored as the start of that day and left out of response-time medians." },
+  legacy: { label: "Historical", tone: "neutral", hint: "Recorded before arrival tracking. The time shown may be when the record was created rather than when the customer arrived." },
+};
+
 export function statusMeta(map: StatusMap, value: string | null | undefined): StatusMeta {
   if (!value) return { label: "—", tone: "neutral" };
   return map[value] ?? { label: value.replace(/_/g, " "), tone: "neutral" };

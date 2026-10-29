@@ -35,8 +35,9 @@ import {
   createContactForLeadAction,
   findLeadMatchesAction,
   linkLeadIdentityAction,
-  qualifyLeadAction,
 } from "@/server/commands/leads";
+import { PursuitClassificationSection } from "@/features/classification/components/pursuit-classification";
+import { CONTACT_CUSTOMER_TYPES, CONTACT_CUSTOMER_TYPE_LABEL } from "@/features/classification/taxonomy";
 
 interface Props {
   lead: LeadRow | null;
@@ -53,7 +54,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Panel = null | "matches" | "convert" | "assign";
+type Panel = null | "matches" | "convert" | "assign" | "qualify";
 
 const TIMELINE_PREVIEW = 5;
 
@@ -138,7 +139,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
             {lead.raw_name ?? lead.raw_company ?? "Inquiry"} <StatusPill map={LEAD_STATUS} value={lead.confirmed_sales > 0 ? "won" : lead.status} size="md" />
           </span>
         }
-        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)} · ${lead.confirmed_sales > 0 ? "Documented sale confirmed" : responseLine}`}
+        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · arrived ${formatRelative(lead.created_at)} · ${lead.confirmed_sales > 0 ? "Documented sale confirmed" : responseLine}`}
       >
         {/* Where the lead lives now, so a response never makes it vanish. */}
         {view && inCurrentView === false && view !== "all" && view !== where.home && (
@@ -212,8 +213,8 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
                   </DropdownMenuItem>
                 )}
                 {canWrite && lead.status !== "qualified" && (
-                  <DropdownMenuItem onSelect={() => run(() => qualifyLeadAction(lead.id))}>
-                    <Check className="size-3.5" aria-hidden /> Mark as qualified
+                  <DropdownMenuItem onSelect={() => setPanel("qualify")}>
+                    <Check className="size-3.5" aria-hidden /> Qualify…
                   </DropdownMenuItem>
                 )}
                 {canWrite && (
@@ -308,6 +309,14 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
                 )}
               </DrawerSection>
 
+              <PursuitClassificationSection
+                key={lead.id}
+                subject={{ lead_id: lead.id }}
+                canWrite={canWrite && lead.status !== "duplicate"}
+                readOnlyReason={lead.status === "duplicate" ? "A duplicate belongs to its original inquiry; classify that one." : OWNER_ONLY}
+                qualifyOpen={panel === "qualify"}
+                onQualifyOpenChange={(o) => !o && setPanel(null)}
+              />
               <InquiryRemarks lead={lead} canWrite={canWrite} />
               <DrawerSection title="What they asked for">
                 {lead.interest && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{lead.interest}</p>}
@@ -404,7 +413,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Convert to project opportunity</DialogTitle>
-            <DialogDescription>Creates a project and an opportunity at the Qualified stage, linked to {contact?.display_name ?? "the contact"}. The original source is preserved.</DialogDescription>
+            <DialogDescription>Creates a project and an opportunity at the Qualified stage, linked to {contact?.display_name ?? "the contact"}. The original source and this inquiry&apos;s classification carry over.</DialogDescription>
           </DialogHeader>
           <ConvertForm
             lead={lead}
@@ -473,7 +482,8 @@ export function ReasonForm({ label, submitLabel, destructive, pending, onSubmit,
 
 function CreateContactInline({ defaultName, pending, onCreate }: { defaultName: string; pending: boolean; onCreate: (name: string, type: string | null) => void }) {
   const [name, setName] = useState(defaultName);
-  const [type, setType] = useState<string>("homeowner");
+  // Not stated until someone says: the person's type is never assumed.
+  const [type, setType] = useState<string>("");
   return (
     <div className="rounded-md border border-dashed p-3">
       <div className="mb-2 flex items-center gap-1.5 text-xs font-medium">
@@ -481,14 +491,15 @@ function CreateContactInline({ defaultName, pending, onCreate }: { defaultName: 
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
         <Input className="h-8" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
-        <Select value={type} onValueChange={setType}>
-          <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
+        <Select value={type || "__none__"} onValueChange={(v) => setType(v === "__none__" ? "" : v)}>
+          <SelectTrigger className="h-8 w-40" aria-label="Customer type"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {["homeowner", "contractor", "designer", "developer", "retailer", "architect", "other"].map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}
+            <SelectItem value="__none__">Type not stated</SelectItem>
+            {CONTACT_CUSTOMER_TYPES.filter((t) => t !== "homeowner" && t !== "designer").map((t) => <SelectItem key={t} value={t}>{CONTACT_CUSTOMER_TYPE_LABEL[t]}</SelectItem>)}
           </SelectContent>
         </Select>
         <DisabledHint reason={name.trim().length < 2 ? "Enter the customer's name (at least 2 characters) first." : null}>
-          <Button size="sm" className="h-8" disabled={name.trim().length < 2 || pending} onClick={() => onCreate(name.trim(), type)}>
+          <Button size="sm" className="h-8" disabled={name.trim().length < 2 || pending} onClick={() => onCreate(name.trim(), type || null)}>
             Create & link
           </Button>
         </DisabledHint>

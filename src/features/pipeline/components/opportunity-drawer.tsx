@@ -25,6 +25,7 @@ import { StageChangeDialog } from "@/features/pipeline/components/stage-dialog";
 import { EditOpportunityDialog, QuoteVersionDialog, ReassignDialog } from "@/features/pipeline/components/opportunity-dialogs";
 import { ActivityDialog, TaskDialog } from "@/features/crm/components/dialogs";
 import { PurchasesList, QuotesList } from "@/features/crm/components/detail-sections";
+import { PursuitClassificationSection } from "@/features/classification/components/pursuit-classification";
 
 type Which = "stage" | "edit" | "quote" | "activity" | "task" | "reassign" | "archive" | null;
 
@@ -176,6 +177,8 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         />
         {opp.notes && <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-sm">{opp.notes}</p>}
       </DrawerSection>
+
+      <PursuitClassificationSection key={opp.id} subject={{ opportunity_id: opp.id }} canWrite={canWrite} readOnlyReason={opp.archived_at ? "Restore this opportunity first." : OWNER_ONLY} />
 
       <DrawerSection title={`Quotes (${opp.quotes.length})`}>
         <QuotesList items={opp.quotes} />

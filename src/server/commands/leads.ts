@@ -25,7 +25,13 @@ export async function createInquiryAction(input: NewInquiryInput, requestId: str
   try {
     await requirePermission("sales.write");
     const supabase = await createServerSupabase();
-    const { data, error } = await supabase.rpc("create_manual_inquiry", { p_input: v, p_request_id: requestId });
+    // The arrival is entered in showroom time; the database decides native or backdated from it.
+    const input = {
+      ...v,
+      arrived_at: v.arrived_at ? new Date(`${v.arrived_at}:00+08:00`).toISOString() : undefined,
+      glc_party_role: v.glc_involvement === "yes" ? (v.glc_party_role ?? "unknown") : undefined,
+    };
+    const { data, error } = await supabase.rpc("create_manual_inquiry", { p_input: input, p_request_id: requestId });
     if (error) return fail(error);
     const result = data as { lead_id: string; identity_state: string };
     // Suggestions are advisory. A failed search must not turn a committed save
@@ -205,19 +211,6 @@ export async function logLeadResponseAction(input: z.input<typeof logResponseSch
     );
     const claimed = !before?.owner_id && after.owner_id === session.userId ? " This lead is now yours." : "";
     return ok(undefined, `${logged} ${where}${claimed}`);
-  } catch (e) {
-    return fail(e);
-  }
-}
-
-export async function qualifyLeadAction(leadId: string): Promise<ActionResult> {
-  try {
-    await requirePermission("sales.write");
-    const supabase = await createServerSupabase();
-    const { error } = await supabase.from("leads").update({ status: "qualified", qualified_at: new Date().toISOString() }).eq("id", leadId);
-    if (error) return fail(error);
-    revalidatePath(INBOX);
-    return ok(undefined, "Lead qualified.");
   } catch (e) {
     return fail(e);
   }
