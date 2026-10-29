@@ -84,7 +84,7 @@ function FilterSelect({ value, onChange, placeholder, options }: { value: string
   );
 }
 
-export function AccountsContactsView({ contacts, accounts, members, includeMerged }: { contacts: ContactListRow[]; accounts: AccountListRow[]; members: MemberOption[]; includeMerged: boolean }) {
+export function AccountsContactsView({ contacts, accounts, members, includeMerged, renderedAt }: { contacts: ContactListRow[]; accounts: AccountListRow[]; members: MemberOption[]; includeMerged: boolean; renderedAt: string }) {
   const router = useRouter();
   const { session } = useSession();
   const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("contacts"));
@@ -103,6 +103,20 @@ export function AccountsContactsView({ contacts, accounts, members, includeMerge
   useEffect(() => {
     const id = requestAnimationFrame(() => setNow(Date.now()));
     return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Relative times ("5 minutes ago") are measured from the server's request
+  // time until mount, so the server HTML and the hydration pass produce the
+  // same text; after mount they follow the browser clock, refreshed every 30s.
+  const [timeRef, setTimeRef] = useState(() => Date.parse(renderedAt));
+  useEffect(() => {
+    const tick = () => setTimeRef(Date.now());
+    const frame = requestAnimationFrame(tick);
+    const interval = setInterval(tick, 30_000);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearInterval(interval);
+    };
   }, []);
 
   const segments = tab === "accounts" ? ACCOUNT_SEGMENTS : CONTACT_SEGMENTS;
@@ -199,10 +213,10 @@ export function AccountsContactsView({ contacts, accounts, members, includeMerge
           ),
       },
       { accessorKey: "open_opportunities", header: "Open opps", meta: { hint: COLUMN_HINTS.openOpps }, cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
-      { accessorKey: "last_activity_at", header: "Last activity", meta: { hint: COLUMN_HINTS.lastActivity }, cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{getValue<string | null>() ? formatRelative(getValue<string>()) : "—"}</span> },
-      { accessorKey: "created_at", header: "Created", cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{formatRelative(getValue<string>())}</span> },
+      { accessorKey: "last_activity_at", header: "Last activity", meta: { hint: COLUMN_HINTS.lastActivity }, cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{getValue<string | null>() ? formatRelative(getValue<string>(), timeRef) : "—"}</span> },
+      { accessorKey: "created_at", header: "Created", cell: ({ getValue }) => <span className="tnum text-xs text-muted-foreground">{formatRelative(getValue<string>(), timeRef)}</span> },
     ],
-    [],
+    [timeRef],
   );
 
   const accountCols = useMemo<ColumnDef<AccountListRow, unknown>[]>(
