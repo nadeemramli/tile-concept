@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useQueryState } from "nuqs";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetricCard } from "@/components/patterns/metric-card";
@@ -8,9 +9,9 @@ import { SuppliersTab } from "@/features/stock/components/suppliers-tab";
 import { SqlTab } from "@/features/stock/components/sql-tab";
 import { ReconciliationTab } from "@/features/stock/components/reconciliation-tab";
 import type { VariantOption } from "@/features/stock/components/variant-combobox";
+import { stockTabParser, type StockTab } from "@/features/stock/url-state";
+import { cn } from "@/lib/utils";
 import type { AvailabilityRow, InHouseSnapshotRow, MappingRow, ReconciliationRow, SqlConnector, StaleSupplierRow, StockCounts } from "@/server/queries/stock";
-
-export type StockTab = "overview" | "suppliers" | "sql" | "reconciliation";
 
 interface Props {
   tab: StockTab;
@@ -30,7 +31,12 @@ interface Props {
 }
 
 export function StockClient({ tab, rows, counts, stale, mappings, snapshots, cases, connector, categories, brands, suppliers, units, sources, variants }: Props) {
-  const [, setTab] = useQueryState("tab");
+  // The server renders the tab's content (page.tsx reads ?tab=), so a tab
+  // change must reach it: shallow: false. Each tab is its own history entry,
+  // so Back returns to the tab you came from. The trigger follows the URL at
+  // once; the content below stays dimmed and busy until the server answers.
+  const [pending, startTransition] = useTransition();
+  const [selectedTab, setTab] = useQueryState("tab", stockTabParser.withOptions({ shallow: false, history: "push", scroll: false, startTransition }));
 
   return (
     <div className="space-y-4">
@@ -72,7 +78,7 @@ export function StockClient({ tab, rows, counts, stale, mappings, snapshots, cas
         />
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v === "overview" ? null : v)}>
+      <Tabs value={selectedTab} onValueChange={(v) => void setTab(v as StockTab)}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="suppliers">Supplier updates</TabsTrigger>
@@ -81,10 +87,12 @@ export function StockClient({ tab, rows, counts, stale, mappings, snapshots, cas
         </TabsList>
       </Tabs>
 
-      {tab === "overview" && <OverviewTab rows={rows} categories={categories} brands={brands} suppliers={suppliers} />}
-      {tab === "suppliers" && <SuppliersTab stale={stale} suppliers={suppliers} variants={variants} units={units} />}
-      {tab === "sql" && <SqlTab connector={connector} mappings={mappings} snapshots={snapshots} variants={variants} />}
-      {tab === "reconciliation" && <ReconciliationTab cases={cases} sources={sources} variants={variants} />}
+      <div aria-busy={pending || undefined} className={cn(pending && "pointer-events-none opacity-60")}>
+        {tab === "overview" && <OverviewTab rows={rows} categories={categories} brands={brands} suppliers={suppliers} />}
+        {tab === "suppliers" && <SuppliersTab stale={stale} suppliers={suppliers} variants={variants} units={units} />}
+        {tab === "sql" && <SqlTab connector={connector} mappings={mappings} snapshots={snapshots} variants={variants} />}
+        {tab === "reconciliation" && <ReconciliationTab cases={cases} sources={sources} variants={variants} />}
+      </div>
     </div>
   );
 }

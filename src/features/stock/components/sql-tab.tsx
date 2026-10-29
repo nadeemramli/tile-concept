@@ -127,9 +127,10 @@ export function SqlTab({ connector, mappings, snapshots, variants }: Props) {
                 </span>
               </Hint>
             </div>
-            <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-              SQL Account is the authority for in-house stock. This app mirrors it and <span className="font-medium text-foreground">never writes back</span>. It also never subtracts a quotation on its own:
-              whether a quotation, sales order or delivery order should reduce available stock has not yet been tested and agreed with the business, so the figures are shown exactly as SQL Account reports them.
+            <p className="mt-1 max-w-2xl text-xs text-muted-foreground" data-testid="sql-stock-authority">
+              SQL Account is the authority for in-house stock. This app mirrors it and <span className="font-medium text-foreground">never writes back</span>. Saving a delivery order in SQL Account deducts the stock there,
+              at that moment; the app only mirrors the result, and planning, packing or completing a delivery here never deducts it a second time. The app never subtracts a quotation or sales order on its own either:
+              the figures are shown exactly as SQL Account reports them. Invoice, delivery and stock status stay separate.
             </p>
           </div>
           <FreshnessBadge lastSuccessAt={connector?.last_success_at ?? null} slaMinutes={connector?.sla_minutes ?? 240} label="Last success" />
