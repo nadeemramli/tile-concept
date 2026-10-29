@@ -35,6 +35,24 @@ Implemented on `main` at `6c351c1`. Nothing hosted was changed: no hosted migrat
 | 8 | Reopen keeps prior loss event, reason, actor, evidence; current state active; weekly outcome kept | pgTAP "earlier loss keeps its reason, actor and effective date after reopen", "reopened loss still counts in its own week", "two loss events, one distinct pursuit"; E2E tests 1–2 |
 | 9 | Friendly-competitor wording provisional; no referral/customer assertion | Taxonomy unit test (wording), relationship requires description + evidence (pgTAP), UI "provisional" pill and tip, glossary entry |
 
+## TILE-88: per-workspace reads of outcome history and the report
+
+`20261029163000_pursuit_outcomes.sql` runs after TILE-62's `20261029000002_workspace_permission_scope.sql`, whose narrowing only reached policies that already existed. So two reads still judged every row by the **acting** membership: the history policy (raw `api.pursuit_outcome_events` and the derived `api.pursuit_outcome_history`) required acting `sales.read`, and `api.report_pursuit_outcomes` checked acting `report.read` once and then aggregated every visible row.
+
+`supabase/migrations/20261029163001_pursuit_outcome_reader_scope.sql` applies TILE-62's per-row rule and nothing else:
+
+- **History:** the row's own workspace must be in `core.permitted_workspace_ids('sales.read')`. Membership and the inquiry-or-opportunity guard (owner scope, shared inquiry access, each under its own RLS) are unchanged.
+- **Report:** each aggregated row also needs `report.read` in its own workspace. The report stays SECURITY INVOKER over the history view. Refusals keep `core.require_permission`'s messages and codes (`not authenticated` 28000, `permission denied: report.read` 42501), now raised only when no membership grants `report.read`. Calculations and output shape are unchanged.
+- **Helper:** `core.permitted_workspace_ids` is created only if absent, byte-identical to TILE-62's (definition MD5 `069a849542c39598eebeed3e76e88447` in both orders). With TILE-62 applied first it does nothing.
+- **Unchanged:** the outcome command (definition MD5 `a55aad0000d3876ba910840d7dca30bd`) and every write path, the triggers, reasons and history semantics.
+
+Evidence:
+
+- `tests/integration/pursuit-outcome-reader-scope.mts` signs in with passwords through local Auth and reads through PostgREST. It changes only the subject's persisted memberships between cases, covers both parent branches, and checks that a B reader acting in A still cannot write B. Its expectations are for the TILE-62-first order. Run it with `pnpm exec tsx tests/integration/pursuit-outcome-reader-scope.mts` (`--expect=baseline` describes the unrepaired behaviour).
+- `supabase/tests/025_pursuit_outcome_reader_scope.sql` holds in both orders. Without the repair it fails 5 assertions even before TILE-62: a reader of A saw B rows it was denied in B, and A's `report.read` reported B.
+
+The cross-workspace cases are database/API contracts. The app has no workspace selector, so the browser always acts in the acting membership, and there is still no report page for this read.
+
 ## Seams for integration
 
 - **Forecasts (TILE-7)** may redefine `api.change_opportunity_stage`. This change does not touch it: the guard trigger refuses Lost/Deferred moves whatever the function body. If a later redefinition starts writing `status` to lost/deferred directly, it will be refused with the outcome-form message; route those through `api.pursuit_outcome_command`.
@@ -46,6 +64,7 @@ Implemented on `main` at `6c351c1`. Nothing hosted was changed: no hosted migrat
 ## Migration order
 
 1. `supabase/migrations/20261029163000_pursuit_outcomes.sql` (reserved TILE-8 namespace; after `20261016015608_catalog_upload_storage_read_access.sql`).
+2. `supabase/migrations/20261029163001_pursuit_outcome_reader_scope.sql` (TILE-88). When TILE-62's `20261029000001`–`20261029000003` are integrated they sort before both.
 
 Forward-only, no backfill, no data change. Generated types are regenerated in this branch (`src/lib/supabase/database.types.ts`; additions only).
 
