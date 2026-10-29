@@ -1,7 +1,12 @@
--- A shared project register is available to every workspace role. Follow-up
+-- A shared project register is available to every company staff role. Follow-up
 -- remains a sales responsibility without granting broader sales.assign rights.
+-- The roles are named rather than taken from core.roles, so a role added by
+-- another migration (applied before or after this one) is not given project or
+-- customer-name access without its own decision. Mirrored in src/lib/rbac/matrix.ts.
 insert into core.role_permissions(role_key,permission)
-select r.key,p from core.roles r cross join unnest(array['projects.read','projects.write']) p on conflict do nothing;
+select r.key,p from core.roles r cross join unnest(array['projects.read','projects.write']) p
+where r.key in('admin','management','sales_manager','sales_rep','showroom','marketing_coordinator','catalog_pricing','stock_coordinator','analyst','guest')
+on conflict do nothing;
 insert into core.role_permissions(role_key,permission)
 select role_key,'projects.follow_up' from core.role_permissions where permission='sales.write' on conflict do nothing;
 
@@ -11,10 +16,11 @@ alter table identity.projects add column last_follow_up_at timestamptz;
 alter table identity.projects add column last_follow_up_by uuid references auth.users(id);
 create index projects_handler_idx on identity.projects(workspace_id,owner_id);
 create or replace view api.projects with(security_invoker=true) as select * from identity.projects;
+-- Per row (TILE-62): a row is readable through the membership in its own workspace.
 create policy project_register_read on identity.projects for select to authenticated
-using(workspace_id in(select core.member_workspace_ids()) and (select core.has_permission('projects.read')));
+using(workspace_id in(select core.permitted_workspace_ids('projects.read')));
 create policy project_register_read on identity.project_sites for select to authenticated
-using(workspace_id in(select core.member_workspace_ids()) and (select core.has_permission('projects.read')));
+using(workspace_id in(select core.permitted_workspace_ids('projects.read')));
 -- All project mutations go through the versioned command, including assignment.
 revoke insert,update,delete on identity.projects,api.projects from authenticated;
 
@@ -37,7 +43,7 @@ create table identity.project_events(
 create index project_events_project_idx on identity.project_events(workspace_id,project_id,created_at desc);
 alter table identity.project_events enable row level security;
 create policy project_event_read on identity.project_events for select to authenticated
-using(workspace_id in(select core.member_workspace_ids()) and (select core.has_permission('projects.read')));
+using(workspace_id in(select core.permitted_workspace_ids('projects.read')));
 create view api.project_events with(security_invoker=true) as select * from identity.project_events;
 revoke all on identity.project_events,api.project_events from anon,authenticated;
 grant select on identity.project_events,api.project_events to authenticated;
@@ -66,8 +72,9 @@ create function api.project_identity_search(p_kind text,p_query text default '',
 returns table(id uuid,name text) language plpgsql stable security definer set search_path='' as $$
 declare ws uuid:=core.current_workspace_id(); q text:=coalesce(core.normalize_text(btrim(p_query)),''); digits text:=regexp_replace(coalesce(p_query,''),'[^0-9]','','g');
 begin
- -- Matching a personal phone number is a CRM lookup; staff without sales access search by name only.
- if not core.has_permission('sales.read') then digits:=''; end if;
+ -- Matching a personal phone number is a CRM lookup; staff whose membership in the
+ -- searched workspace lacks sales access search by name only (TILE-62: per workspace).
+ if not core.has_permission_in(ws,'sales.read') then digits:=''; end if;
  perform core.require_permission('projects.write'); perform core.require_workspace(ws);
  if length(q)>200 or p_kind not in ('account','contact') then raise exception 'Invalid search' using errcode='23514'; end if;
  if length(q)<2 and p_account_id is null then return; end if;

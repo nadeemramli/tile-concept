@@ -77,6 +77,53 @@ select is((select count(*) from sales.opportunities where project_id=pg_temp.pid
 select ok(not has_function_privilege('anon','api.project_command(text,jsonb,uuid)','EXECUTE'),'anonymous registration denied');
 select ok(not has_function_privilege('anon','api.project_directory(uuid)','EXECUTE'),'shared directory is not public internet access');
 select ok(not has_table_privilege('authenticated','identity.project_requests','SELECT'),'idempotency payloads are private');
+-- TILE-62: a permission held in one workspace never authorizes another.
+-- The catalogue user acts in A (oldest membership) and gains a later sales-rep membership in B.
+insert into core.memberships(workspace_id,user_id,role_key,status,created_at)
+select core.demo_workspace_id(),m.user_id,'sales_rep','active',m.created_at+interval '1 day' from core.memberships m
+where m.user_id='aaaaaaaa-0000-0000-0000-000000000006' and m.workspace_id='11111111-1111-1111-1111-111111111111';
+-- A salesperson acting in A gains a later catalogue membership in B.
+insert into core.memberships(workspace_id,user_id,role_key,status,created_at)
+select core.demo_workspace_id(),m.user_id,'catalog_pricing','active',m.created_at+interval '1 day' from core.memberships m
+where m.user_id='aaaaaaaa-0000-0000-0000-000000000003' and m.workspace_id='11111111-1111-1111-1111-111111111111';
+insert into identity.projects(id,workspace_id,name) values('bbbbbbbb-3422-0000-0000-000000000062',core.demo_workspace_id(),'Synthetic demo-workspace project');
+-- A member whose A role holds nothing (test-only role) and whose later B role is sales_rep.
+insert into core.roles(key,label,rank) values('synthetic_no_access','Synthetic role without permissions (test only)',999);
+insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
+  confirmation_token,recovery_token,email_change,email_change_token_new,email_change_token_current,phone_change,phone_change_token,reauthentication_token,is_sso_user)
+values('00000000-0000-0000-0000-000000000000','dddddddd-3422-0000-0000-000000000062','authenticated','authenticated','synthetic.projects.none-a.rep-b@tileconcept.test','',now(),'{"provider":"email","providers":["email"]}','{}',now(),now(),'','','','','','','','',false);
+insert into core.memberships(workspace_id,user_id,role_key,status,created_at) values
+ ('11111111-1111-1111-1111-111111111111','dddddddd-3422-0000-0000-000000000062','synthetic_no_access','active',now()-interval '2 days'),
+ (core.demo_workspace_id(),'dddddddd-3422-0000-0000-000000000062','sales_rep','active',now()-interval '1 day');
+create temp table snapshot62 as select (select to_jsonb(p) from identity.projects p where p.id=pg_temp.pid()) own,(select to_jsonb(p) from identity.projects p where p.id='bbbbbbbb-3422-0000-0000-000000000062') b_row,(select count(*) from identity.project_events) events,(select count(*) from identity.project_requests) requests;
+set local role authenticated;
+select pg_temp.login('aaaaaaaa-0000-0000-0000-000000000006');
+select ok(core.current_workspace_id()='11111111-1111-1111-1111-111111111111' and core.current_role_key()='catalog_pricing','catalogue A + rep B: acts in A as catalogue');
+select ok(not core.has_permission('projects.follow_up') and not core.has_permission('sales.read') and not exists(select 1 from api.my_permissions() p where p in('projects.follow_up','sales.read')),'catalogue A + rep B: acting and session permissions carry nothing from the B sales role');
+select throws_ok($$select api.project_command('follow_up',pg_temp.input('{"note":"Through the B role"}'),gen_random_uuid())$$,'42501','permission denied: projects.follow_up','catalogue A + rep B: cannot follow up an A project');
+select throws_ok($$select api.project_command('assign',pg_temp.input('{"owner_id":"aaaaaaaa-0000-0000-0000-000000000003","note":"Through the B role"}'),gen_random_uuid())$$,'42501','permission denied: projects.follow_up','catalogue A + rep B: cannot assign an A project');
+select throws_ok($$select api.project_command('follow_up','{"id":"bbbbbbbb-3422-0000-0000-000000000062","version":1,"note":"From A into B"}',gen_random_uuid())$$,'42501',null,'catalogue A + rep B: commands do not reach B projects');
+select is((select count(*) from api.project_identity_search('contact','9342271')),0::bigint,'catalogue A + rep B: no phone-digit match in A');
+select is((select count(*) from api.project_identity_search('contact','Registration')),1::bigint,'catalogue A + rep B: name lookup for registration still works');
+reset role;
+select ok((select own=(select to_jsonb(p) from identity.projects p where p.id=pg_temp.pid()) and b_row=(select to_jsonb(p) from identity.projects p where p.id='bbbbbbbb-3422-0000-0000-000000000062') and events=(select count(*) from identity.project_events) and requests=(select count(*) from identity.project_requests) from snapshot62),'refused two-membership commands changed no project, event or request rows');
+set local role authenticated;
+select pg_temp.login('aaaaaaaa-0000-0000-0000-000000000006');
+select lives_ok($$select api.project_command('create','{"name":"Synthetic dual-membership registration"}',gen_random_uuid())$$,'catalogue A + rep B: still registers in A');
+select lives_ok($$select api.project_command('edit',pg_temp.input('{"name":"Synthetic enriched project","notes":"Enriched by catalogue A"}'),gen_random_uuid())$$,'catalogue A + rep B: still enriches A projects');
+select is((select count(*) from api.projects where id='bbbbbbbb-3422-0000-0000-000000000062'),1::bigint,'catalogue A + rep B: reads the B project through the B membership');
+select is((select count(*) from jsonb_array_elements(api.project_directory()) e where e->>'workspace_id'<>'11111111-1111-1111-1111-111111111111'),0::bigint,'catalogue A + rep B: the directory lists the acting workspace only');
+select pg_temp.login('aaaaaaaa-0000-0000-0000-000000000003');
+select ok(core.has_permission('projects.follow_up') and core.has_permission('sales.read'),'rep A + catalogue B: keeps the A sales role');
+select lives_ok($$select api.project_command('follow_up',pg_temp.input('{"note":"Rep acting in A"}'),gen_random_uuid())$$,'rep A + catalogue B: follows up an A project');
+select is((select count(*) from api.project_identity_search('contact','9342271')),1::bigint,'rep A + catalogue B: phone-digit match in A');
+select pg_temp.login('dddddddd-3422-0000-0000-000000000062');
+select is((select count(*) from api.projects where workspace_id='11111111-1111-1111-1111-111111111111'),0::bigint,'no project role in A + rep B: reads no A projects');
+select is((select count(*) from api.project_sites where workspace_id='11111111-1111-1111-1111-111111111111')+(select count(*) from api.project_events where workspace_id='11111111-1111-1111-1111-111111111111'),0::bigint,'no project role in A + rep B: reads no A sites or history');
+select is((select count(*) from api.projects where id='bbbbbbbb-3422-0000-0000-000000000062'),1::bigint,'no project role in A + rep B: reads B projects through the B membership');
+select throws_ok($$select api.project_command('create','{"name":"Synthetic no-access registration"}',gen_random_uuid())$$,'42501',null,'no project role in A + rep B: cannot register in A');
+select throws_ok($$select * from api.project_identity_search('contact','Registration')$$,'42501',null,'no project role in A + rep B: no identity lookup in A');
+reset role;
 select throws_ok($$delete from identity.projects where id=pg_temp.pid()$$,'23503',null,'project history cannot be deleted by deleting its project');
 -- The weekly demo reset deletes the demo workspace; a guest-registered project must not block it.
 select set_config('request.jwt.claims','{"sub":"00000000-9999-4000-8000-000000000001","role":"authenticated"}',true);

@@ -1,10 +1,17 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { test, expect, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
-// Uses only the local demo seed. Registration deliberately needs no CRM fixture.
+// Uses the local demo seed; the two-membership case adds synthetic fixtures to the LOCAL stack only.
 async function signIn(page: Page, role: "catalog" | "rep1" | "rep2") {
+  await signInAs(page, `demo.${role}@tileconcept.test`);
+}
+async function signInAs(page: Page, email: string) {
   await page.context().clearCookies();
   await page.goto("/login");
-  await page.locator("#email").fill(`demo.${role}@tileconcept.test`);
+  await page.locator("#email").fill(email);
   await page.locator("#password").fill("TileDemo!2026");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL("**/");
@@ -130,4 +137,42 @@ test("non-sales staff keep registration but cannot claim, and enrichment persist
   await expect(page.getByText("Sales, invoices & receipts", { exact: true })).toHaveCount(0);
   await page.goto("/sales/pipeline");
   await expect(page.getByRole("heading", { name: /^Not available to Catalog/ })).toBeVisible();
+});
+
+test("a sales role in another workspace grants nothing in the acting workspace", async ({ page }) => {
+  test.setTimeout(120_000);
+  const sql = (query: string) => execFileSync("docker", ["exec", process.env.E2E_DB_CONTAINER ?? "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atqc", query], { encoding: "utf8" }).trim();
+  const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+  assert(["127.0.0.1", "localhost"].includes(new URL(status.API_URL).hostname), "This test refuses hosted targets");
+  const admin = createClient(status.API_URL, status.SERVICE_ROLE_KEY ?? status.SECRET_KEY, { auth: { persistSession: false } });
+  const email = `synthetic.projects.dual-${randomUUID().slice(0, 8)}@tileconcept.test`;
+  const { data, error } = await admin.auth.admin.createUser({ email, password: "TileDemo!2026", email_confirm: true, user_metadata: { full_name: "Synthetic Dual Member" } });
+  if (error) throw error;
+  const uid = data.user.id;
+  // Catalogue in the seed workspace (acting: the oldest membership), sales rep in the demo workspace.
+  sql(`insert into core.memberships(workspace_id,user_id,role_key,status,created_at) values ('11111111-1111-1111-1111-111111111111','${uid}','catalog_pricing','active',now()-interval '2 days'),(core.demo_workspace_id(),'${uid}','sales_rep','active',now()-interval '1 day')`);
+
+  const title = `Synthetic dual-membership project ${Date.now()}`;
+  await signInAs(page, email);
+  await page.goto("/sales/projects?new=1");
+  await page.locator("#project-name").fill(title);
+  await page.getByRole("dialog").getByRole("button", { name: "Register project", exact: true }).click();
+  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible({ timeout: 20_000 });
+  expect(sql(`select p.workspace_id from identity.projects p where p.name='${title}'`)).toBe("11111111-1111-1111-1111-111111111111");
+  // The session reflects the acting catalogue membership: no claim, follow-up or assignment.
+  await expect(page.getByRole("button", { name: "I'll handle this", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Log follow-up", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Assign handler", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Enrich project", exact: true }).click();
+  await page.locator("#notes").fill("Synthetic note from a dual member");
+  await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.reload();
+  await expect(page.getByText("Synthetic note from a dual member", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log follow-up", exact: true })).toBeDisabled();
+  await page.goto("/sales/pipeline");
+  await expect(page.getByRole("heading", { name: /^Not available to Catalog/ })).toBeVisible();
+  // Nothing was recorded through the sales role held in the other workspace.
+  expect(sql(`select count(*) from identity.project_events e join identity.projects p on p.id=e.project_id where p.name='${title}' and e.kind in ('assigned','follow_up')`)).toBe("0");
+  sql(`update core.memberships set status='suspended' where user_id='${uid}'`);
 });
