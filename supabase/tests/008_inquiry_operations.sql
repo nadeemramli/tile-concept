@@ -62,11 +62,12 @@ select is((api.inquiry_page('replied','Inquiry Workflow Fixture')->>'total')::in
 select is((api.inquiry_page('waiting','Inquiry Workflow Fixture')->>'total')::int,0,'replied inquiry leaves Awaiting reply');
 select is((api.inquiry_page('no-response','Inquiry Workflow Fixture')->>'total')::int,0,'reply resolves the no-response view');
 select lives_ok($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000001','schedule','dddddddd-2109-0000-0000-000000000008',now()+interval '2 days')$$,'schedule before closing');
-select lives_ok($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000001','lost','dddddddd-2109-0000-0000-000000000009',p_body=>'Project cancelled')$$,'mark lost with reason');
+select throws_ok($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000001','lost','dddddddd-2109-0000-0000-000000000009',p_body=>'Project cancelled')$$,'23514',null,'free-text loss is retired; a structured reason is required');
+select lives_ok($$select api.pursuit_outcome_command('lose',jsonb_build_object('lead_id','cccccccc-2109-0000-0000-000000000001','reason_code','project_cancelled','effective_date',(now() at time zone 'Asia/Kuala_Lumpur')::date),'dddddddd-2109-0000-0000-000000000009')$$,'mark lost with a structured reason');
 select ok((select status='disqualified' and open_follow_ups=0 and completed_follow_ups=1 from api.inbox_leads where id='cccccccc-2109-0000-0000-000000000001'),'lost cancels open reminders and retains completed work');
 select is((api.inquiry_page('disqualified','Inquiry Workflow Fixture')->>'total')::int,1,'lost inquiries remain discoverable');
 select throws_like($$update api.tasks set status='open' where lead_id='cccccccc-2109-0000-0000-000000000001' and status='cancelled'$$,'%Reopen the inquiry%','Tasks screen cannot reopen follow-up on lost inquiry');
-select lives_ok($$select api.work_inquiry('cccccccc-2109-0000-0000-000000000001','reopen','dddddddd-2109-0000-0000-000000000010',now()+interval '1 day',p_body=>'Customer restarted project')$$,'reopen with reason and next action');
+select lives_ok($$select api.pursuit_outcome_command('reopen',jsonb_build_object('lead_id','cccccccc-2109-0000-0000-000000000001','reason_detail','Customer restarted project','next_follow_up_at',now()+interval '1 day'),'dddddddd-2109-0000-0000-000000000010')$$,'reopen with reason and next action');
 select ok((select status='contacted' and open_follow_ups=1 and first_customer_reply_at is not null from api.inbox_leads where id='cccccccc-2109-0000-0000-000000000001'),'reopening preserves reply history');
 
 select is((api.inquiry_page('all','Pagination fixture')->>'total')::int,1100,'total covers every inquiry beyond old cap');

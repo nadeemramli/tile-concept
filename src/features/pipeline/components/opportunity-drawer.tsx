@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowRightLeft, ListTodo, MessageSquarePlus, Pencil, UserCog } from "lucide-react";
+import { ArrowRightLeft, CircleSlash, ListTodo, MessageSquarePlus, Pencil, RotateCcw, UserCog } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/features/crm/components/form-dialog";
 import { Field } from "@/components/patterns/field";
@@ -24,11 +24,13 @@ import type { MemberOption } from "@/features/crm/components/selects";
 import { StageChangeDialog } from "@/features/pipeline/components/stage-dialog";
 import { EditOpportunityDialog, ReassignDialog } from "@/features/pipeline/components/opportunity-dialogs";
 import { QuotePanel } from "@/features/quotes/components/quote-panel";
+import { OutcomeDialog } from "@/features/outcomes/components/outcome-dialog";
+import { OutcomeHistory } from "@/features/outcomes/components/outcome-history";
 import { ActivityDialog, TaskDialog } from "@/features/crm/components/dialogs";
 import { PurchasesList } from "@/features/crm/components/detail-sections";
 import { PursuitClassificationSection } from "@/features/classification/components/pursuit-classification";
 
-type Which = "stage" | "edit" | "activity" | "task" | "reassign" | "archive" | null;
+type Which = "stage" | "edit" | "activity" | "task" | "reassign" | "archive" | "close" | "reopen" | null;
 
 export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, onClose }: { opp: OpportunityDetail; stages: StageRef[]; members: MemberOption[]; suggestedQuoteNumber: string; onClose: () => void }) {
   const router = useRouter();
@@ -106,8 +108,19 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
           {opp.outcome_reason && <span className="block text-xs opacity-90">Reason: {opp.outcome_reason}</span>}
         </div>
       )}
+      <OutcomeHistory items={opp.outcomes} canWrite={canWrite} />
 
       <div className="flex flex-wrap gap-2">
+        {(opp.status === "open" || opp.status === "deferred") && write(
+          <Button variant="outline" size="sm" onClick={() => setOpen("close")}>
+            <CircleSlash className="size-3.5" aria-hidden /> {opp.status === "deferred" ? "Record loss" : "Close or defer…"}
+          </Button>,
+        )}
+        {(opp.status === "lost" || opp.status === "deferred") && write(
+          <Button variant="outline" size="sm" onClick={() => setOpen("reopen")}>
+            <RotateCcw className="size-3.5" aria-hidden /> Reopen
+          </Button>,
+        )}
         {write(
           <Button variant="outline" size="sm" onClick={() => setOpen("edit")}>
             <Pencil className="size-3.5" aria-hidden /> Edit
@@ -225,6 +238,10 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
 
       {canWrite && (
         <>
+          {open === "close" && <OutcomeDialog open mode="close" target={{ opportunityId: opp.id }} onOpenChange={() => setOpen(null)} types={opp.status === "deferred" ? ["lost"] : ["lost", "deferred"]}
+            linkedNote={opp.lead_id ? "Its inquiry closes with it unless the inquiry has another active opportunity; the pursuit is counted once." : undefined} />}
+          {open === "reopen" && <OutcomeDialog open mode="reopen" target={{ opportunityId: opp.id }} onOpenChange={() => setOpen(null)} needsNextAction
+            stages={stages.filter((s) => s.reporting_group === "open")} defaultStage={(opp.stage_events.find((e) => e.to_stage_key === opp.stage_key)?.from_stage_key) ?? undefined} />}
           <StageChangeDialog open={open === "stage"} onOpenChange={() => setOpen(null)} opportunityId={opp.id} currentStage={opp.stage_key} stages={stages} hasNextAction={!!opp.next_action && !!opp.next_action_due_at} />
           <EditOpportunityDialog open={open === "edit"} onOpenChange={() => setOpen(null)} opp={opp} members={members} canAssign={can("sales.assign")} />
           <ActivityDialog open={open === "activity"} onOpenChange={() => setOpen(null)} links={{ opportunity_id: opp.id, contact_id: opp.contact_id ?? undefined, account_id: opp.account_id ?? undefined, project_id: opp.project_id ?? undefined }} />
