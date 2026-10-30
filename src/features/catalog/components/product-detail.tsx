@@ -22,6 +22,8 @@ import { formatDateTime } from "@/lib/format";
 import type { ProductDetail } from "@/server/queries/catalog";
 import { addAliasAction, addPackagingAction, addVariantAction, markProductReviewedAction, setProductStatusAction, upsertAttributeValueAction } from "@/server/commands/catalog";
 import { ProductMedia } from "@/features/catalog/components/product-media";
+import { ProductStock } from "@/features/catalog/components/product-stock";
+import type { ProductStockResult } from "@/server/queries/stock";
 import { ProductFormDialog } from "@/features/catalog/components/product-form-dialog";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { fieldError, useAction } from "@/features/catalog/use-action";
@@ -34,10 +36,12 @@ interface Props {
   canWrite: boolean;
   canPublish: boolean;
   canReadPrice: boolean;
+  /** Null when the role lacks stock.read; otherwise streamed into the Stock tab. */
+  stock: Promise<ProductStockResult> | null;
   rulesByCategory: Record<string, { attribute_definition_id: string; key: string; label: string; data_type: string; unit: string | null; is_required: boolean; options?: unknown }[]>;
 }
 
-export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, rulesByCategory }: Props) {
+export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, stock, rulesByCategory }: Props) {
   const { product, specs, variants, prices, aliases, media, catalogEntries, audit, duplicates, reference } = detail;
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -115,6 +119,13 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
         )}
       </PageHeader>
 
+      {product.merged_into_product_id && (
+        <div role="status" className="rounded-md border border-info/30 bg-info/10 px-3 py-2 text-sm">
+          Merged into <Link href={`/merchandise/catalog/${product.merged_into_product_id}`} className="font-medium underline">the surviving product</Link>
+          {product.merged_at ? ` on ${formatDateTime(product.merged_at)}` : ""}. Its variants, prices, stock, media and sales history now live there; this record is kept for provenance.
+        </div>
+      )}
+
       {/* Provenance strip */}
       <Card className="px-4 py-3">
         <FactList
@@ -157,10 +168,17 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
                   <span>{d.name}</span>
                   <span className="text-muted-foreground">{d.brand}</span>
                   <TonePill tone="warning" label={d.reason} hint="Why the two products look alike: a shared code, alias or name. A person decides; nothing is merged automatically." />
+                  {canWrite ? (
+                    <Link href={`/merchandise/catalog/merge?survivor=${product.id}&merged=${d.id}`} className="underline">
+                      Review merge
+                    </Link>
+                  ) : null}
                 </li>
               ))}
             </ul>
-            <p className="mt-1 text-[11px] text-muted-foreground">Human confirmation required; product merge is not available in this release.</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {canWrite ? "Review merge compares both products and previews every record that would move. Nothing merges until you confirm." : "A catalog/pricing operator decides whether these are the same product."}
+            </p>
           </div>
         </div>
       )}
@@ -204,11 +222,7 @@ export function ProductDetailView({ detail, canWrite, canPublish, canReadPrice, 
         </TabsContent>
 
         <TabsContent value="stock" className="mt-3">
-          <EmptyState
-            title="No stock source connected — Phase 5"
-            description="In-house stock will mirror SQL Account (read-only, with source timestamp and sync status). Supplier availability will appear as time-stamped snapshots with supplier, age, and evidence. Unknown, stale, low, out and ask-supplier states are never collapsed into zero."
-            action={{ label: "About the Stock module", href: "/merchandise/stock" }}
-          />
+          <ProductStock stock={stock} variants={variants} productCode={product.code} />
         </TabsContent>
 
         <TabsContent value="refs" className="mt-3">

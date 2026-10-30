@@ -16,9 +16,12 @@ async function choose(user: ReturnType<typeof userEvent.setup>, label: string, o
   await user.click(screen.getByRole("option", { name: option }));
 }
 
-describe("Malaysia customer area filters", () => {
+// Typing through the full postcode lists is CPU-bound in jsdom: ~2 s alone, past
+// the 5 s default when the suite runs on every core. The budget is explicit so
+// load cannot fail it; the assertions are unchanged.
+describe("Malaysia customer area filters", { timeout: 20_000 }, () => {
   it("filters towns and postcodes and clears descendants on state change", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
     expect(screen.getByRole("combobox", { name: "Bandar / Pekan" })).toBeDisabled();
     expect(screen.getByRole("combobox", { name: "Poskod" })).toBeDisabled();
@@ -36,7 +39,7 @@ describe("Malaysia customer area filters", () => {
     expect(screen.getByRole("option", { name: "Kuching" })).toBeInTheDocument();
   });
   it("clears postcode and neighbourhood when the town changes", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
     await choose(user, "Negeri / Wilayah Persekutuan", "Selangor");
     await choose(user, "Bandar / Pekan", "Batu Caves");
@@ -47,7 +50,7 @@ describe("Malaysia customer area filters", () => {
     expect(screen.getByLabelText("Taman / neighbourhood (optional)")).toHaveValue("");
   });
   it("keeps a leading-zero postcode intact through selection and serialization", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
     await choose(user, "Negeri / Wilayah Persekutuan", "Perlis");
     await choose(user, "Bandar / Pekan", "Kangar");
@@ -55,7 +58,7 @@ describe("Malaysia customer area filters", () => {
     expect(screen.getByTestId("saved-area")).toHaveTextContent(/^01000 Kangar, Perlis$/);
   });
   it("allows an unlisted manual location and can return to empty preset filters", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
     await choose(user, "Negeri / Wilayah Persekutuan", "Selangor");
     await user.click(screen.getByRole("checkbox", { name: "Area not listed? Enter manually" }));

@@ -95,6 +95,25 @@ export function parseUnit(text: string): string | null {
   return null;
 }
 
+/** Exported for the OCR entry builder, which reads label/value pairs line by line. */
+export function extractCode(text: string): string | null {
+  return CODE_RE.exec(text.toUpperCase())?.[1] ?? null;
+}
+
+export function extractColour(text: string): string | null {
+  return firstWord(text, COLOURS);
+}
+
+export function extractFinish(text: string): string | null {
+  const f = firstWord(text, FINISHES);
+  return f === "Matt" ? "Matte" : f;
+}
+
+export function extractMaterial(text: string): string | null {
+  const m = firstWord(text, MATERIALS);
+  return m && m.toUpperCase() === "WPC" ? "WPC" : m;
+}
+
 function firstWord(text: string, words: string[]): string | null {
   const t = text.toLowerCase();
   const hit = words.find((w) => new RegExp(`(^|[^a-z])${w}([^a-z]|$)`).test(t));

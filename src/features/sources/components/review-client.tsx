@@ -98,7 +98,10 @@ export function ReviewClient({ items, assets, duplicates, canApprove, refs }: Pr
   if (itemId && itemId !== loadedFor) {
     setLoadedFor(itemId);
     const base: Record<string, string> = {};
-    for (const f of correctableFor(item?.item_type ?? "product", item?.task_type)) base[f.key] = asText(item?.proposed?.[f.key]);
+    // A decided row shows what was published: the reading, overlaid with the
+    // reviewer's corrections. Fields that differ still show as edited.
+    const decided = item && item.status !== "pending" ? (item.corrections ?? {}) : {};
+    for (const f of correctableFor(item?.item_type ?? "product", item?.task_type)) base[f.key] = asText(f.key in decided ? decided[f.key] : item?.proposed?.[f.key]);
     setDraft(base);
     setNote("");
     setFocused(null);

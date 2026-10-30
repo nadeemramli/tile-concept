@@ -83,10 +83,10 @@ export default async function ReviewPage({ searchParams }: PageProps<"/sources/r
           value={needsManual}
           tone={needsManual ? "warning" : "neutral"}
           info={{
-            definition: "Scanned pages with no text layer.",
+            definition: "Pages OCR could not read, or was not allowed to read, plus rows added by hand.",
             grain: "Review item",
             source: "ingest.review_items",
-            caveat: "OCR runs in the background worker (PRD §12.5). Nothing is guessed in the meantime.",
+            caveat: "Readable scans become OCR proposals with a confidence score. Nothing is guessed for the rest.",
           }}
         />
       </div>

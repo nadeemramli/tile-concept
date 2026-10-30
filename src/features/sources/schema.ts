@@ -24,6 +24,17 @@ export const signedUrlSchema = z.object({
   path: z.string().trim().min(1).max(500),
 });
 
+const SOURCE_BUCKETS = new Set(["source-assets", "product-media", "ingest-artifacts"]);
+
+/**
+ * Source evidence may be signed only from the source buckets and only inside
+ * the caller's own workspace folder. Storage policies are still applied on
+ * top, because the link is signed with the caller's own session.
+ */
+export function isSignableSourceObject(bucket: string, path: string, workspaceId: string): boolean {
+  return SOURCE_BUCKETS.has(bucket) && path.startsWith(`${workspaceId}/`) && !path.split("/").includes("..");
+}
+
 export const approveSchema = z.object({
   review_item_id: uuid(),
   corrections: z.record(z.string(), z.unknown()).optional(),
@@ -38,6 +49,23 @@ export const rejectSchema = z.object({
 export type RejectInput = z.input<typeof rejectSchema>;
 
 export const archiveSchema = z.object({ asset_id: uuid() });
+
+/** OCR (TILE-22). Limits live in the database (ingest.ocr_limits); these only shape input. */
+export const requestOcrSchema = z.object({
+  asset_id: uuid(),
+  pages: z.array(z.number().int().min(1).max(10000)).max(200).optional(),
+});
+export type RequestOcrInput = z.input<typeof requestOcrSchema>;
+
+export const retryOcrSchema = z.object({ job_id: uuid() });
+
+export const manualItemSchema = z.object({
+  asset_id: uuid(),
+  page_no: z.number().int().min(1).max(10000).optional(),
+  item_type: z.enum(["product", "price"]).default("product"),
+  note: z.string().trim().max(500).optional().or(z.literal("")),
+});
+export type ManualItemInput = z.input<typeof manualItemSchema>;
 
 /**
  * Fields the reviewer may correct before approving.
