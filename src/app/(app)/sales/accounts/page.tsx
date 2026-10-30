@@ -18,7 +18,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/sales/a
   return (
     <PageBody>
       <PageHeader title="Accounts & Contacts" description="One durable identity per person and per organisation. Lists mask contact details; reveal is permissioned and audited." />
-      <AccountsContactsView contacts={contacts} accounts={accounts} members={members} includeMerged={includeMerged} />
+      <AccountsContactsView contacts={contacts} accounts={accounts} members={members} includeMerged={includeMerged} renderedAt={new Date().toISOString()} />
     </PageBody>
   );
 }
