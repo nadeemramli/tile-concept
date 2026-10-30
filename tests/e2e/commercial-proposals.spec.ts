@@ -33,7 +33,7 @@ test.afterAll(() => {
 });
 
 async function login(page: Page, email: string) {
-  await page.goto("/login");
+  await page.goto("/login?next=%2F");
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("TileDemo!2026");
   await page.getByRole("button", { name: "Sign in" }).click();

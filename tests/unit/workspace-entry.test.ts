@@ -100,7 +100,7 @@ describe("area sidebars", () => {
   it("keeps the Operating System sidebar unchanged and free of admin queues", () => {
     expect(keys("admin", "operating")).not.toContain("preparation");
     expect(keys("admin", "operating")).not.toContain("my-deliveries");
-    expect(keys("sales_rep", "operating")).toEqual(["pipeline", "projects", "walkins", "feedback", "inbox", "accounts", "creative", "content-opps", "shoot-calendar", "catalog", "pricing", "stock", "reports"]);
+    expect(keys("sales_rep", "operating")).toEqual(["projects", "pipeline", "walkins", "feedback", "inbox", "accounts", "creative", "content-opps", "shoot-calendar", "catalog", "pricing", "stock", "reports"]);
   });
 
   it("gives a driver exactly one menu item and nothing from sales", () => {

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { Json } from "@/lib/supabase/database.types";
+import { forecastCaptureShape } from "@/features/forecast/schema";
+import { captureForecast, withForecastNote } from "@/server/forecast-capture";
 import { uuid } from "@/lib/zod";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requirePermission } from "@/server/session";
@@ -70,11 +72,20 @@ export async function quoteCommandAction(input: unknown): Promise<ActionResult<R
     const { data, error } = await db.rpc("quote_command", { p_action: parsed.data.action, p_input: payload as Json, p_request_id: parsed.data.request_id });
     if (error || !data) return fail(error ?? "The quote was not saved");
     const result = data as Record<string, unknown>;
+    let forecastError: string | null = null;
+    // The quote is already committed. A forecast error must never undo it.
+    const capture = z.object({ forecast: z.object({ version: z.number().int().positive().optional(), ...forecastCaptureShape }).optional() }).safeParse(input);
+    if (!capture.success) forecastError = "Check the optional forecast fields.";
+    else if (capture.data.forecast && ["prepare", "revise", "issue"].includes(parsed.data.action) && typeof result.quote_id === "string") {
+      const { data: quote } = await db.from("quotes").select("opportunity_id").eq("id", result.quote_id).maybeSingle();
+      if (quote?.opportunity_id) forecastError = await captureForecast(db, quote.opportunity_id, "quote", capture.data.forecast, parsed.data.request_id, capture.data.forecast.version);
+    }
+    revalidatePath("/sales/pipeline/forecast");
     revalidatePath("/sales/inbox");
     revalidatePath("/sales/walk-ins");
     revalidatePath("/sales/pipeline");
     const message = result.duplicate === true ? "That send was already recorded; nothing new was added." : result.already_issued === true ? "That version was already issued." : DONE[parsed.data.action];
-    return ok(result, message);
+    return ok(result, withForecastNote(message, forecastError));
   } catch (e) {
     return fail(e);
   }

@@ -14,8 +14,11 @@ import { StatusPill } from "@/components/patterns/status-pill";
 import { QUOTE_CHANNEL, QUOTE_EVIDENCE_STATE, QUOTE_LIFECYCLE, QUOTE_SEND_EVIDENCE, QUOTE_SEND_KIND, QUOTE_VERSION_STATE, VISIT_QUOTE_RESOLUTION } from "@/lib/domain/status-maps";
 import { formatDate, formatDateTime, formatMoney, titleCase } from "@/lib/format";
 import { loadQuoteContextAction, quoteCommandAction } from "@/server/commands/quotes";
+import { ForecastCaptureFields } from "@/features/forecast/components/forecast-fields";
 import { QUOTE_CHANNELS, QUOTE_SEND_EVIDENCES, type QuoteAction } from "../schema";
 import type { QuoteAnchor, QuoteContext, QuoteSendView, QuoteVersionView, QuoteView, VisitEvidenceView } from "../types";
+
+type QuoteForecast = { version: number; expected_close_date: string | null; probability_band: string | null };
 
 const selectClass = "h-9 w-full rounded-md border bg-background px-2 text-sm";
 
@@ -41,8 +44,8 @@ const ORIGIN: Record<string, "inbox" | "visit" | "pipeline"> = { lead_id: "inbox
  * inquiry drawer, the visit drawer or the opportunity. Preparing, issuing and
  * sending are separate steps; the database keeps every version and send.
  */
-export function QuotePanel({ anchor, suggestedNumber, defaultAmount, defaultCurrency = "MYR" }: {
-  anchor: QuoteAnchor; suggestedNumber?: string; defaultAmount?: number | null; defaultCurrency?: string;
+export function QuotePanel({ anchor, suggestedNumber, defaultAmount, defaultCurrency = "MYR", forecast }: {
+  anchor: QuoteAnchor; suggestedNumber?: string; defaultAmount?: number | null; defaultCurrency?: string; forecast?: QuoteForecast;
 }) {
   const router = useRouter();
   const [ctx, setCtx] = useState<QuoteContext | null>(null);
@@ -101,7 +104,7 @@ export function QuotePanel({ anchor, suggestedNumber, defaultAmount, defaultCurr
           </ul>
         </div>
       )}
-      {dialog && <QuoteDialog dialog={dialog} anchor={anchor} ctx={ctx} suggestedNumber={suggestedNumber} defaultAmount={defaultAmount} defaultCurrency={defaultCurrency} onClose={() => setDialog(null)} onSaved={saved} />}
+      {dialog && <QuoteDialog dialog={dialog} anchor={anchor} ctx={ctx} suggestedNumber={suggestedNumber} defaultAmount={defaultAmount} defaultCurrency={defaultCurrency} forecast={forecast} onClose={() => setDialog(null)} onSaved={saved} />}
     </div>
   );
 }
@@ -171,11 +174,12 @@ function QuoteLinks({ quote, anchor }: { quote: QuoteView; anchor: QuoteAnchor }
   return <>{links.map((l) => <Link key={l.href} href={l.href} className="text-xs hover:underline">{l.label}</Link>)}</>;
 }
 
-function QuoteDialog({ dialog, anchor, ctx, suggestedNumber, defaultAmount, defaultCurrency, onClose, onSaved }: {
-  dialog: Dialogs; anchor: QuoteAnchor; ctx: QuoteContext; suggestedNumber?: string; defaultAmount?: number | null; defaultCurrency: string;
+function QuoteDialog({ dialog, anchor, ctx, suggestedNumber, defaultAmount, defaultCurrency, forecast, onClose, onSaved }: {
+  dialog: Dialogs; anchor: QuoteAnchor; ctx: QuoteContext; suggestedNumber?: string; defaultAmount?: number | null; defaultCurrency: string; forecast?: QuoteForecast;
   onClose: () => void; onSaved: () => void;
 }) {
   const [pending, start] = useTransition();
+  const forecastVersion = useRef(forecast?.version);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [failed, setFailed] = useState("");
   const [stage, setStage] = useState<"prepared" | "issued" | "sent">("prepared");
@@ -190,7 +194,8 @@ function QuoteDialog({ dialog, anchor, ctx, suggestedNumber, defaultAmount, defa
     const request_id = retry.current.id;
     start(async () => {
       try {
-        const r = await quoteCommandAction({ action, request_id, input });
+        const { forecast_close_date, forecast_band, forecast_evidence, ...quoteInput } = input;
+        const r = await quoteCommandAction({ action, request_id, input: quoteInput, forecast: { version: forecastVersion.current, forecast_close_date, forecast_band, forecast_evidence } });
         if (r.ok) { toast.success(r.message ?? "Saved"); onSaved(); return; }
         setErrors(r.fieldErrors ?? {}); setFailed(r.error); toast.error(r.error);
       } catch {
@@ -233,6 +238,7 @@ function QuoteDialog({ dialog, anchor, ctx, suggestedNumber, defaultAmount, defa
       {stage !== "prepared" && <Field label="Issued" htmlFor="issued_at" error={err("issued_at")} hint={stage === "sent" ? "Leave blank if it was issued when it was sent." : undefined}><Input id="issued_at" name="issued_at" type="datetime-local" defaultValue={stage === "issued" ? nowLocal() : ""} /></Field>}
       {stage === "sent" && <SendFields err={err} evidence={evidence} setEvidence={setEvidence} noteName="send_note" />}
       <Field label="Notes" htmlFor="notes" error={err("notes")}><Textarea id="notes" name="notes" rows={2} /></Field>
+      {"opportunity_id" in anchor && <ForecastCaptureFields idPrefix="quote" current={forecast} />}
     </>;
   } else if (dialog.kind === "issue") {
     title = `Issue v${dialog.version.version_no}`; description = "Issuing finalises this version. After this it cannot change."; submitLabel = "Issue version";

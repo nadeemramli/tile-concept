@@ -29,7 +29,7 @@ const name = (label: string) => `E2E ${label} ${RUN}`;
 function sql(query: string) {
   return execFileSync("docker", ["exec", process.env.E2E_DB_CONTAINER ?? "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8" }).trim();
 }
-const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json", ...(process.env.E2E_SUPABASE_WORKDIR ? ["--workdir", process.env.E2E_SUPABASE_WORKDIR] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 assert(["127.0.0.1", "localhost"].includes(new URL(status.API_URL).hostname), "This test refuses hosted targets");
 const admin = createClient(status.API_URL, status.SERVICE_ROLE_KEY ?? status.SECRET_KEY, { auth: { persistSession: false } });
 const publishable = status.PUBLISHABLE_KEY ?? status.ANON_KEY;
@@ -61,9 +61,9 @@ test.beforeAll(async () => {
       ('${WORKSPACE}','${name("lead reminder")}',now()+interval '1 day','${users.rep.id}','${ids.leadOther}',null,'${users.rep.id}'),
       ('${WORKSPACE}','${name("linked lead reminder")}',now()+interval '1 day','${users.rep.id}','${ids.leadLinked}',null,'${users.rep.id}'),
       ('${WORKSPACE}','${name("linked opportunity reminder")}',now()+interval '1 day','${users.rep.id}',null,'${ids.oppLinked}','${users.rep.id}');
-    insert into sales.quotes(id,workspace_id,opportunity_id,quote_number,status,current_version_no) values ('${randomUUID()}','${WORKSPACE}','${ids.oppLinked}','E2E-Q-${RUN}','issued',1);
-    insert into sales.quote_versions(workspace_id,quote_id,version_no,issued_at,total_amount,currency)
-      select '${WORKSPACE}',id,1,now()-interval '1 day',27500,'MYR' from sales.quotes where quote_number='E2E-Q-${RUN}';
+    insert into sales.quotes(id,workspace_id,opportunity_id,quote_number,status,current_version_no,origin) values ('${randomUUID()}','${WORKSPACE}','${ids.oppLinked}','E2E-Q-${RUN}','issued',1,'legacy');
+    insert into sales.quote_versions(workspace_id,quote_id,version_no,prepared_at,issued_at,total_amount,currency,evidence_state)
+      select '${WORKSPACE}',id,1,now()-interval '1 day',now()-interval '1 day',27500,'MYR','legacy' from sales.quotes where quote_number='E2E-Q-${RUN}';
   `);
 });
 

@@ -182,7 +182,7 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
       <PursuitClassificationSection key={opp.id} subject={{ opportunity_id: opp.id }} canWrite={canWrite} readOnlyReason={opp.archived_at ? "Restore this opportunity first." : OWNER_ONLY} />
 
       <DrawerSection title="Quotations">
-        <QuotePanel key={opp.id} anchor={{ opportunity_id: opp.id }} suggestedNumber={suggestedQuoteNumber} defaultAmount={opp.estimated_value} defaultCurrency={opp.currency} />
+        <QuotePanel key={opp.id} anchor={{ opportunity_id: opp.id }} suggestedNumber={suggestedQuoteNumber} defaultAmount={opp.estimated_value} defaultCurrency={opp.currency} forecast={opp} />
       </DrawerSection>
 
       <DrawerSection title={`Stage history (${opp.stage_events.length})`}>

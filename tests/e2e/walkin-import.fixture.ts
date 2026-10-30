@@ -15,7 +15,7 @@ export type FixtureRole = "showroom" | "management";
 export type ServiceClient = Awaited<ReturnType<WalkinImportFixture["serviceClient"]>>;
 export interface FixtureUser { id: string; email: string; password: string; fullName: string; role: FixtureRole }
 
-const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json", ...(process.env.E2E_SUPABASE_WORKDIR ? ["--workdir", process.env.E2E_SUPABASE_WORKDIR] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 const API_URL: string = status.API_URL;
 assert(["127.0.0.1", "localhost"].includes(new URL(API_URL).hostname), "The walk-in import suite refuses hosted targets");
 const PUBLISHABLE_KEY: string = status.PUBLISHABLE_KEY ?? status.ANON_KEY;

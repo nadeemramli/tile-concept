@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { changeStageSchema, addQuoteVersionSchema } from "@/features/pipeline/schema";
+import { changeStageSchema } from "@/features/pipeline/schema";
+import { quoteCommandSchema } from "@/features/quotes/schema";
 import { captureToReviewInput, reviewForecastSchema } from "./schema";
 import { FORECAST_BAND, FORECAST_QUEUE } from "@/lib/domain/status-maps";
 import { FORECAST_QUEUES } from "./schema";
@@ -45,7 +46,7 @@ describe("forecast review input", () => {
 describe("forecast capture at stage change and quote follow-up", () => {
   it("is optional: the stage and quote forms validate without any forecast", () => {
     expect(changeStageSchema.safeParse({ opportunity_id: base.opportunity_id, to_stage_key: "quote_sent" }).success).toBe(true);
-    expect(addQuoteVersionSchema.safeParse({ opportunity_id: base.opportunity_id, quote_number: "QT-2026-0001" }).success).toBe(true);
+    expect(quoteCommandSchema.safeParse({ action: "prepare", request_id: base.request_id, input: { opportunity_id: base.opportunity_id, origin: "pipeline", quote_number: "QT-2026-0001", currency: "MYR" } }).success).toBe(true);
   });
 
   it("applies only the fields that were filled in", () => {

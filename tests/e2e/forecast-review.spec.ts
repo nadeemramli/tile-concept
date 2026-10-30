@@ -20,7 +20,7 @@ function sql(query: string) {
 }
 function stack(): { url: string; key: string } {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SECRET_KEY) return { url: process.env.NEXT_PUBLIC_SUPABASE_URL, key: process.env.SUPABASE_SECRET_KEY };
-  const s = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+  const s = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json", ...(process.env.E2E_SUPABASE_WORKDIR ? ["--workdir", process.env.E2E_SUPABASE_WORKDIR] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
   return { url: s.API_URL, key: s.SERVICE_ROLE_KEY ?? s.SECRET_KEY };
 }
 const { url, key } = stack();
@@ -179,9 +179,12 @@ test("a quotation is recorded without a forecast, and a stage change can capture
   await login(page, users.rep.email);
   await page.goto(`/sales/pipeline?opportunity=${ids.quoted}`);
   const drawer = page.getByRole("dialog");
-  await drawer.getByRole("button", { name: "Quote version" }).click();
-  await page.getByRole("dialog", { name: /Add quote/ }).getByRole("button", { name: "Issue version" }).click();
-  await expect(page.getByText("Quote version 1 added.")).toBeVisible();
+  await drawer.getByRole("button", { name: "Record quote", exact: true }).click();
+  const quote = page.getByRole("dialog", { name: "Record quote", exact: true });
+  await quote.getByLabel("Quote number", { exact: true }).fill(`SYN-FORECAST-${tag}`);
+  await quote.getByLabel("What has happened", { exact: true }).selectOption("issued");
+  await quote.getByRole("button", { name: "Save and issue", exact: true }).click();
+  await expect(page.getByText("Quote recorded.", { exact: true })).toBeVisible();
   await page.goto(forecastUrl("&list=missing_date"));
   await expect(row(page, NAMES.quoted)).toBeVisible();
 
@@ -197,6 +200,18 @@ test("a quotation is recorded without a forecast, and a stage change can capture
   await page.goto(forecastUrl());
   await expect(row(page, NAMES.quoted)).toContainText("Low");
   await expect(row(page, NAMES.quoted)).toContainText("Negotiation");
+
+  await page.goto(`/sales/pipeline?opportunity=${ids.quoted}`);
+  await page.getByTestId("quote-card").filter({ hasText: `SYN-FORECAST-${tag}` }).getByRole("button", { name: "Revise", exact: true }).click();
+  const revision = page.getByRole("dialog", { name: /Revise SYN-FORECAST/ });
+  await revision.getByLabel("Expected close", { exact: true }).fill(sunday);
+  await chooseOption(page, "Likelihood", "High");
+  await revision.getByRole("button", { name: "Save as prepared", exact: true }).click();
+  await expect(page.getByText("Revision recorded.", { exact: true })).toBeVisible();
+  await page.goto(forecastUrl());
+  await page.reload();
+  await expect(row(page, NAMES.quoted)).toContainText("High");
+  expect(sql(`select count(*) from sales.opportunity_forecast_history where opportunity_id='${ids.quoted}' and review_context='quote'`)).toBe("1");
 });
 
 test("showroom staff without shared sales scope cannot see another salesperson's forecast", async ({ page }) => {

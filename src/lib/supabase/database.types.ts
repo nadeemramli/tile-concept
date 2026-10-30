@@ -762,6 +762,13 @@ export type Database = {
             foreignKeyName: "candidate_records_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "candidate_records_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -864,6 +871,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "candidate_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_edition_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "catalog_edition_candidates_source_asset_id_fkey"
@@ -978,6 +992,13 @@ export type Database = {
             foreignKeyName: "catalog_editions_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "catalog_editions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -1083,8 +1104,22 @@ export type Database = {
             foreignKeyName: "catalog_entries_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_entries_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "catalog_entries_source_asset_fk"
@@ -1384,6 +1419,13 @@ export type Database = {
             foreignKeyName: "certificate_candidates_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "certificate_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -1512,6 +1554,13 @@ export type Database = {
             foreignKeyName: "certificate_scopes_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "certificate_scopes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1623,6 +1672,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "certificates_source_asset_id_fkey"
@@ -1888,6 +1944,13 @@ export type Database = {
             foreignKeyName: "commercial_amount_observations_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "commercial_amount_observations_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -2129,6 +2192,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_sheet_items_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
           },
           {
             foreignKeyName: "contact_sheet_items_workspace_id_fkey"
@@ -2648,6 +2718,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "corpus_validation_issues_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
           {
             foreignKeyName: "corpus_validation_issues_source_asset_id_fkey"
             columns: ["source_asset_id"]
@@ -3173,6 +3250,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
             referencedColumns: ["product_id"]
           },
           {
@@ -4167,13 +4251,22 @@ export type Database = {
           attempts: number | null
           created_at: string | null
           created_by: string | null
+          engine: string | null
+          engine_version: string | null
           error: string | null
+          failure_kind: string | null
           finished_at: string | null
           id: string | null
           job_type: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          max_attempts: number | null
+          next_attempt_at: string | null
           parser_version: string | null
           progress: Json | null
+          requested_pages: number[] | null
           source_asset_id: string | null
+          source_checksum: string | null
           started_at: string | null
           stats: Json | null
           status: string | null
@@ -4183,13 +4276,22 @@ export type Database = {
           attempts?: number | null
           created_at?: string | null
           created_by?: string | null
+          engine?: string | null
+          engine_version?: string | null
           error?: string | null
+          failure_kind?: string | null
           finished_at?: string | null
           id?: string | null
           job_type?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          max_attempts?: number | null
+          next_attempt_at?: string | null
           parser_version?: string | null
           progress?: Json | null
+          requested_pages?: number[] | null
           source_asset_id?: string | null
+          source_checksum?: string | null
           started_at?: string | null
           stats?: Json | null
           status?: string | null
@@ -4199,19 +4301,35 @@ export type Database = {
           attempts?: number | null
           created_at?: string | null
           created_by?: string | null
+          engine?: string | null
+          engine_version?: string | null
           error?: string | null
+          failure_kind?: string | null
           finished_at?: string | null
           id?: string | null
           job_type?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          max_attempts?: number | null
+          next_attempt_at?: string | null
           parser_version?: string | null
           progress?: Json | null
+          requested_pages?: number[] | null
           source_asset_id?: string | null
+          source_checksum?: string | null
           started_at?: string | null
           stats?: Json | null
           status?: string | null
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
           {
             foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
             columns: ["source_asset_id"]
@@ -4289,6 +4407,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_records_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -4857,6 +4982,45 @@ export type Database = {
           },
         ]
       }
+      lead_assignment_settings: {
+        Row: {
+          config: Json | null
+          updated_at: string | null
+          updated_by: string | null
+          version: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          config?: Json | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          config?: Json | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignment_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "lead_assignment_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_intake_links: {
         Row: {
           intake_event_id: string | null
@@ -4890,6 +5054,71 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_routing_assignments: {
+        Row: {
+          config_version: number | null
+          created_at: string | null
+          customer_type: string | null
+          lead_id: string | null
+          owner_id: string | null
+          pool_key: string | null
+          reason: string | null
+          slot_name: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          config_version?: number | null
+          created_at?: string | null
+          customer_type?: string | null
+          lead_id?: string | null
+          owner_id?: string | null
+          pool_key?: string | null
+          reason?: string | null
+          slot_name?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          config_version?: number | null
+          created_at?: string | null
+          customer_type?: string | null
+          lead_id?: string | null
+          owner_id?: string | null
+          pool_key?: string | null
+          reason?: string | null
+          slot_name?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_routing_assignments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_routing_assignments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_routing_assignments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "lead_routing_assignments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -5192,6 +5421,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "media_asset_variant_links_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
             foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
             columns: ["product_variant_id"]
             isOneToOne: false
@@ -5320,6 +5556,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_assets_parent_media_asset_id_fkey"
+            columns: ["parent_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
+            foreignKeyName: "media_assets_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "media_assets_source_asset_id_fkey"
@@ -5457,6 +5707,79 @@ export type Database = {
           },
           {
             foreignKeyName: "media_permission_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_review_queue: {
+        Row: {
+          asset_kind: string | null
+          asset_state: string | null
+          brand_hint: string | null
+          confidence: number | null
+          created_at: string | null
+          document_class: string | null
+          height_px: number | null
+          link_basis: string | null
+          link_basis_raw: string | null
+          link_id: string | null
+          link_reviewed_at: string | null
+          link_reviewed_by: string | null
+          link_state: string | null
+          media_asset_id: string | null
+          mime_type: string | null
+          object_path: string | null
+          page_bucket: string | null
+          page_number: number | null
+          page_object_path: string | null
+          parent_page_number: number | null
+          product_code: string | null
+          product_id: string | null
+          product_name: string | null
+          product_variant_id: string | null
+          published_is_primary: boolean | null
+          published_media_id: string | null
+          rights_basis: string | null
+          source_asset_id: string | null
+          source_code_raw: string | null
+          source_name: string | null
+          source_path: string | null
+          source_web_url: string | null
+          storage_bucket: string | null
+          usage_rights_state: string | null
+          variant_candidate_key: string | null
+          variant_name: string | null
+          variant_sku: string | null
+          width_px: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
+            columns: ["product_variant_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["default_variant_id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_product_variant_id_fkey"
+            columns: ["product_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "media_asset_variant_links_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -5668,6 +5991,174 @@ export type Database = {
           sources?: string[] | null
         }
         Relationships: []
+      }
+      ocr_jobs: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          created_by: string | null
+          engine: string | null
+          engine_version: string | null
+          error: string | null
+          failure_kind: string | null
+          finished_at: string | null
+          id: string | null
+          max_attempts: number | null
+          next_attempt_at: string | null
+          pages: Json | null
+          parser_version: string | null
+          pending_items: number | null
+          requested_pages: number[] | null
+          review_items: number | null
+          source_asset_id: string | null
+          source_checksum: string | null
+          source_name: string | null
+          started_at: string | null
+          stats: Json | null
+          status: string | null
+          superseded: boolean | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "source_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "ingestion_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ocr_page_results: {
+        Row: {
+          created_at: string | null
+          detail: string | null
+          engine: string | null
+          engine_version: string | null
+          height_px: number | null
+          id: string | null
+          image_path: string | null
+          job_id: string | null
+          mean_confidence: number | null
+          outcome: string | null
+          page_no: number | null
+          preprocessing: Json | null
+          text: string | null
+          tsv_path: string | null
+          width_px: number | null
+          word_count: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          detail?: string | null
+          engine?: string | null
+          engine_version?: string | null
+          height_px?: number | null
+          id?: string | null
+          image_path?: string | null
+          job_id?: string | null
+          mean_confidence?: number | null
+          outcome?: string | null
+          page_no?: number | null
+          preprocessing?: Json | null
+          text?: string | null
+          tsv_path?: string | null
+          width_px?: number | null
+          word_count?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          detail?: string | null
+          engine?: string | null
+          engine_version?: string | null
+          height_px?: number | null
+          id?: string | null
+          image_path?: string | null
+          job_id?: string | null
+          mean_confidence?: number | null
+          outcome?: string | null
+          page_no?: number | null
+          preprocessing?: Json | null
+          text?: string | null
+          tsv_path?: string | null
+          width_px?: number | null
+          word_count?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_page_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ingestion_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "review_queue"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "ocr_page_results_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       opportunities: {
         Row: {
@@ -6631,6 +7122,13 @@ export type Database = {
             foreignKeyName: "price_candidates_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "price_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -6748,6 +7246,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "price_lists"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "price_list_versions_source_asset_id_fkey"
@@ -6943,6 +7448,13 @@ export type Database = {
             foreignKeyName: "product_aliases_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_aliases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -7024,6 +7536,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
             referencedColumns: ["product_id"]
           },
           {
@@ -7220,6 +7739,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_media_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
             foreignKeyName: "product_media_media_asset_variant_link_id_fkey"
             columns: ["media_asset_variant_link_id"]
             isOneToOne: false
@@ -7227,10 +7753,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_media_media_asset_variant_link_id_fkey"
+            columns: ["media_asset_variant_link_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["link_id"]
+          },
+          {
             foreignKeyName: "product_media_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
             referencedColumns: ["product_id"]
           },
           {
@@ -7263,6 +7803,102 @@ export type Database = {
           },
           {
             foreignKeyName: "product_media_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_merges: {
+        Row: {
+          id: string | null
+          impact: Json | null
+          merged_at: string | null
+          merged_by: string | null
+          merged_product_id: string | null
+          reason: string | null
+          removed_duplicates: Json | null
+          survivor_product_id: string | null
+          variant_map: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          impact?: Json | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_product_id?: string | null
+          reason?: string | null
+          removed_duplicates?: Json | null
+          survivor_product_id?: string | null
+          variant_map?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          impact?: Json | null
+          merged_at?: string | null
+          merged_by?: string | null
+          merged_product_id?: string | null
+          reason?: string | null
+          removed_duplicates?: Json | null
+          survivor_product_id?: string | null
+          variant_map?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_merged_product_id_fkey"
+            columns: ["merged_product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merges_survivor_product_id_fkey"
+            columns: ["survivor_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merges_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "product_merges_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -7446,6 +8082,13 @@ export type Database = {
             foreignKeyName: "product_variants_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -7503,6 +8146,8 @@ export type Database = {
           id: string | null
           material: string | null
           material_code: string | null
+          merged_at: string | null
+          merged_into_product_id: string | null
           name: string | null
           normalized_name: string | null
           published_version: number | null
@@ -7537,6 +8182,8 @@ export type Database = {
           id?: string | null
           material?: string | null
           material_code?: string | null
+          merged_at?: string | null
+          merged_into_product_id?: string | null
           name?: string | null
           normalized_name?: string | null
           published_version?: number | null
@@ -7571,6 +8218,8 @@ export type Database = {
           id?: string | null
           material?: string | null
           material_code?: string | null
+          merged_at?: string | null
+          merged_into_product_id?: string | null
           name?: string | null
           normalized_name?: string | null
           published_version?: number | null
@@ -7603,6 +8252,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_finder"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "products_merged_into_product_id_fkey"
+            columns: ["merged_into_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "products_source_asset_fk"
@@ -9392,6 +10069,13 @@ export type Database = {
             foreignKeyName: "review_items_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "ocr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["job_id"]
           },
@@ -9401,6 +10085,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ingestion_records"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_items_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "review_items_source_asset_id_fkey"
@@ -9444,12 +10135,19 @@ export type Database = {
           confidence: number | null
           conflicts: Json | null
           created_at: string | null
+          decision_corrections: Json | null
           decision_note: string | null
           fields: Json | null
           id: string | null
           item_type: string | null
           job_id: string | null
           job_type: string | null
+          ocr_engine: string | null
+          ocr_engine_version: string | null
+          ocr_height_px: number | null
+          ocr_image_path: string | null
+          ocr_page_confidence: number | null
+          ocr_width_px: number | null
           page_count: number | null
           page_no: number | null
           parser_version: string | null
@@ -10023,6 +10721,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shape_profiles_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
           {
             foreignKeyName: "shape_profiles_source_asset_id_fkey"
             columns: ["source_asset_id"]
@@ -10605,6 +11310,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "source_asset_versions_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
           {
             foreignKeyName: "source_asset_versions_source_asset_id_fkey"
             columns: ["source_asset_id"]
@@ -11545,6 +12257,13 @@ export type Database = {
             foreignKeyName: "supplier_availability_snapshots_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "supplier_availability_snapshots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -11873,6 +12592,224 @@ export type Database = {
           },
         ]
       }
+      telegram_lead_cards: {
+        Row: {
+          assigned_at: string | null
+          chat_id: number | null
+          created_at: string | null
+          delivered_follow_up_at: string | null
+          expires_at: string | null
+          lead_id: string | null
+          lease_until: string | null
+          leased_follow_up_at: string | null
+          message_id: number | null
+          needs_sync: boolean | null
+          owner_id: string | null
+          token: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          chat_id?: number | null
+          created_at?: string | null
+          delivered_follow_up_at?: string | null
+          expires_at?: string | null
+          lead_id?: string | null
+          lease_until?: string | null
+          leased_follow_up_at?: string | null
+          message_id?: number | null
+          needs_sync?: boolean | null
+          owner_id?: string | null
+          token?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          chat_id?: number | null
+          created_at?: string | null
+          delivered_follow_up_at?: string | null
+          expires_at?: string | null
+          lead_id?: string | null
+          lease_until?: string | null
+          leased_follow_up_at?: string | null
+          message_id?: number | null
+          needs_sync?: boolean | null
+          owner_id?: string | null
+          token?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_lead_cards_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_lead_cards_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_lead_cards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_lead_cards_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_link_codes: {
+        Row: {
+          expires_at: string | null
+          token_hash: string | null
+          used_at: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          expires_at?: string | null
+          token_hash?: string | null
+          used_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          expires_at?: string | null
+          token_hash?: string | null
+          used_at?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_link_codes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_link_codes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_members: {
+        Row: {
+          linked_at: string | null
+          telegram_user_id: number | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          linked_at?: string | null
+          telegram_user_id?: number | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          linked_at?: string | null
+          telegram_user_id?: number | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_sales_channels: {
+        Row: {
+          chat_id: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          chat_id?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          chat_id?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_sales_channels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_sales_channels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_updates: {
+        Row: {
+          processed_at: string | null
+          result: Json | null
+          update_id: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          processed_at?: string | null
+          result?: Json | null
+          update_id?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          processed_at?: string | null
+          result?: Json | null
+          update_id?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_updates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "telegram_updates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unit_conversions: {
         Row: {
           context_variant_id: string | null
@@ -12135,6 +13072,13 @@ export type Database = {
             foreignKeyName: "variant_candidates_source_asset_id_fkey"
             columns: ["source_asset_id"]
             isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
+          },
+          {
+            foreignKeyName: "variant_candidates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
             referencedRelation: "review_queue"
             referencedColumns: ["source_asset_id"]
           },
@@ -12283,6 +13227,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "variant_prices_source_asset_fk"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["source_asset_id"]
           },
           {
             foreignKeyName: "variant_prices_source_asset_fk"
@@ -12796,6 +13747,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "visual_observations_media_asset_id_fkey"
+            columns: ["media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_review_queue"
+            referencedColumns: ["media_asset_id"]
+          },
+          {
             foreignKeyName: "visual_observations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -12861,6 +13819,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_manual_review_item: {
+        Args: {
+          p_item_type?: string
+          p_note?: string
+          p_page_no?: number
+          p_source_asset_id: string
+        }
+        Returns: string
+      }
       annotate_inquiry: {
         Args: {
           p_action: string
@@ -12907,6 +13874,11 @@ export type Database = {
         }
         Returns: string
       }
+      begin_telegram_link: {
+        Args: { p_token_hash: string }
+        Returns: undefined
+      }
+      catalog_media_coverage: { Args: never; Returns: Json }
       change_opportunity_stage: {
         Args: {
           p_next_action?: string
@@ -12930,6 +13902,19 @@ export type Database = {
       confirm_feedback_by_token: {
         Args: { p_customer_text: string; p_token_hash: string }
         Returns: boolean
+      }
+      confirm_media_association: {
+        Args: { p_link_id: string; p_note?: string; p_variant_id: string }
+        Returns: string
+      }
+      confirm_telegram_card: {
+        Args: {
+          p_lead_id: string
+          p_message_id: number
+          p_token: string
+          p_workspace_id: string
+        }
+        Returns: undefined
       }
       convert_lead: {
         Args: {
@@ -13236,6 +14221,7 @@ export type Database = {
           object_path: string
         }[]
       }
+      get_lead_routing: { Args: never; Returns: Json }
       global_search: {
         Args: { p_limit?: number; p_query: string }
         Returns: {
@@ -13331,6 +14317,17 @@ export type Database = {
         }
         Returns: string
       }
+      merge_products: {
+        Args: {
+          p_confirmed: boolean
+          p_expected_fingerprint: string
+          p_merged: string
+          p_reason: string
+          p_survivor: string
+          p_variant_map: Json
+        }
+        Returns: string
+      }
       my_membership: {
         Args: never
         Returns: {
@@ -13365,6 +14362,31 @@ export type Database = {
         }
         Returns: string
       }
+      ocr_claim_job: {
+        Args: { p_lease_seconds?: number; p_worker: string }
+        Returns: Json
+      }
+      ocr_complete_job: {
+        Args: {
+          p_engine?: string
+          p_engine_version?: string
+          p_job_id: string
+          p_lease_token: string
+          p_pages: Json
+          p_records: Json
+          p_stats?: Json
+        }
+        Returns: Json
+      }
+      ocr_fail_job: {
+        Args: {
+          p_error: string
+          p_failure_kind?: string
+          p_job_id: string
+          p_lease_token: string
+        }
+        Returns: Json
+      }
       open_reconciliation_case: {
         Args: {
           p_expected: number
@@ -13388,6 +14410,10 @@ export type Database = {
         }
         Returns: string
       }
+      pending_telegram_cards: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       prepare_feedback_photo: {
         Args: {
           p_media_id: string
@@ -13410,6 +14436,14 @@ export type Database = {
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
       preview_classification_backfill: { Args: never; Returns: Json }
       preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
+      preview_product_merge: {
+        Args: { p_merged: string; p_survivor: string; p_variant_map?: Json }
+        Returns: Json
+      }
+      process_telegram_update: {
+        Args: { p_update: Json; p_workspace_id: string }
+        Returns: Json
+      }
       project_command: {
         Args: { p_action: string; p_input: Json; p_request_id: string }
         Returns: Json
@@ -13617,6 +14651,10 @@ export type Database = {
         Args: { p_candidate_id: string; p_note?: string }
         Returns: undefined
       }
+      reject_media_association: {
+        Args: { p_link_id: string; p_reason: string }
+        Returns: undefined
+      }
       reject_review_item: {
         Args: { p_reason: string; p_review_item_id: string }
         Returns: undefined
@@ -13798,6 +14836,10 @@ export type Database = {
           visits: number
         }[]
       }
+      request_ocr: {
+        Args: { p_pages?: number[]; p_source_asset_id: string }
+        Returns: Json
+      }
       resolve_reconciliation_case: {
         Args: { p_case_id: string; p_notes: string; p_status: string }
         Returns: undefined
@@ -13812,6 +14854,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      retry_ocr_job: { Args: { p_job_id: string }; Returns: Json }
       reveal_contact_points: {
         Args: { p_contact_id: string }
         Returns: {
@@ -13822,6 +14865,18 @@ export type Database = {
           normalized_value: string
           raw_value: string
         }[]
+      }
+      review_media_asset: {
+        Args: { p_decision: string; p_media_asset_id: string; p_note?: string }
+        Returns: number
+      }
+      review_media_rights: {
+        Args: {
+          p_media_asset_id: string
+          p_reason: string
+          p_rights_state: string
+        }
+        Returns: number
       }
       review_opportunity_forecast: {
         Args: { p_input: Json; p_opportunity_id: string; p_request_id: string }
@@ -13836,6 +14891,10 @@ export type Database = {
         Returns: string
       }
       sales_scorecard: { Args: { p_year?: number }; Returns: Json }
+      save_lead_routing: {
+        Args: { p_config: Json; p_expected_version: number }
+        Returns: Json
+      }
       set_content_opportunity_status: {
         Args: {
           p_id: string
@@ -13914,6 +14973,7 @@ export type Database = {
         }
         Returns: Json
       }
+      unlink_my_telegram: { Args: never; Returns: undefined }
       unmerge_contacts: {
         Args: { p_merge_event_id: string; p_reason: string }
         Returns: undefined

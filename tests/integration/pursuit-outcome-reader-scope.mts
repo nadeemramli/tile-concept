@@ -24,7 +24,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/
 const expectMode = (args.expect ?? "repaired") as "repaired" | "baseline";
 assert(["repaired", "baseline"].includes(expectMode), "--expect must be repaired or baseline");
 
-const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json", ...(process.env.E2E_SUPABASE_WORKDIR ? ["--workdir", process.env.E2E_SUPABASE_WORKDIR] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 const url: string = status.API_URL;
 assert(["127.0.0.1", "localhost"].includes(new URL(url).hostname), "This test refuses hosted targets");
 const anonKey: string = status.PUBLISHABLE_KEY ?? status.ANON_KEY;

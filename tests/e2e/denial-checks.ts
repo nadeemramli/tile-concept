@@ -39,7 +39,7 @@ export async function expectNotAvailable(page: Page, roleLabel: string, protecte
  */
 export const settingsMarkers = (page: Page) => ({
   header: page.getByRole("heading", { name: "Settings", exact: true, includeHidden: true })
-    .or(page.getByText("Users, invitations, role matrix, workspace, locations, opportunity stages, shared views and feature flags.")),
+    .or(page.getByText("Users, invitations, role matrix, workspace, locations, opportunity stages, shared views, feature flags and lead routing.")),
   tabs: page.getByRole("tab", { name: /^(Users|Invites|Roles)$/, includeHidden: true }),
   memberControls: page.getByRole("button", { name: /^(Suspend|Reactivate)$/, includeHidden: true }),
   inviteForm: page.getByRole("button", { name: /^(Invite user|Inviting…)$/, includeHidden: true })

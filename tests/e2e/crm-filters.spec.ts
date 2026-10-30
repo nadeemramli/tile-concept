@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Accounts & Contacts quick filters against a running app and the LOCAL
  * Supabase stack: Type / Source / Lifecycle / Activity quick filters, the
@@ -33,10 +34,9 @@ test.afterEach(() => {
 });
 
 async function login(page: Page, user: keyof typeof USERS) {
-  await page.goto("/login");
-  await page.locator("#email").fill(USERS[user].email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.context().clearCookies({ name: /^sb-/ });
+  await page.goto("/login?next=%2F");
+  await submitPasswordForm(page, USERS[user].email, PASSWORD);
   await page.waitForURL("**/");
 }
 

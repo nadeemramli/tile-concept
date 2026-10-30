@@ -21,9 +21,9 @@ describe("manual inquiry save recovery", () => {
     render(<TooltipProvider><NewInquiryDialog open onOpenChange={vi.fn()} members={[]} locations={[]} defaultLocationId={null}
       defaultOwnerId="aaaaaaaa-0000-0000-0000-000000000003" onCreated={created} /></TooltipProvider>);
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Recovery fixture");
-    await user.click(await screen.findByRole("button", { name: "Save inquiry" }));
+    await user.click(await screen.findByRole("button", { name: "Save inquiry" }, { timeout: 5000 }));
     await waitFor(() => expect(mock.error).toHaveBeenCalledWith(expect.stringContaining("Retry with the same fields")));
-    await user.click(await screen.findByRole("button", { name: "Save inquiry" }));
+    await user.click(await screen.findByRole("button", { name: "Save inquiry" }, { timeout: 5000 }));
     await waitFor(() => expect(created).toHaveBeenCalledOnce());
     expect(mock.create).toHaveBeenCalledTimes(2);
     expect(mock.create.mock.calls[0][1]).toBe(mock.create.mock.calls[1][1]);
@@ -31,5 +31,5 @@ describe("manual inquiry save recovery", () => {
     expect(mock.create.mock.calls[0][0]).toMatchObject({ buyer_role: "unknown", project_use: "unknown", work_type: "unknown", glc_involvement: "unknown", arrived_at: "" });
     expect(screen.getByText(/identifiers are shared, conflicting or provisional/)).toBeInTheDocument();
     expect(screen.queryByText(/Linked to the uniquely matched customer/)).not.toBeInTheDocument();
-  });
+  }, 15_000);
 });

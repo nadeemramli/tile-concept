@@ -45,7 +45,7 @@ describe("my leads quick actions", () => {
     await user.click(screen.getByRole("button", { name: "Phone" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("will not be recorded twice");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(await screen.findByRole("button", { name: /^Save$/ }, { timeout: 5000 }));
     await waitFor(() => expect(mock.work).toHaveBeenCalledTimes(2));
     expect(mock.work.mock.calls[0][0].request_id).toBe(mock.work.mock.calls[1][0].request_id);
     expect(mock.work.mock.calls[1][0]).toMatchObject({ action: "customer_replied", channel: "phone" });

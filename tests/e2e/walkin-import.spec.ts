@@ -155,7 +155,7 @@ test("showroom importer maps, previews and commits a legacy CSV; rows persist an
   // Persistence, read back through the API views as the importer.
   const [alya] = await contactByName(service, ALYA);
   const [ben] = await contactByName(service, BEN);
-  expect(alya).toMatchObject({ customer_type: "homeowner", is_provisional: false });
+  expect(alya).toMatchObject({ customer_type: "end_user", is_provisional: false });
   expect(ben).toMatchObject({ customer_type: "contractor", is_provisional: false });
   const { data: points, error: pointsError } = await service.from("contact_points").select("contact_id, kind, normalized_value").in("contact_id", [alya.id, ben.id]).order("normalized_value");
   expect(pointsError).toBeNull();

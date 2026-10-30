@@ -30,11 +30,11 @@ insert into sales.opportunities(id,workspace_id,name,contact_id,lead_id,owner_id
   ('eeeeeeee-2910-0024-0000-0000000000d4','11111111-1111-1111-1111-111111111111','Synthetic teammate opportunity','bbbbbbbb-2910-0024-0000-000000000001',null,'aaaaaaaa-0000-0000-0000-000000000004','consultation','open',null,'Visit site',now()+interval '1 day'),
   ('eeeeeeee-2910-0024-0000-000000000099','99999999-2910-0024-0000-000000000001','Synthetic foreign opportunity',null,null,null,'new','open',null,'Visit site',now()+interval '1 day');
 update sales.leads set converted_opportunity_id = 'eeeeeeee-2910-0024-0000-00000000000b' where id = 'cccccccc-2910-0024-0000-00000000000b';
-insert into sales.quotes(id,workspace_id,opportunity_id,quote_number,status,current_version_no) values
-  ('dddddddd-2910-0024-0000-00000000000b','11111111-1111-1111-1111-111111111111','eeeeeeee-2910-0024-0000-00000000000b','SYN-Q-1','revised',2);
-insert into sales.quote_versions(workspace_id,quote_id,version_no,issued_at,total_amount,currency) values
-  ('11111111-1111-1111-1111-111111111111','dddddddd-2910-0024-0000-00000000000b',1,now()-interval '2 days',21000,'MYR'),
-  ('11111111-1111-1111-1111-111111111111','dddddddd-2910-0024-0000-00000000000b',2,now()-interval '1 day',19500,'MYR');
+insert into sales.quotes(id,workspace_id,opportunity_id,quote_number,status,current_version_no,origin) values
+  ('dddddddd-2910-0024-0000-00000000000b','11111111-1111-1111-1111-111111111111','eeeeeeee-2910-0024-0000-00000000000b','SYN-Q-1','revised',2,'pipeline');
+insert into sales.quote_versions(workspace_id,quote_id,version_no,prepared_at,issued_at,total_amount,currency,evidence_state) values
+  ('11111111-1111-1111-1111-111111111111','dddddddd-2910-0024-0000-00000000000b',1,now()-interval '2 days',now()-interval '2 days',21000,'MYR','legacy'),
+  ('11111111-1111-1111-1111-111111111111','dddddddd-2910-0024-0000-00000000000b',2,now()-interval '1 day',now()-interval '1 day',19500,'MYR','legacy');
 insert into sales.tasks(id,workspace_id,title,due_at,assignee_id,lead_id,opportunity_id,created_by) values
   ('ffffffff-2910-0024-0000-00000000000a','11111111-1111-1111-1111-111111111111','Synthetic follow-up A',now()+interval '1 day','aaaaaaaa-0000-0000-0000-000000000003','cccccccc-2910-0024-0000-00000000000a',null,'aaaaaaaa-0000-0000-0000-000000000003'),
   ('ffffffff-2910-0024-0000-00000000000b','11111111-1111-1111-1111-111111111111','Synthetic lead follow-up B',now()+interval '1 day','aaaaaaaa-0000-0000-0000-000000000003','cccccccc-2910-0024-0000-00000000000b',null,'aaaaaaaa-0000-0000-0000-000000000003'),

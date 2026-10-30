@@ -21,7 +21,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json", ...(process.env.E2E_SUPABASE_WORKDIR ? ["--workdir", process.env.E2E_SUPABASE_WORKDIR] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 const url: string = status.API_URL;
 assert(["127.0.0.1", "localhost"].includes(new URL(url).hostname), "This check refuses hosted targets");
 const anonKey: string = status.ANON_KEY ?? status.PUBLISHABLE_KEY;

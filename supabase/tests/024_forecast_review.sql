@@ -69,7 +69,7 @@ select throws_ok($$select * from api.forecast_queue('week',p_limit=>500)$$,'2351
 
 -- No stage requires a forecast: unforecast work can reach a quotation stage and be quoted.
 select lives_ok($$select api.change_opportunity_stage('eeeeeeee-0700-0000-0000-000000000009','quote_sent','Quotation sent to customer','Follow up quotation',now()+interval '2 days')$$,'a quotation stage can be entered without a forecast');
-select lives_ok($$insert into api.quotes(workspace_id,opportunity_id,quote_number,status) values('11111111-1111-1111-1111-111111111111','eeeeeeee-0700-0000-0000-000000000009','SYNTHETIC-FORECAST-QUOTE','issued')$$,'a sent quotation is recorded without a forecast');
+select lives_ok($$select api.quote_command('prepare',jsonb_build_object('opportunity_id','eeeeeeee-0700-0000-0000-000000000009','origin','pipeline','quote_number','SYNTHETIC-FORECAST-QUOTE','currency','MYR','issue',jsonb_build_object('issued_at',now()),'send',jsonb_build_object('sent_at',now(),'channel','whatsapp','evidence','staff_attested')),gen_random_uuid())$$,'a sent quotation is recorded without a forecast');
 select ok(exists(select 1 from api.forecast_queue('missing_date',p_owner_id=>'dddddddd-0700-0000-0000-000000000001') where id='eeeeeeee-0700-0000-0000-000000000009' and stage_key='quote_sent'),'quoted but unforecast work stays in the review queue');
 
 -- Review: date, likelihood, value, evidence and next step, with actor and time.

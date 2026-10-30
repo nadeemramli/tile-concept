@@ -14,15 +14,15 @@ type Supabase = Awaited<ReturnType<typeof createServerSupabase>>;
  * block it: on failure the caller reports the reason and the opportunity stays
  * in the review queues. Returns null when saved or when nothing was stated.
  */
-export async function captureForecast(supabase: Supabase, opportunityId: string, context: "create" | "quote" | "stage", capture: ForecastCapture): Promise<string | null> {
+export async function captureForecast(supabase: Supabase, opportunityId: string, context: "create" | "quote" | "stage", capture: ForecastCapture, requestId = crypto.randomUUID(), version?: number): Promise<string | null> {
   const stated = captureToReviewInput(capture);
   if (Object.keys(stated).length === 0) return null;
   const { data: o } = await supabase.from("opportunities").select("version").eq("id", opportunityId).maybeSingle();
   if (!o?.version) return "The opportunity could not be read to save its forecast.";
   const { error } = await supabase.rpc("review_opportunity_forecast", {
     p_opportunity_id: opportunityId,
-    p_input: { ...stated, version: o.version, context } as Json,
-    p_request_id: crypto.randomUUID(),
+    p_input: { ...stated, version: version ?? o.version, context } as Json,
+    p_request_id: requestId,
   });
   return error ? humanizeDbError(error.message) : null;
 }

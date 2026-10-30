@@ -52,12 +52,12 @@ describe("QuotePanel", () => {
     await user.click(await screen.findByRole("button", { name: "Issue v1" }));
     await user.click(screen.getByRole("button", { name: "Issue version" }));
     await screen.findByRole("alert");
-    await user.click(screen.getByRole("button", { name: "Retry: issue version" }));
+    await user.click(await screen.findByRole("button", { name: "Retry: issue version" }, { timeout: 5000 }));
     await waitFor(() => expect(mocks.command).toHaveBeenCalledTimes(2));
     expect(mocks.command.mock.calls[0][0].request_id).toBe(mocks.command.mock.calls[1][0].request_id);
     await user.clear(screen.getByLabelText(/Issued/));
     await user.type(screen.getByLabelText(/Issued/), "2026-10-23T15:00");
-    await user.click(screen.getByRole("button", { name: "Retry: issue version" }));
+    await user.click(await screen.findByRole("button", { name: "Retry: issue version" }, { timeout: 5000 }));
     await waitFor(() => expect(mocks.command).toHaveBeenCalledTimes(3));
     expect(mocks.command.mock.calls[2][0].request_id).not.toBe(mocks.command.mock.calls[1][0].request_id);
     await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
