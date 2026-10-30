@@ -76,9 +76,16 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   // Canonical quotation versions and forecast history are immutable. Their
   // supported fixture teardown is the exact run-owned workspace cascade.
-  sql(`delete from audit.audit_events where workspace_id='${WORKSPACE}';
+  sql(`delete from sales.opportunity_requests where workspace_id='${WORKSPACE}';
+       delete from audit.audit_events where workspace_id='${WORKSPACE}';
        delete from core.workspaces where id='${WORKSPACE}';`);
-  for (const u of Object.values(users)) if (u.id) await admin.auth.admin.deleteUser(u.id).catch(() => undefined);
+  for (const u of Object.values(users)) if (u.id) {
+    const { error } = await admin.auth.admin.deleteUser(u.id);
+    assert.ifError(error);
+  }
+  expect(sql(`select count(*) from core.workspaces where id='${WORKSPACE}'`), "owned workspace removed").toBe("0");
+  const people = Object.values(users).filter((u) => u.id).map((u) => `'${u.id}'`).join(",");
+  if (people) expect(sql(`select count(*) from auth.users where id in (${people})`), "owned Auth users removed").toBe("0");
 });
 
 async function login(page: Page, email: string) {
