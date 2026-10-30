@@ -226,7 +226,11 @@ test("search keeps focus, the drawer stays open across ticks, and assignment and
   await drawer.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Task updated.")).toBeVisible();
   expect(sql(`select assignee_id from sales.tasks where id='${T.assign.id}'`)).toBe(users.rep2.id);
+  // The drawer comes back from the URL after a reload, showing the saved assignee.
   await page.reload();
+  await expect(drawer.getByRole("definition").filter({ hasText: users.rep2.name })).toBeVisible();
+  await drawer.getByRole("button", { name: "Close" }).click();
+  await expect(page).not.toHaveURL(/task=/);
   await expect(row(page, T.assign.title)).toContainText(users.rep2.name);
 
   // Complete the linked task with an outcome; it moves to Done after a reload.
