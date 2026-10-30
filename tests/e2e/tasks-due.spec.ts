@@ -121,6 +121,9 @@ test("a browser clock ten minutes ahead hydrates the Due column cleanly, then sh
   await expect(dueCell(page, T.overdue.title)).toHaveText("2 hours ago");
   await expect(dueCell(page, T.overdue.title)).toHaveClass(/text-destructive/);
   await expect(dueCell(page, T.overdue.title)).toHaveAttribute("title", formatDateTime(due[T.overdue.id]));
+  // The undated task sorts last; other suites' open tasks in the shared
+  // workspace can push it onto page 2, so show only this run's rows (TILE-92).
+  await page.getByRole("textbox", { name: "Filter rows" }).fill(tag);
   await expect(row(page, T.undated.title)).toContainText("—");
   await expect(row(page, T.foreign.title)).toHaveCount(0);
   expect(errors).toEqual([]);

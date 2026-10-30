@@ -184,3 +184,141 @@ describe("Tasks Due cell: existing overdue semantics", () => {
     expect(r.live.title).toBeNull();
   });
 });
+
+/**
+ * TILE-92: a clock tick must update the Due cell without remounting the rest of
+ * the row. Keyboard focus on a row's linked contact or opportunity stays on the
+ * same element through the mount reconciliation and every 30-second tick.
+ */
+describe("Tasks row links keep their element and focus while the Due clock moves", () => {
+  const linked = (overrides: Partial<TaskRow> = {}) =>
+    task({ contact_id: "c-1", contact_name: "Synthetic Buyer", opportunity_id: "o-1", opportunity_name: "Synthetic Opportunity", ...overrides });
+
+  /** Server render at SERVER_NOW, hydrate `skewMs` later; mount effects have not run yet. */
+  async function hydrate(row: TaskRow, skewMs: number) {
+    vi.setSystemTime(SERVER_NOW);
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(view(row));
+    document.body.appendChild(container);
+    vi.setSystemTime(SERVER_NOW + skewMs);
+    const errors: string[] = [];
+    const consoleError = vi.spyOn(console, "error").mockImplementation((...args) => errors.push(String(args[0])));
+    await act(async () => {
+      root = hydrateRoot(container, view(row), { onRecoverableError: (error) => errors.push(String((error as Error).message ?? error)) });
+    });
+    const link = (name: string) => {
+      const a = Array.from(container.querySelectorAll<HTMLAnchorElement>("tbody a")).find((el) => el.textContent === name);
+      expect(a, name).toBeDefined();
+      return a!;
+    };
+    const titleCell = () => container.querySelector("tbody tr td span")!;
+    return { container, errors, link, titleCell, done: () => consoleError.mockRestore() };
+  }
+
+  const tick = (ms: number) => act(async () => { vi.advanceTimersByTime(ms); });
+  const frame = () => act(async () => { vi.advanceTimersToNextFrame(); });
+
+  function expectFocused(el: HTMLElement) {
+    expect(el.isConnected, "the focused link is still in the document").toBe(true);
+    expect(document.activeElement, "focus stays on the link").toBe(el);
+  }
+
+  it("no clock change and a 1 s advance keep the link and focus (control)", async () => {
+    const h = await hydrate(linked(), 0);
+    await frame();
+    const contact = h.link("Synthetic Buyer");
+    contact.focus();
+    expectFocused(contact);
+    await tick(1_000);
+    expectFocused(contact);
+    expect(h.link("Synthetic Buyer")).toBe(contact);
+    h.done();
+    expect(h.errors).toEqual([]);
+  });
+
+  it("the mount reconciliation moves the label onto the browser clock without replacing the focused link", async () => {
+    const h = await hydrate(linked(), 1_000);
+    expect(dueCell(h.container).text).toBe("2 minutes ago");
+    const contact = h.link("Synthetic Buyer");
+    const title = h.titleCell();
+    contact.focus();
+    await frame();
+    expect(dueCell(h.container).text).toBe("3 minutes ago");
+    expectFocused(contact);
+    expect(h.link("Synthetic Buyer")).toBe(contact);
+    expect(h.titleCell()).toBe(title);
+    h.done();
+    expect(h.errors).toEqual([]);
+  });
+
+  it("repeated 30-second ticks advance the Due text while the contact and opportunity links keep their elements and focus", async () => {
+    const h = await hydrate(linked(), 1_000);
+    await frame();
+    const contact = h.link("Synthetic Buyer");
+    const opportunity = h.link("Synthetic Opportunity");
+    const title = h.titleCell();
+    contact.focus();
+    const labels = [dueCell(h.container).text];
+    for (let i = 0; i < 4; i++) {
+      await tick(30_000);
+      labels.push(dueCell(h.container).text);
+      expectFocused(contact);
+    }
+    expect(labels).toEqual(["3 minutes ago", "3 minutes ago", "4 minutes ago", "4 minutes ago", "5 minutes ago"]);
+    opportunity.focus();
+    await tick(30_000);
+    await tick(30_000);
+    expect(dueCell(h.container).text).toBe("6 minutes ago");
+    expectFocused(opportunity);
+    expect(h.link("Synthetic Buyer")).toBe(contact);
+    expect(h.link("Synthetic Opportunity")).toBe(opportunity);
+    expect(h.titleCell()).toBe(title);
+    h.done();
+    expect(h.errors).toEqual([]);
+  });
+
+  it("an open task turns overdue on a tick while focus stays on its link", async () => {
+    const h = await hydrate(linked({ due_at: at(50_000) }), 1_000);
+    await frame();
+    expect(dueCell(h.container).className).not.toContain(OVERDUE);
+    const contact = h.link("Synthetic Buyer");
+    contact.focus();
+    await tick(30_000);
+    expect(dueCell(h.container).className).not.toContain(OVERDUE);
+    await tick(30_000);
+    expect(dueCell(h.container).className).toContain(OVERDUE);
+    expect(dueCell(h.container).title).toBe(formatDateTime(at(50_000)));
+    expectFocused(contact);
+    h.done();
+    expect(h.errors).toEqual([]);
+  });
+
+  it.each(["done", "cancelled"])("a %s task keeps its link and focus and is never overdue across ticks", async (status) => {
+    const h = await hydrate(linked({ status, due_at: at(50_000), completed_at: status === "done" ? at(-MINUTE) : null }), 1_000);
+    await frame();
+    const contact = h.link("Synthetic Buyer");
+    contact.focus();
+    await tick(30_000);
+    await tick(30_000);
+    expect(dueCell(h.container).text).toBe("just now");
+    await tick(30_000);
+    await tick(30_000);
+    expect(dueCell(h.container).text).toBe("1 minute ago");
+    expect(dueCell(h.container).className).not.toContain(OVERDUE);
+    expectFocused(contact);
+    h.done();
+    expect(h.errors).toEqual([]);
+  });
+
+  it("a task without a due date keeps its link and focus across ticks", async () => {
+    const h = await hydrate(linked({ due_at: null }), 1_000);
+    await frame();
+    const opportunity = h.link("Synthetic Opportunity");
+    opportunity.focus();
+    await tick(30_000);
+    expect(dueCell(h.container).text).toBe("—");
+    expectFocused(opportunity);
+    h.done();
+    expect(h.errors).toEqual([]);
+  });
+});
