@@ -152,6 +152,9 @@ test("focus on a row's linked contact and opportunity survives the mount reconci
   // The browser starts slightly ahead of the server, so mount moves the labels.
   await page.clock.install({ time: new Date(Date.now() + 1_000) });
   await page.goto("/sales/tasks?view=all");
+  // Only this run's rows, whatever else the shared workspace holds.
+  const filter = page.getByRole("textbox", { name: "Filter rows" });
+  await filter.fill(tag);
   await expect(contactLink(page, T.linked.title)).toBeVisible();
   await expect(dueCell(page, T.linked.title)).toHaveText(/^\d+ minutes ago$/);
   await expect(dueCell(page, T.soon.title)).not.toHaveClass(/text-destructive/);
@@ -188,6 +191,7 @@ test("focus on a row's linked contact and opportunity survives the mount reconci
   await page.waitForURL(`**${oppHref}`);
   await expect(page.getByText(OPPORTUNITY.name).first()).toBeVisible();
   await page.goBack();
+  await filter.fill(tag);
   await contactLink(page, T.linked.title).focus();
   await tick(page);
   await page.keyboard.press("Enter");
