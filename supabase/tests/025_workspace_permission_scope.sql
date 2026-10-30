@@ -10,26 +10,9 @@
 --   * commands (SECURITY DEFINER RPCs), core.has_permission, api.my_permissions
 --     and the app session follow the acting membership, and a command only
 --     touches records of the acting workspace.
---
--- Ported from commit 9e6dffb (draft PR #40) without its TILE-32 workspace-entry
--- migration, which defines the driver/warehouse roles and
--- api.my_workspace_permissions. Here those roles are test-only fixtures holding
--- no permission at all (on PR #40 they hold only admin-area keys, none of which
--- exist on this branch), and the acting membership's permissions are computed
--- with core.has_permission_in. Every case and assertion is otherwise unchanged.
 begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();
-
-insert into core.roles(key,label,rank) values
-  ('driver','Synthetic driver (test fixture, no permissions)',985),
-  ('warehouse','Synthetic warehouse (test fixture, no permissions)',980)
-on conflict (key) do nothing;
--- The acting membership's permissions, judged independently of core.has_permission.
-create function pg_temp.acting_permissions() returns setof text language sql as $$
-  select rp.permission from (select distinct permission from core.role_permissions) rp
-  where core.has_permission_in(core.current_workspace_id(), rp.permission)
-$$;
 
 create function pg_temp.act_as(u uuid) returns void language plpgsql as $$ begin
   perform set_config('request.jwt.claims',jsonb_build_object('sub',u,'role','authenticated')::text,true);
@@ -173,9 +156,9 @@ end $$;
 create function pg_temp.acting_only(who text) returns setof text language plpgsql as $$
 begin
   return next is((select coalesce(array_agg(p order by p), '{}') from api.my_permissions() p),
-                 (select coalesce(array_agg(p order by p), '{}') from pg_temp.acting_permissions() p),
+                 (select coalesce(array_agg(p order by p), '{}') from api.my_workspace_permissions() p),
                  who || ': api.my_permissions is the acting membership''s permissions');
-  return next is((select bool_and(core.has_permission(rp.permission) = (rp.permission in (select pg_temp.acting_permissions())))
+  return next is((select bool_and(core.has_permission(rp.permission) = (rp.permission in (select api.my_workspace_permissions())))
                   from (select distinct permission from core.role_permissions) rp), true,
                  who || ': core.has_permission agrees with the acting membership for every key');
 end $$;

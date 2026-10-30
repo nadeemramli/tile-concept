@@ -11,8 +11,10 @@ import { expectNotAvailable, settingsContent } from "./denial-checks";
  * from the outside.
  */
 
+// `next=/` keeps the Command Centre bookmark. Without it a guest, who holds
+// overview.read like management, starts on the Management Overview.
 async function enterAsGuest(page: Page) {
-  await page.goto("/login");
+  await page.goto("/login?next=%2F");
   await page.getByRole("button", { name: "Enter as guest" }).click();
   await page.waitForURL("**/", { timeout: 30_000 });
 }
@@ -23,6 +25,13 @@ test("the sign-in page offers guest entry without asking for anything", async ({
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
   await expect(page.getByText(/No account needed/i)).toBeVisible();
+});
+
+test("a guest without a deep link starts on the Management Overview", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Enter as guest" }).click();
+  await page.waitForURL("**/overview", { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Management Overview", level: 1 })).toBeVisible();
 });
 
 test("a guest lands in a working app", async ({ page }) => {

@@ -20,7 +20,7 @@ export async function workInquiryAction(input: z.input<typeof inquiryActionSchem
       p_channel: v.channel, p_occurred_at: v.occurred_at,
     });
     if (error) return fail(error);
-    for (const path of ["/sales/inbox", "/sales/tasks", "/", "/sales/contacts", "/insights/reports"]) revalidatePath(path);
+    for (const path of ["/sales/inbox", "/sales/my-leads", "/sales/tasks", "/", "/sales/contacts", "/insights/reports"]) revalidatePath(path);
     return ok(undefined, v.action === "schedule" || v.action === "reschedule"
       ? "Follow-up saved. Find it in Upcoming or Follow-ups due."
       : v.action === "complete" ? "Follow-up completed. Choose the next action or record why none is needed."
@@ -45,7 +45,7 @@ export async function annotateInquiryAction(input: z.input<typeof inquiryAnnotat
       p_expected_detail: v.expected_detail ?? undefined,
     });
     if (error) return fail(error);
-    for (const path of ["/sales/inbox", "/sales/contacts", "/insights/reports"]) revalidatePath(path);
+    for (const path of ["/sales/inbox", "/sales/my-leads", "/sales/contacts", "/insights/reports"]) revalidatePath(path);
     return ok(undefined, v.action === "source" ? "Source corrected; original intake and correction history retained." : "Remark added to the inquiry history.");
   } catch (error) { return fail(error); }
 }

@@ -6,11 +6,10 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getBrands, getCategories, getUnits } from "@/server/queries/reference";
 import { getSuppliers } from "@/server/queries/catalog";
 import { getSqlConnector, getStockCounts, getVariantOptions, listAvailability, listInHouseSnapshots, listItemMappings, listReconciliationCases, listStaleSuppliers } from "@/server/queries/stock";
-import { StockClient, type StockTab } from "@/features/stock/components/stock-client";
+import { StockClient } from "@/features/stock/components/stock-client";
+import { parseStockTab } from "@/features/stock/url-state";
 
 export const metadata: Metadata = { title: "Stock" };
-
-const TABS: StockTab[] = ["overview", "suppliers", "sql", "reconciliation"];
 
 export default async function StockPage({ searchParams }: PageProps<"/merchandise/stock">) {
   const session = await requireSession();
@@ -18,7 +17,7 @@ export default async function StockPage({ searchParams }: PageProps<"/merchandis
 
   const sp = await searchParams;
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
-  const tab = (TABS.includes(str("tab") as StockTab) ? (str("tab") as StockTab) : "overview") as StockTab;
+  const tab = parseStockTab(str("tab"));
   const filters = {
     category: str("category"),
     brand: str("brand"),
