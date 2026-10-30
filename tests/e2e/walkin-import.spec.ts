@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Legacy walk-in workbook import, driven through the real browser wizard
  * against the LOCAL Supabase stack: CSV → mapping → preview → Commit → the
@@ -69,10 +70,8 @@ test.afterEach(() => {
 });
 
 async function login(page: Page, user: FixtureUser) {
-  await page.goto("/login");
-  await page.locator("#email").fill(user.email);
-  await page.locator("#password").fill(user.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.goto("/login?next=%2F");
+  await submitPasswordForm(page, user.email, user.password);
   await page.waitForURL("**/");
 }
 async function upload(page: Page, name: string, buffer: Buffer, rows: number) {
@@ -167,7 +166,7 @@ test("showroom importer maps, previews and commits a legacy CSV; rows persist an
   expect(visits).toHaveLength(2);
   expect(visits[0]).toMatchObject({
     contact_id: alya.id, location_id: fx.locationId, staff_user_id: importer.id, created_by: importer.id,
-    occurred_at: "2026-10-20T00:00:00+00:00", origin_area: "Cheras", customer_type: "homeowner", inquiry_source: "tiktok",
+    occurred_at: "2026-10-20T00:00:00+00:00", origin_area: "Cheras", customer_type: "end_user", inquiry_source: "tiktok",
     purpose: "purchase", is_new_customer: true, renovation_area: "Wet Kitchen", quotation_ref: SQ1, quotation_amount: 4800,
   });
   expect(visits[0].notes).toContain("sheet said New");

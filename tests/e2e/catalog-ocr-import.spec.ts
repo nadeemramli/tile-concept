@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * TILE-22: OCR-assisted scanned catalogue import, end to end.
  *
@@ -93,9 +94,7 @@ test.afterAll(async () => {
 
 async function login(page: Page, email: string) {
   await page.goto("/login?next=%2F");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 

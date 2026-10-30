@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Tasks Due cell against a running app and a LOCAL Supabase stack (TILE-83).
  * The suite creates its own synthetic users, tasks and a second workspace,
@@ -96,9 +97,7 @@ function watchErrors(page: Page) {
 }
 async function login(page: Page, email: string) {
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 const row = (page: Page, title: string) => page.getByRole("row").filter({ hasText: title });

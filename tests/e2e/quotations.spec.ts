@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * TILE-5 quotation journeys against a running app and the LOCAL Supabase stack.
  *
@@ -67,9 +68,7 @@ test.afterAll(async () => {
 
 async function login(page: Page, email: string) {
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 /** A form field by its label; required fields render as "Label *". */

@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Weekly forecast review against a running app and a LOCAL Supabase stack.
  * The suite creates its own synthetic users, company and opportunities, signs
@@ -11,7 +12,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { addWeeks, currentWeekStart, formatWeek, weekEndOf } from "../../src/features/forecast/week";
 
-const WORKSPACE = "11111111-1111-1111-1111-111111111111";
+const WORKSPACE = randomUUID();
+const TEMPLATE_WORKSPACE = "11111111-1111-1111-1111-111111111111";
 const PASSWORD = `E2e!${randomUUID()}`;
 const tag = randomUUID().slice(0, 8);
 
@@ -47,6 +49,9 @@ const NAMES = {
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
+  sql(`insert into core.workspaces(id,slug,name) values ('${WORKSPACE}','e2e-forecast-${tag}','E2E forecast ${tag}');
+       insert into core.opportunity_stages(workspace_id,key,label,position,reporting_group,requires_reason,requires_next_action,is_active)
+       select '${WORKSPACE}',key,label,position,reporting_group,requires_reason,requires_next_action,is_active from core.opportunity_stages where workspace_id='${TEMPLATE_WORKSPACE}';`);
   for (const u of Object.values(users)) {
     const { data, error } = await admin.auth.admin.createUser({ email: u.email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: u.name } });
     if (error || !data.user) throw error ?? new Error("user not created");
@@ -69,22 +74,16 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  const opps = Object.values(ids).filter((id) => id !== ids.account).map((id) => `'${id}'`).join(",");
-  const people = Object.values(users).filter((u) => u.id).map((u) => `'${u.id}'`).join(",");
-  sql(`delete from sales.activities where opportunity_id in (${opps});
-       delete from sales.quote_versions where quote_id in (select id from sales.quotes where opportunity_id in (${opps}));
-       delete from sales.quotes where opportunity_id in (${opps});
-       delete from sales.opportunities where id in (${opps});
-       delete from identity.accounts where id='${ids.account}';
-       ${people ? `delete from core.memberships where user_id in (${people});` : ""}`);
+  // Canonical quotation versions and forecast history are immutable. Their
+  // supported fixture teardown is the exact run-owned workspace cascade.
+  sql(`delete from audit.audit_events where workspace_id='${WORKSPACE}';
+       delete from core.workspaces where id='${WORKSPACE}';`);
   for (const u of Object.values(users)) if (u.id) await admin.auth.admin.deleteUser(u.id).catch(() => undefined);
 });
 
 async function login(page: Page, email: string) {
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 const forecastUrl = (extra = "") => `/sales/pipeline/forecast?owner=${users.rep.id}${extra}`;

@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Sales-owned customer cards against a running app and the LOCAL Supabase
  * stack: the PIC creates and edits, a teammate sees the card read-only in the
@@ -43,9 +44,7 @@ async function memberClient(email: string) {
 
 async function login(page: Page, email: string) {
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 

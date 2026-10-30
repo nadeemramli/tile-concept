@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 import { test, expect, type Page } from "@playwright/test";
 import { expectHealthyRoute, PRIMARY_ROUTES, REPORT_ROUTES, SECONDARY_ROUTES } from "./route-smoke";
 import { expectNotAvailable, pipelineContent, settingsContent, settingsMarkers } from "./denial-checks";
@@ -9,9 +10,7 @@ const ADMIN = { email: "demo.admin@tileconcept.test", password: "TileDemo!2026" 
 // (covered in workspace-entry.spec.ts).
 async function login(page: Page, email = ADMIN.email, password = ADMIN.password) {
   await page.goto("/login?next=%2F");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, password);
   await page.waitForURL("**/");
 }
 

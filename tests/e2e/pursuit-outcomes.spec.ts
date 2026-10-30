@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * TILE-8 pursuit outcomes, through the compiled app against the LOCAL Supabase
  * stack: browser → server action → api.pursuit_outcome_command → reload.
@@ -69,9 +70,7 @@ test.beforeAll(async () => {
 
 async function login(page: Page, email: string) {
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 async function signedIn(browser: Browser, email: string) {

@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * TILE-24: a source original (supplier catalogue, price list) is opened only by
  * importers and catalogue operators of its workspace. Sales, showroom, sales
@@ -62,9 +63,7 @@ test.afterAll(async () => {
 
 async function login(page: Page, email: string) {
   await page.goto("/login?next=%2F");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 

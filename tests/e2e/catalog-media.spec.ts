@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Catalogue media journey against a running app and the LOCAL Supabase stack.
  * Synthetic fixtures only; refuses hosted targets. Needs ffmpeg for real media.
@@ -68,9 +69,7 @@ test.afterAll(async () => {
 
 async function login(page: Page, email: string) {
   await page.goto("/login?next=%2F");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 async function openMedia(page: Page) {

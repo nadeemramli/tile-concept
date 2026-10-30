@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * TILE-23: imported commercial proposals (price candidates) are approved or
  * rejected by a person in Imports & OCR Review; an unstated field blocks
@@ -34,9 +35,7 @@ test.afterAll(() => {
 
 async function login(page: Page, email: string) {
   await page.goto("/login?next=%2F");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill("TileDemo!2026");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, "TileDemo!2026");
   await page.waitForURL("**/");
 }
 

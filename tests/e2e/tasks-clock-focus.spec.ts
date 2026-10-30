@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * TILE-92: the Tasks Due clock must not remount the rest of a row. Against a
  * running app and a LOCAL Supabase stack, with the browser clock under test
@@ -125,9 +126,7 @@ function watchErrors(page: Page) {
 async function signIn(browser: Browser, email: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
   return page;
 }

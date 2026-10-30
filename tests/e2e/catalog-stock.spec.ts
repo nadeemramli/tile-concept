@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Product Stock tab against a running app and the LOCAL Supabase stack.
  * Balances change only through the existing stock RPCs (the SQL Account
@@ -55,9 +56,7 @@ test.afterAll(() => {
 
 async function login(page: Page, email: string) {
   await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 async function openStock(page: Page) {

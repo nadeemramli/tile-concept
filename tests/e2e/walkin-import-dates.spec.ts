@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * TILE-80: walk-in import dates must keep the calendar day the file states,
  * whatever the browser's timezone. Runs the same journeys with the browser in
@@ -51,9 +52,7 @@ function typedWorkbook(bookType: "xlsx" | "biff8") {
 
 async function login(page: Page, user: FixtureUser) {
   await page.goto("/login");
-  await page.locator("#email").fill(user.email);
-  await page.locator("#password").fill(user.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitPasswordForm(page, user.email, user.password);
   await page.waitForURL("**/");
 }
 const FILE_LABEL = "Choose .xlsx / .csv";
