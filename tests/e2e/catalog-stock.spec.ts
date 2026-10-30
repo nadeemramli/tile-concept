@@ -55,7 +55,7 @@ test.afterAll(() => {
 });
 
 async function login(page: Page, email: string) {
-  await page.goto("/login");
+  await page.goto("/login?next=%2F");
   await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
@@ -86,6 +86,10 @@ test("sales sees per-warehouse balances, and persisted stock changes after reloa
 
   // Stock moves out of WH-A: the newer snapshot wins after reload, never summed with the old one.
   await snapshot(WH_A, 8, 3, 5);
+  // Confirm the real persisted read model before checking browser freshness.
+  const { data: saved, error: readError } = await writer.from("stock_availability").select("quantity,on_hand,allocated").eq("variant_id", variantA).eq("location_name", WH_A).single();
+  assert.ifError(readError);
+  expect(saved).toMatchObject({ quantity: 5, on_hand: 8, allocated: 3 });
   await page.reload();
   await page.getByRole("tab", { name: "Stock" }).click();
   await expect(row(page, WH_A)).toContainText("Low");
