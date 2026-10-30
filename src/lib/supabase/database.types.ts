@@ -5691,6 +5691,9 @@ export type Database = {
           deferred_until: string | null
           estimated_value: number | null
           expected_close_date: string | null
+          forecast_evidence: string | null
+          forecast_reviewed_at: string | null
+          forecast_reviewed_by: string | null
           glc_involvement: string | null
           glc_party_role: string | null
           id: string | null
@@ -5737,6 +5740,9 @@ export type Database = {
           deferred_until?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
+          forecast_evidence?: string | null
+          forecast_reviewed_at?: string | null
+          forecast_reviewed_by?: string | null
           glc_involvement?: string | null
           glc_party_role?: string | null
           id?: string | null
@@ -5783,6 +5789,9 @@ export type Database = {
           deferred_until?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
+          forecast_evidence?: string | null
+          forecast_reviewed_at?: string | null
+          forecast_reviewed_by?: string | null
           glc_involvement?: string | null
           glc_party_role?: string | null
           id?: string | null
@@ -5853,6 +5862,100 @@ export type Database = {
           },
           {
             foreignKeyName: "opportunities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_forecast_history: {
+        Row: {
+          actor_id: string | null
+          archived: boolean | null
+          currency: string | null
+          estimated_value: number | null
+          evidence: string | null
+          expected_close_date: string | null
+          id: string | null
+          kind: string | null
+          next_action: string | null
+          next_action_due_at: string | null
+          opportunity_id: string | null
+          owner_id: string | null
+          probability_band: string | null
+          recorded_at: string | null
+          review_context: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          seq: number | null
+          stage_key: string | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          archived?: boolean | null
+          currency?: string | null
+          estimated_value?: number | null
+          evidence?: string | null
+          expected_close_date?: string | null
+          id?: string | null
+          kind?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          opportunity_id?: string | null
+          owner_id?: string | null
+          probability_band?: string | null
+          recorded_at?: string | null
+          review_context?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seq?: number | null
+          stage_key?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          archived?: boolean | null
+          currency?: string | null
+          estimated_value?: number | null
+          evidence?: string | null
+          expected_close_date?: string | null
+          id?: string | null
+          kind?: string | null
+          next_action?: string | null
+          next_action_due_at?: string | null
+          opportunity_id?: string | null
+          owner_id?: string | null
+          probability_band?: string | null
+          recorded_at?: string | null
+          review_context?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seq?: number | null
+          stage_key?: string | null
+          status?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_forecast_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_forecast_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "opportunity_forecast_history_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -6196,6 +6299,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      outcome_reasons: {
+        Row: {
+          hint: string | null
+          is_active: boolean | null
+          is_competitor: boolean | null
+          key: string | null
+          label: string | null
+          outcome_type: string | null
+          position: number | null
+          requires_detail: boolean | null
+        }
+        Insert: {
+          hint?: string | null
+          is_active?: boolean | null
+          is_competitor?: boolean | null
+          key?: string | null
+          label?: string | null
+          outcome_type?: string | null
+          position?: number | null
+          requires_detail?: boolean | null
+        }
+        Update: {
+          hint?: string | null
+          is_active?: boolean | null
+          is_competitor?: boolean | null
+          key?: string | null
+          label?: string | null
+          outcome_type?: string | null
+          position?: number | null
+          requires_detail?: boolean | null
+        }
+        Relationships: []
       }
       packaging_configurations: {
         Row: {
@@ -8084,6 +8220,305 @@ export type Database = {
           },
           {
             foreignKeyName: "purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pursuit_outcome_events: {
+        Row: {
+          actor_id: string | null
+          closes_lead: boolean | null
+          closes_opportunity: boolean | null
+          command: Json | null
+          competitor_evidence: string | null
+          competitor_name: string | null
+          competitor_relationship: string | null
+          competitor_relationship_detail: string | null
+          corrects_event_id: string | null
+          duplicate_of_lead_id: string | null
+          effective_date: string | null
+          estimated_currency: string | null
+          estimated_value: number | null
+          id: string | null
+          lead_id: string | null
+          opportunity_id: string | null
+          outcome_type: string | null
+          prior_state: Json | null
+          pursuit_key: string | null
+          quoted_currency: string | null
+          quoted_value: number | null
+          reason_code: string | null
+          reason_detail: string | null
+          reason_set: string | null
+          recorded_at: string | null
+          reopens_event_id: string | null
+          request_id: string | null
+          result: Json | null
+          review_date: string | null
+          review_task_id: string | null
+          seq: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          closes_lead?: boolean | null
+          closes_opportunity?: boolean | null
+          command?: Json | null
+          competitor_evidence?: string | null
+          competitor_name?: string | null
+          competitor_relationship?: string | null
+          competitor_relationship_detail?: string | null
+          corrects_event_id?: string | null
+          duplicate_of_lead_id?: string | null
+          effective_date?: string | null
+          estimated_currency?: string | null
+          estimated_value?: number | null
+          id?: string | null
+          lead_id?: string | null
+          opportunity_id?: string | null
+          outcome_type?: string | null
+          prior_state?: Json | null
+          pursuit_key?: string | null
+          quoted_currency?: string | null
+          quoted_value?: number | null
+          reason_code?: string | null
+          reason_detail?: string | null
+          reason_set?: string | null
+          recorded_at?: string | null
+          reopens_event_id?: string | null
+          request_id?: string | null
+          result?: Json | null
+          review_date?: string | null
+          review_task_id?: string | null
+          seq?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          closes_lead?: boolean | null
+          closes_opportunity?: boolean | null
+          command?: Json | null
+          competitor_evidence?: string | null
+          competitor_name?: string | null
+          competitor_relationship?: string | null
+          competitor_relationship_detail?: string | null
+          corrects_event_id?: string | null
+          duplicate_of_lead_id?: string | null
+          effective_date?: string | null
+          estimated_currency?: string | null
+          estimated_value?: number | null
+          id?: string | null
+          lead_id?: string | null
+          opportunity_id?: string | null
+          outcome_type?: string | null
+          prior_state?: Json | null
+          pursuit_key?: string | null
+          quoted_currency?: string | null
+          quoted_value?: number | null
+          reason_code?: string | null
+          reason_detail?: string | null
+          reason_set?: string | null
+          recorded_at?: string | null
+          reopens_event_id?: string | null
+          request_id?: string | null
+          result?: Json | null
+          review_date?: string | null
+          review_task_id?: string | null
+          seq?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["latest_correction_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_corrects_event_id_fkey"
+            columns: ["corrects_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["reopened_by_event_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_duplicate_of_lead_id_fkey"
+            columns: ["duplicate_of_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reason_set_reason_code_fkey"
+            columns: ["reason_set", "reason_code"]
+            isOneToOne: false
+            referencedRelation: "outcome_reasons"
+            referencedColumns: ["outcome_type", "key"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["latest_correction_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_reopens_event_id_fkey"
+            columns: ["reopens_event_id"]
+            isOneToOne: false
+            referencedRelation: "pursuit_outcome_history"
+            referencedColumns: ["reopened_by_event_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_review_task_id_fkey"
+            columns: ["review_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pursuit_outcome_history: {
+        Row: {
+          actor_id: string | null
+          closes_lead: boolean | null
+          closes_opportunity: boolean | null
+          competitor_evidence: string | null
+          competitor_name: string | null
+          competitor_relationship: string | null
+          competitor_relationship_detail: string | null
+          corrected_at: string | null
+          corrected_by: string | null
+          duplicate_of_lead_id: string | null
+          effective_date: string | null
+          effective_week: string | null
+          estimated_currency: string | null
+          estimated_value: number | null
+          id: string | null
+          latest_correction_id: string | null
+          lead_id: string | null
+          opportunity_id: string | null
+          original_effective_date: string | null
+          original_reason_code: string | null
+          outcome_type: string | null
+          pursuit_key: string | null
+          quoted_currency: string | null
+          quoted_value: number | null
+          reason_code: string | null
+          reason_detail: string | null
+          recorded_at: string | null
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          reopened_by_event_id: string | null
+          review_date: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "pursuit_outcome_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -12670,6 +13105,89 @@ export type Database = {
         Returns: undefined
       }
       flag_stale_suppliers: { Args: never; Returns: number }
+      forecast_queue: {
+        Args: {
+          p_as_of?: string
+          p_limit?: number
+          p_mode?: string
+          p_offset?: number
+          p_owner_id?: string
+          p_queue: string
+          p_stale_days?: number
+          p_week_start?: string
+        }
+        Returns: {
+          account_id: string
+          account_name: string
+          contact_id: string
+          contact_name: string
+          created_at: string
+          currency: string
+          estimated_value: number
+          evidence: string
+          expected_close_date: string
+          id: string
+          name: string
+          next_action: string
+          next_action_due_at: string
+          owner_id: string
+          probability_band: string
+          recorded: boolean
+          reviewed_at: string
+          reviewed_by: string
+          stage_key: string
+          status: string
+          total_count: number
+          version: number
+        }[]
+      }
+      forecast_rows: {
+        Args: { p_as_of?: string; p_mode?: string; p_owner_id?: string }
+        Returns: {
+          account_id: string
+          archived: boolean
+          contact_id: string
+          created_at: string
+          currency: string
+          estimated_value: number
+          evidence: string
+          expected_close_date: string
+          id: string
+          name: string
+          next_action: string
+          next_action_due_at: string
+          owner_id: string
+          probability_band: string
+          project_id: string
+          recorded: boolean
+          reviewed_at: string
+          reviewed_by: string
+          stage_key: string
+          status: string
+          version: number
+        }[]
+      }
+      forecast_week: {
+        Args: {
+          p_as_of?: string
+          p_mode?: string
+          p_owner_id?: string
+          p_stale_days?: number
+          p_week_start?: string
+        }
+        Returns: Json
+      }
+      forecast_window: {
+        Args: { p_as_of?: string; p_mode?: string; p_week_start?: string }
+        Returns: {
+          as_of: string
+          today: string
+          week_end: string
+          week_end_at: string
+          week_start: string
+          week_start_at: string
+        }[]
+      }
       funnel_dashboard: {
         Args: {
           p_as_of: string
@@ -12920,6 +13438,10 @@ export type Database = {
           p_sort_order?: number
         }
         Returns: string
+      }
+      pursuit_outcome_command: {
+        Args: { p_action: string; p_input: Json; p_request_id: string }
+        Returns: Json
       }
       quote_command: {
         Args: { p_action: string; p_input: Json; p_request_id: string }
@@ -13190,6 +13712,22 @@ export type Database = {
           with_current_price: number
         }[]
       }
+      report_pursuit_outcomes: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          events: number
+          lost_estimated_unquoted_value: number
+          lost_quoted_value: number
+          outcome_type: string
+          pursuits: number
+          reason_code: string
+          reason_label: string
+          reopened_later: number
+          value_not_myr: number
+          value_unknown: number
+          week_start: string
+        }[]
+      }
       report_pursuit_segments: {
         Args: { p_from?: string; p_grain?: string; p_to?: string }
         Returns: {
@@ -13284,6 +13822,10 @@ export type Database = {
           normalized_value: string
           raw_value: string
         }[]
+      }
+      review_opportunity_forecast: {
+        Args: { p_input: Json; p_opportunity_id: string; p_request_id: string }
+        Returns: Json
       }
       review_shoot_output: {
         Args: { p_decision: string; p_output_id: string; p_reason?: string }
