@@ -13,6 +13,7 @@ import { OPPORTUNITY_SEGMENTS } from "@/features/pipeline/schema";
 import { reassignOpportunityAction, updateOpportunityAction } from "@/server/commands/opportunities";
 import type { OpportunityDetail } from "@/server/queries/opportunities";
 import { titleCase } from "@/lib/format";
+import { ForecastCaptureFields } from "@/features/forecast/components/forecast-fields";
 
 type P = { open: boolean; onOpenChange: (o: boolean) => void };
 

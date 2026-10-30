@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { uuid } from "@/lib/zod";
 import { PRODUCT_INTERESTS, SOURCE_CHANNELS } from "@/features/crm/schema";
+import { forecastCaptureShape } from "@/features/forecast/schema";
 
 const optionalStr = z.string().trim().optional().or(z.literal("")).transform((v) => (v ? v : undefined));
 const optionalUuid = uuid().optional().or(z.literal("")).transform((v) => (v ? v : undefined));
@@ -13,6 +14,7 @@ export const changeStageSchema = z.object({
   next_action: optionalStr,
   next_action_due_at: optionalStr,
   outcome_date: optionalStr,
+  ...forecastCaptureShape,
 });
 
 export const OPPORTUNITY_SEGMENTS = ["institutional", "residential", "fnb", "hospitality", "commercial", "other"] as const;
@@ -49,6 +51,7 @@ export const createOpportunitySchema = z.object({
   next_action_due_at: z.string().min(1, "Enter the next action due date"),
   source_channel: optionalStr, notes: optionalStr,
   product_interest: z.array(z.enum(PRODUCT_INTERESTS)).default([]),
+  ...forecastCaptureShape,
 }).refine((v) => v.contact_id || v.account_id, { path: ["contact_id"], message: "Choose a contact or company" });
 
 export const archiveOpportunitySchema = z.object({ id: uuid(), version: z.coerce.number().int().positive(), request_id: uuid(), action: z.enum(["archive", "restore"]), reason: z.string().trim().min(1).max(2000) });

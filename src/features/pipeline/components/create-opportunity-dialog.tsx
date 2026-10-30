@@ -12,6 +12,7 @@ import { EnumSelect, MemberSelect, clean, type MemberOption } from "@/features/c
 import { SOURCE_CHANNELS } from "@/features/crm/schema";
 import { createOpportunityAction } from "@/server/commands/opportunities";
 import { useSession } from "@/components/shell/session-context";
+import { ForecastCaptureFields } from "@/features/forecast/components/forecast-fields";
 
 export function CreateOpportunityDialog({ open, onOpenChange, members, defaults }: {
   open: boolean; onOpenChange: (open: boolean) => void; members: MemberOption[];
@@ -38,5 +39,6 @@ export function CreateOpportunityDialog({ open, onOpenChange, members, defaults 
     <Field label="Due (Malaysia time)" htmlFor="opportunity-due" required><Input id="opportunity-due" name="next_action_due_at" type="datetime-local" required /></Field>
     {can("sales.assign") ? <Field label="Owner"><MemberSelect name="owner_id" members={members} defaultValue={session.userId} /></Field> : <input type="hidden" name="owner_id" value={session.userId} />}
     <Field label="Remarks" htmlFor="opportunity-notes"><Textarea id="opportunity-notes" name="notes" rows={3} /></Field>
+    <ForecastCaptureFields idPrefix="create" />
   </FormDialog>;
 }
