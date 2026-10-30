@@ -22,6 +22,7 @@ export async function createAccountAction(input: unknown): Promise<ActionResult<
       registration_number: v.registration_number ?? null,
       website: v.website ?? null,
       address: { city: v.city ?? "", state: v.state ?? "", country: "MY" },
+      // The database makes the caller the PIC and refuses anyone else.
       owner_id: v.owner_id ?? session.userId,
       original_acquisition_source: v.source ?? null,
       original_acquisition_at: v.source ? new Date().toISOString() : null,
@@ -42,11 +43,16 @@ export async function updateAccountAction(input: unknown): Promise<ActionResult>
   const session = await requireSession();
   const v = parsed.data;
   const supabase = await createServerSupabase();
-  const { error } = await supabase
+  // The PIC is not an editable field: it is sent only when a caller tries to
+  // change it, so the database can refuse that. Transfers go through
+  // transferCustomerCardAction.
+  const { data, error } = await supabase
     .from("accounts")
-    .update({ name: v.name, telephone: v.telephone || null, account_type: v.account_type ?? null, registration_number: v.registration_number ?? null, website: v.website ?? null, address: { city: v.city ?? "", state: v.state ?? "", country: "MY" }, owner_id: v.owner_id ?? null, notes: v.notes ?? null, updated_by: session.userId })
-    .eq("id", v.id);
+    .update({ name: v.name, telephone: v.telephone || null, account_type: v.account_type ?? null, registration_number: v.registration_number ?? null, website: v.website ?? null, address: { city: v.city ?? "", state: v.state ?? "", country: "MY" }, notes: v.notes ?? null, updated_by: session.userId, ...(v.owner_id ? { owner_id: v.owner_id } : {}) })
+    .eq("id", v.id)
+    .select("id");
   if (error) return fail(error);
+  if (!data?.length) return fail("This account is outside your access scope.");
   revalidatePath(`/sales/accounts/${v.id}`);
   revalidatePath("/sales/accounts");
   return ok(undefined, "Account updated.");

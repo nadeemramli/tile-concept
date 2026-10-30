@@ -101,6 +101,10 @@ export interface ContactDetail {
   merged_into_contact_id: string | null;
   merged_into_name: string | null;
   archived_at: string | null;
+  /** Card PIC: the salesperson who owns this contact. Null on legacy cards awaiting assignment. */
+  owner_id: string | null;
+  owner_assigned_by: string | null;
+  owner_assigned_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -286,6 +290,9 @@ export async function getContactDetail(id: string): Promise<ContactDetail | null
     merged_into_contact_id: c.merged_into_contact_id,
     merged_into_name: (merged.data as { display_name: string | null } | null)?.display_name ?? null,
     archived_at: c.archived_at,
+    owner_id: c.owner_id,
+    owner_assigned_by: c.owner_assigned_by,
+    owner_assigned_at: c.owner_assigned_at,
     created_by: c.created_by,
     created_at: c.created_at!,
     updated_at: c.updated_at!,

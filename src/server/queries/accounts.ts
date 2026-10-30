@@ -63,7 +63,10 @@ export interface AccountDetail {
   website: string | null;
   domain: string | null;
   address: Record<string, string>;
+  /** Card PIC: the salesperson who owns this account. Null on legacy cards awaiting assignment. */
   owner_id: string | null;
+  owner_assigned_by: string | null;
+  owner_assigned_at: string | null;
   lifecycle_state: string;
   original_acquisition_source: string | null;
   original_acquisition_at: string | null;
@@ -114,6 +117,8 @@ export async function getAccountDetail(id: string): Promise<AccountDetail | null
     domain: a.domain,
     address: (a.address ?? {}) as Record<string, string>,
     owner_id: a.owner_id,
+    owner_assigned_by: a.owner_assigned_by,
+    owner_assigned_at: a.owner_assigned_at,
     lifecycle_state: a.lifecycle_state ?? "new",
     original_acquisition_source: a.original_acquisition_source,
     original_acquisition_at: a.original_acquisition_at,
