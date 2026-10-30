@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { createContext, useContext, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
@@ -52,6 +52,18 @@ const VIEW_HINTS = {
   done: "Completed and cancelled tasks, most recent first.",
 } as const;
 
+// The Due clock reaches the Due cells through context, so a tick re-renders
+// only their text and styling; changing the column definitions would remount
+// every cell, the row's linked contact and opportunity included (TILE-92).
+const DueClock = createContext(0);
+
+function DueCell({ task }: { task: TaskRow }) {
+  const now = useContext(DueClock);
+  if (!task.due_at) return <span className="text-muted-foreground">—</span>;
+  const over = task.status === "open" && isDuePast(task.due_at, now);
+  return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")} title={formatDateTime(task.due_at)}>{dueLabel(task.due_at, now)}</span>;
+}
+
 function toLocalInput(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -91,12 +103,7 @@ export function TasksClient({ view, tasks, counts, members, prefill, renderedAt 
         accessorKey: "due_at",
         header: "Due",
         meta: { hint: COLUMN_HINTS.due },
-        cell: ({ row }) => {
-          const t = row.original;
-          if (!t.due_at) return <span className="text-muted-foreground">—</span>;
-          const over = t.status === "open" && isDuePast(t.due_at, now);
-          return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")} title={formatDateTime(t.due_at)}>{dueLabel(t.due_at, now)}</span>;
-        },
+        cell: ({ row }) => <DueCell task={row.original} />,
       },
       { accessorKey: "assignee_name", header: "Assignee", meta: { hint: COLUMN_HINTS.assignee }, cell: ({ row }) => row.original.assignee_name ?? <span className="text-muted-foreground">Unassigned</span> },
       {
@@ -114,7 +121,7 @@ export function TasksClient({ view, tasks, counts, members, prefill, renderedAt 
       },
       { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusPill map={TASK_STATUS} value={row.original.status} /> },
     ],
-    [now],
+    [],
   );
 
   return (
@@ -144,7 +151,9 @@ export function TasksClient({ view, tasks, counts, members, prefill, renderedAt 
         }
       />
 
-      <DataTable columns={columns} data={tasks} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setTaskId(r.id)} isRowActive={(r) => r.id === taskId} emptyTitle="No tasks here" emptyDescription="Tasks are created from leads, opportunities and contacts, or directly." />
+      <DueClock.Provider value={now}>
+        <DataTable columns={columns} data={tasks} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setTaskId(r.id)} isRowActive={(r) => r.id === taskId} emptyTitle="No tasks here" emptyDescription="Tasks are created from leads, opportunities and contacts, or directly." />
+      </DueClock.Provider>
 
       <RecordDrawer
         open={!!task}
