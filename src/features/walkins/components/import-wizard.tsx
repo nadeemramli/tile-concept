@@ -17,6 +17,7 @@ import { normalizePhone } from "@/lib/identity/normalize";
 import { cn } from "@/lib/utils";
 import { checkImportDuplicatesAction, commitImportAction, type ImportCommitResult } from "@/server/commands/walkins";
 import type { ImportRow } from "@/features/walkins/schema";
+import { toIsoDate, WORKBOOK_READ_OPTIONS } from "@/features/walkins/import-dates";
 
 const TARGETS = [
   { key: "date", label: "Date", required: true },
@@ -86,24 +87,6 @@ function num(v: unknown): number | null {
   const n = Number(String(v).replace(/[^0-9.-]/g, ""));
   return Number.isNaN(n) ? null : n;
 }
-function toIsoDate(v: unknown): string | null {
-  if (v instanceof Date && !Number.isNaN(v.getTime())) return v.toISOString();
-  if (typeof v === "number") {
-    const d = XLSX.SSF.parse_date_code(v);
-    if (d) return new Date(Date.UTC(d.y, d.m - 1, d.d, d.H ?? 0, d.M ?? 0)).toISOString();
-  }
-  const s = String(v ?? "").trim();
-  if (!s) return null;
-  const m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
-  if (m) {
-    const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
-    const d = new Date(Date.UTC(y, Number(m[2]) - 1, Number(m[1])));
-    return Number.isNaN(d.getTime()) ? null : d.toISOString();
-  }
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
-
 export function ImportWizard({ locations }: { locations: { id: string; name: string }[] }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [sheetNames, setSheetNames] = useState<string[]>([]);
@@ -147,7 +130,7 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const wb = XLSX.read(e.target?.result, { type: "array", cellDates: true });
+        const wb = XLSX.read(e.target?.result, WORKBOOK_READ_OPTIONS);
         wbRef.current = wb;
         setSheetNames(wb.SheetNames);
         setFileName(file.name);
@@ -163,10 +146,11 @@ export function ImportWizard({ locations }: { locations: { id: string; name: str
 
   function buildPreview() {
     const get = (r: Record<string, unknown>, k: TargetKey) => (mapping[k] ? r[mapping[k]!] : undefined);
+    const date1904 = !!wbRef.current?.Workbook?.WBProps?.date1904;
     const out: PreviewRow[] = rows.map((r, i) => {
       const messages: string[] = [];
       let status: RowStatus = "valid";
-      const date = toIsoDate(get(r, "date"));
+      const date = toIsoDate(get(r, "date"), date1904);
       const name = String(get(r, "customer_name") ?? "").trim();
       const rawPhone = String(get(r, "phone") ?? "").trim();
       const phone = normalizePhone(rawPhone);
