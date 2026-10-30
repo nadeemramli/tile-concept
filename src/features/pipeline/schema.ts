@@ -36,19 +36,6 @@ export const updateOpportunitySchema = z.object({
   source_channel: z.enum(SOURCE_CHANNELS).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
 });
 
-export const addQuoteVersionSchema = z.object({
-  opportunity_id: uuid(),
-  quote_id: optionalUuid,
-  quote_number: z.string().trim().min(1),
-  issued_at: optionalStr,
-  valid_until: optionalStr,
-  total_amount: optionalNumber,
-  currency: z.string().length(3).default("MYR"),
-  external_ref: optionalStr,
-  notes: optionalStr,
-  link_sql_document: z.coerce.boolean().default(false),
-});
-
 export const reassignSchema = z.object({ opportunity_id: uuid(), version: z.coerce.number().int().positive(), request_id: uuid(), owner_id: uuid(), reason: optionalStr });
 
 export const createOpportunitySchema = z.object({

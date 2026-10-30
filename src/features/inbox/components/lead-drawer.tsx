@@ -22,6 +22,7 @@ import { FormAnswers } from "@/features/inbox/components/form-answers";
 import { mergeFormAnswers } from "@/features/inbox/lib/payload";
 import { InquiryWorkflow } from "./inquiry-workflow";
 import { InquiryRemarks } from "./inquiry-remarks";
+import { QuotePanel } from "@/features/quotes/components/quote-panel";
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
@@ -327,6 +328,10 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
             {/* Right: what happens next and what has happened */}
             <div className="order-first space-y-5 @3xl:order-last">
               <InquiryWorkflow key={lead.id} lead={lead} canWrite={canWrite} />
+
+              <DrawerSection title="Quotations">
+                <QuotePanel key={lead.id} anchor={{ lead_id: lead.id }} />
+              </DrawerSection>
 
               <DrawerSection
                 title="Activity"

@@ -42,7 +42,7 @@ select lives_ok($$insert into storage.objects(bucket_id,name,metadata) select 'o
 select lives_ok($$select api.opportunity_photo_command('finish',(select id from results),'eeeeeeee-3412-0000-0000-000000000001')$$,'actual upload can be finalized');
 select lives_ok($$select api.opportunity_photo_command('finish',(select id from results),'eeeeeeee-3412-0000-0000-000000000001')$$,'upload finalize is idempotent');
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000002');
-insert into api.quotes(workspace_id,opportunity_id,quote_number,status) values('11111111-1111-1111-1111-111111111111',(select id from results),'SYNTHETIC-ARCHIVE-QUOTE','issued');
+select api.quote_command('prepare',jsonb_build_object('opportunity_id',(select id from results),'origin','pipeline','quote_number','SYNTHETIC-ARCHIVE-QUOTE','currency','MYR','issue',jsonb_build_object('issued_at',now())),'eeeeeeee-3412-0000-0000-0000000000a1');
 insert into metrics select (select sum(opportunities) from api.report_pipeline()),(select sum(quotes) from api.report_quotes()),(api.sales_scorecard()->>'pipeline')::numeric,(api.command_centre_summary()->>'open_opportunities')::integer;
 select pg_temp.act_as('aaaaaaaa-0000-0000-0000-000000000003');
 select lives_ok($$select pg_temp.cmd('archive','{"reason":"Duplicate pursuit"}')$$,'archive is reversible');
