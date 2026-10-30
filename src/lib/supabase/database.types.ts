@@ -1668,6 +1668,153 @@ export type Database = {
           },
         ]
       }
+      classification_events: {
+        Row: {
+          actor_id: string | null
+          after_values: Json | null
+          basis: string | null
+          before_values: Json | null
+          conflict: Json | null
+          id: string | null
+          lead_id: string | null
+          occurred_at: string | null
+          opportunity_id: string | null
+          reason: string | null
+          request_id: string | null
+          source_values: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          after_values?: Json | null
+          basis?: string | null
+          before_values?: Json | null
+          conflict?: Json | null
+          id?: string | null
+          lead_id?: string | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          reason?: string | null
+          request_id?: string | null
+          source_values?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          after_values?: Json | null
+          basis?: string | null
+          before_values?: Json | null
+          conflict?: Json | null
+          id?: string | null
+          lead_id?: string | null
+          occurred_at?: string | null
+          opportunity_id?: string | null
+          reason?: string | null
+          request_id?: string | null
+          source_values?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classification_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "inbox_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classification_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classification_events_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classification_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "corpus_reconciliation"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "classification_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      classification_queue: {
+        Row: {
+          arrived_at: string | null
+          buyer_role: string | null
+          classification_basis: string | null
+          classification_conflict: Json | null
+          classification_flagged_at: string | null
+          classification_note: string | null
+          classification_state: string | null
+          classification_updated_at: string | null
+          classification_version: number | null
+          contact_id: string | null
+          glc_involvement: string | null
+          glc_party_role: string | null
+          lead_id: string | null
+          opportunity_id: string | null
+          owner_id: string | null
+          project_use: string | null
+          pursuit_status: string | null
+          subject_id: string | null
+          subject_type: string | null
+          title: string | null
+          work_type: string | null
+          workspace_id: string | null
+        }
+        Relationships: []
+      }
+      classification_values: {
+        Row: {
+          aliases: string[] | null
+          dimension: string | null
+          hint: string | null
+          is_legacy: boolean | null
+          is_primary: boolean | null
+          key: string | null
+          label: string | null
+          position: number | null
+          reporting_group: string | null
+        }
+        Insert: {
+          aliases?: string[] | null
+          dimension?: string | null
+          hint?: string | null
+          is_legacy?: boolean | null
+          is_primary?: boolean | null
+          key?: string | null
+          label?: string | null
+          position?: number | null
+          reporting_group?: string | null
+        }
+        Update: {
+          aliases?: string[] | null
+          dimension?: string | null
+          hint?: string | null
+          is_legacy?: boolean | null
+          is_primary?: boolean | null
+          key?: string | null
+          label?: string | null
+          position?: number | null
+          reporting_group?: string | null
+        }
+        Relationships: []
+      }
       commercial_amount_observations: {
         Row: {
           amount_normalized: number | null
@@ -4750,7 +4897,19 @@ export type Database = {
       leads: {
         Row: {
           account_id: string | null
+          arrival_basis: string | null
+          arrival_note: string | null
+          arrival_precision: string | null
           assigned_at: string | null
+          buyer_role: string | null
+          classification_basis: string | null
+          classification_conflict: Json | null
+          classification_flagged_at: string | null
+          classification_note: string | null
+          classification_state: string | null
+          classification_updated_at: string | null
+          classification_updated_by: string | null
+          classification_version: number | null
           contact_attempts: number | null
           contact_id: string | null
           converted_opportunity_id: string | null
@@ -4758,30 +4917,55 @@ export type Database = {
           created_by: string | null
           disqualified_reason: string | null
           duplicate_of_lead_id: string | null
+          first_customer_reply_at: string | null
           first_response_at: string | null
           first_response_due_at: string | null
+          first_whatsapp_reply_at: string | null
+          first_whatsapp_sent_at: string | null
+          glc_involvement: string | null
+          glc_party_role: string | null
           id: string | null
           interest: string | null
+          last_contact_attempt_at: string | null
+          last_customer_reply_at: string | null
+          last_no_response_at: string | null
           location_id: string | null
+          no_next_action_reason: string | null
           notes: string | null
           owner_id: string | null
           product_interest: string[] | null
+          project_use: string | null
           qualified_at: string | null
           raw_company: string | null
           raw_email: string | null
+          raw_email_normalized: string | null
           raw_name: string | null
           raw_phone: string | null
           raw_phone_normalized: string | null
+          recorded_at: string | null
           source_channel: string | null
           source_detail: string | null
           status: string | null
           updated_at: string | null
           version: number | null
+          work_type: string | null
           workspace_id: string | null
         }
         Insert: {
           account_id?: string | null
+          arrival_basis?: string | null
+          arrival_note?: string | null
+          arrival_precision?: string | null
           assigned_at?: string | null
+          buyer_role?: string | null
+          classification_basis?: string | null
+          classification_conflict?: Json | null
+          classification_flagged_at?: string | null
+          classification_note?: string | null
+          classification_state?: string | null
+          classification_updated_at?: string | null
+          classification_updated_by?: string | null
+          classification_version?: number | null
           contact_attempts?: number | null
           contact_id?: string | null
           converted_opportunity_id?: string | null
@@ -4789,30 +4973,55 @@ export type Database = {
           created_by?: string | null
           disqualified_reason?: string | null
           duplicate_of_lead_id?: string | null
+          first_customer_reply_at?: string | null
           first_response_at?: string | null
           first_response_due_at?: string | null
+          first_whatsapp_reply_at?: string | null
+          first_whatsapp_sent_at?: string | null
+          glc_involvement?: string | null
+          glc_party_role?: string | null
           id?: string | null
           interest?: string | null
+          last_contact_attempt_at?: string | null
+          last_customer_reply_at?: string | null
+          last_no_response_at?: string | null
           location_id?: string | null
+          no_next_action_reason?: string | null
           notes?: string | null
           owner_id?: string | null
           product_interest?: string[] | null
+          project_use?: string | null
           qualified_at?: string | null
           raw_company?: string | null
           raw_email?: string | null
+          raw_email_normalized?: string | null
           raw_name?: string | null
           raw_phone?: string | null
           raw_phone_normalized?: string | null
+          recorded_at?: string | null
           source_channel?: string | null
           source_detail?: string | null
           status?: string | null
           updated_at?: string | null
           version?: number | null
+          work_type?: string | null
           workspace_id?: string | null
         }
         Update: {
           account_id?: string | null
+          arrival_basis?: string | null
+          arrival_note?: string | null
+          arrival_precision?: string | null
           assigned_at?: string | null
+          buyer_role?: string | null
+          classification_basis?: string | null
+          classification_conflict?: Json | null
+          classification_flagged_at?: string | null
+          classification_note?: string | null
+          classification_state?: string | null
+          classification_updated_at?: string | null
+          classification_updated_by?: string | null
+          classification_version?: number | null
           contact_attempts?: number | null
           contact_id?: string | null
           converted_opportunity_id?: string | null
@@ -4820,25 +5029,38 @@ export type Database = {
           created_by?: string | null
           disqualified_reason?: string | null
           duplicate_of_lead_id?: string | null
+          first_customer_reply_at?: string | null
           first_response_at?: string | null
           first_response_due_at?: string | null
+          first_whatsapp_reply_at?: string | null
+          first_whatsapp_sent_at?: string | null
+          glc_involvement?: string | null
+          glc_party_role?: string | null
           id?: string | null
           interest?: string | null
+          last_contact_attempt_at?: string | null
+          last_customer_reply_at?: string | null
+          last_no_response_at?: string | null
           location_id?: string | null
+          no_next_action_reason?: string | null
           notes?: string | null
           owner_id?: string | null
           product_interest?: string[] | null
+          project_use?: string | null
           qualified_at?: string | null
           raw_company?: string | null
           raw_email?: string | null
+          raw_email_normalized?: string | null
           raw_name?: string | null
           raw_phone?: string | null
           raw_phone_normalized?: string | null
+          recorded_at?: string | null
           source_channel?: string | null
           source_detail?: string | null
           status?: string | null
           updated_at?: string | null
           version?: number | null
+          work_type?: string | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -5452,6 +5674,15 @@ export type Database = {
           account_id: string | null
           archive_reason: string | null
           archived_at: string | null
+          buyer_role: string | null
+          classification_basis: string | null
+          classification_conflict: Json | null
+          classification_flagged_at: string | null
+          classification_note: string | null
+          classification_state: string | null
+          classification_updated_at: string | null
+          classification_updated_by: string | null
+          classification_version: number | null
           competitor: string | null
           contact_id: string | null
           created_at: string | null
@@ -5460,6 +5691,8 @@ export type Database = {
           deferred_until: string | null
           estimated_value: number | null
           expected_close_date: string | null
+          glc_involvement: string | null
+          glc_party_role: string | null
           id: string | null
           lead_id: string | null
           lost_at: string | null
@@ -5472,6 +5705,7 @@ export type Database = {
           probability_band: string | null
           product_interest: string[] | null
           project_id: string | null
+          project_use: string | null
           segment: string | null
           source_channel: string | null
           stage_key: string | null
@@ -5479,12 +5713,22 @@ export type Database = {
           updated_at: string | null
           version: number | null
           won_at: string | null
+          work_type: string | null
           workspace_id: string | null
         }
         Insert: {
           account_id?: string | null
           archive_reason?: string | null
           archived_at?: string | null
+          buyer_role?: string | null
+          classification_basis?: string | null
+          classification_conflict?: Json | null
+          classification_flagged_at?: string | null
+          classification_note?: string | null
+          classification_state?: string | null
+          classification_updated_at?: string | null
+          classification_updated_by?: string | null
+          classification_version?: number | null
           competitor?: string | null
           contact_id?: string | null
           created_at?: string | null
@@ -5493,6 +5737,8 @@ export type Database = {
           deferred_until?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
+          glc_involvement?: string | null
+          glc_party_role?: string | null
           id?: string | null
           lead_id?: string | null
           lost_at?: string | null
@@ -5505,6 +5751,7 @@ export type Database = {
           probability_band?: string | null
           product_interest?: string[] | null
           project_id?: string | null
+          project_use?: string | null
           segment?: string | null
           source_channel?: string | null
           stage_key?: string | null
@@ -5512,12 +5759,22 @@ export type Database = {
           updated_at?: string | null
           version?: number | null
           won_at?: string | null
+          work_type?: string | null
           workspace_id?: string | null
         }
         Update: {
           account_id?: string | null
           archive_reason?: string | null
           archived_at?: string | null
+          buyer_role?: string | null
+          classification_basis?: string | null
+          classification_conflict?: Json | null
+          classification_flagged_at?: string | null
+          classification_note?: string | null
+          classification_state?: string | null
+          classification_updated_at?: string | null
+          classification_updated_by?: string | null
+          classification_version?: number | null
           competitor?: string | null
           contact_id?: string | null
           created_at?: string | null
@@ -5526,6 +5783,8 @@ export type Database = {
           deferred_until?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
+          glc_involvement?: string | null
+          glc_party_role?: string | null
           id?: string | null
           lead_id?: string | null
           lost_at?: string | null
@@ -5538,6 +5797,7 @@ export type Database = {
           probability_band?: string | null
           product_interest?: string[] | null
           project_id?: string | null
+          project_use?: string | null
           segment?: string | null
           source_channel?: string | null
           stage_key?: string | null
@@ -5545,6 +5805,7 @@ export type Database = {
           updated_at?: string | null
           version?: number | null
           won_at?: string | null
+          work_type?: string | null
           workspace_id?: string | null
         }
         Relationships: [
@@ -12178,6 +12439,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_classification_backfill: {
+        Args: { p_expected_known: number; p_reason: string }
+        Returns: Json
+      }
       approve_certificate_candidate: {
         Args: { p_candidate_id: string; p_corrections?: Json; p_note?: string }
         Returns: string
@@ -12217,6 +12482,10 @@ export type Database = {
           p_to_stage_key: string
         }
         Returns: undefined
+      }
+      classify_pursuit: {
+        Args: { p_input: Json; p_request_id: string }
+        Returns: Json
       }
       command_centre_summary: { Args: never; Returns: Json }
       complete_sales_task: {
@@ -12621,6 +12890,7 @@ export type Database = {
         Returns: string
       }
       prepare_visit_feedback: { Args: { p_input: Json }; Returns: string }
+      preview_classification_backfill: { Args: never; Returns: Json }
       preview_marketing_spend_batch: { Args: { p_input: Json }; Returns: Json }
       project_command: {
         Args: { p_action: string; p_input: Json; p_request_id: string }
@@ -12920,6 +13190,23 @@ export type Database = {
           with_current_price: number
         }[]
       }
+      report_pursuit_segments: {
+        Args: { p_from?: string; p_grain?: string; p_to?: string }
+        Returns: {
+          complete: number
+          conflict: number
+          dimension: string
+          dimension_label: string
+          is_legacy: boolean
+          missing_flagged: number
+          period_end: string
+          period_start: string
+          pursuits: number
+          unreviewed: number
+          value: string
+          value_label: string
+        }[]
+      }
       report_quotes: {
         Args: { p_from?: string; p_to?: string }
         Returns: {
@@ -13017,6 +13304,17 @@ export type Database = {
         Returns: undefined
       }
       set_default_area: { Args: { p_area?: string }; Returns: string }
+      set_inquiry_arrival: {
+        Args: {
+          p_arrived_at: string
+          p_basis: string
+          p_lead_id: string
+          p_precision: string
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       set_primary_catalog_media: {
         Args: { p_media_id: string; p_product_id: string }
         Returns: undefined

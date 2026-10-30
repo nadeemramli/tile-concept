@@ -19,6 +19,7 @@ import { addAccountAliasAction, createAccountAction, updateAccountAction } from 
 import { addProjectSiteAction, registerProjectAction, updateProjectAction } from "@/server/commands/projects";
 import { ROLE_PERMISSIONS, type RoleKey } from "@/lib/rbac/matrix";
 import { transferCustomerCardAction } from "@/server/commands/customer-cards";
+import { CONTACT_CUSTOMER_TYPE_LABEL, UNKNOWN_CLASSIFICATION, type ClassificationValues } from "@/features/classification/taxonomy";
 import type { ContactDetail } from "@/server/queries/contacts";
 import type { AccountDetail } from "@/server/queries/accounts";
 import type { ProjectDetail } from "@/server/queries/projects";
@@ -57,7 +58,7 @@ export function NewContactDialog({ open, onOpenChange, members, defaultAccountId
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Customer type">
-          <EnumSelect name="customer_type" options={CUSTOMER_TYPES} />
+          <EnumSelect name="customer_type" options={CUSTOMER_TYPES.filter((t) => t !== "homeowner" && t !== "designer")} labels={CONTACT_CUSTOMER_TYPE_LABEL} placeholder="Type not stated" />
         </Field>
         <Field label="Acquisition source">
           <EnumSelect name="source" options={SOURCE_CHANNELS} />
@@ -87,7 +88,7 @@ export function EditContactDialog({ open, onOpenChange, contact }: DialogProps &
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Customer type">
-          <EnumSelect name="customer_type" options={CUSTOMER_TYPES} defaultValue={contact.customer_type} />
+          <EnumSelect name="customer_type" options={CUSTOMER_TYPES.filter((t) => (t !== "homeowner" && t !== "designer") || t === contact.customer_type)} labels={CONTACT_CUSTOMER_TYPE_LABEL} defaultValue={contact.customer_type} placeholder="Type not stated" />
         </Field>
         <Field label="Preferred language" htmlFor="preferred_language">
           <Input id="preferred_language" name="preferred_language" defaultValue={contact.preferred_language ?? ""} />

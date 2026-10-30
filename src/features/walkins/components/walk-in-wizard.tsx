@@ -24,7 +24,11 @@ import { normalizePhone } from "@/lib/identity/normalize";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
 import { createWalkInContactAction, getOpenOpportunitiesAction, recordWalkInAction } from "@/server/commands/walkins";
-import { CUSTOMER_TYPES, PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
+import { PRODUCT_INTERESTS, VISIT_PURPOSES, walkInSchema, type WalkInInput } from "@/features/walkins/schema";
+import { CLASSIFICATION_OPTIONS, DIMENSION_HINT, optionLabel } from "@/features/classification/taxonomy";
+
+/** Roles staff can state at the counter; "Not stated" leaves the inquiry's role Unknown. */
+const ROLE_CHOICES = CLASSIFICATION_OPTIONS.buyer_role.filter((o) => o.primary && o.key !== "unknown");
 import { RENOVATION_AREA_PRESETS } from "@/features/walkins/presets";
 import { EMPTY_MALAYSIA_AREA, formatMalaysiaArea } from "@/lib/location/malaysia";
 import { searchShowroomCustomersAction } from "@/server/commands/showroom-search";
@@ -62,7 +66,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   // step 2
   const [contact, setContact] = useState<{ id: string; name: string; lifecycle?: string | null; isNew: boolean } | null>(null);
   const [newName, setNewName] = useState("");
-  const [newType, setNewType] = useState<string>("homeowner");
+  const [newType, setNewType] = useState<string>("");
   /** A prior inquiry selected at identity confirmation; saved with the visit. */
   const [fromLead, setFromLead] = useState<IdentityCandidate | null>(null);
   const [accountId, setAccountId] = useState<string>("");
@@ -72,7 +76,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
   const [occurredAt, setOccurredAt] = useState(localNow);
   const [locationId, setLocationId] = useState(session.defaultLocationId ?? locations[0]?.id ?? "");
   const [staffId, setStaffId] = useState(session.userId);
-  const [customerType, setCustomerType] = useState<string>("homeowner");
+  const [customerType, setCustomerType] = useState<string>("");
   const [customerArea, setCustomerArea] = useState(EMPTY_MALAYSIA_AREA);
   const area = formatMalaysiaArea(customerArea);
   const [renovationArea, setRenovationArea] = useState("");
@@ -328,9 +332,12 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             </div>
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <Input autoFocus={!(candidates && candidates.length)} className="h-9" placeholder="Full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-              <Select value={newType} onValueChange={setNewType}>
-                <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
-                <SelectContent>{CUSTOMER_TYPES.map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}</SelectContent>
+              <Select value={newType || "__none__"} onValueChange={(v) => setNewType(v === "__none__" ? "" : v)}>
+                <SelectTrigger className="h-9 w-44" aria-label="Customer type"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Type not stated</SelectItem>
+                  {ROLE_CHOICES.map((o) => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -387,10 +394,13 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
                 <SelectContent><SelectItem value="personal">Personal visit / no company</SelectItem>{contactCompanies.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
               </Select>
             </Field>}
-            <Field label="Customer type">
-              <Select value={customerType} onValueChange={setCustomerType}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>{CUSTOMER_TYPES.map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}</SelectContent>
+            <Field label="Buyer role at this visit" htmlFor="visit-buyer-role" tip={`${DIMENSION_HINT.buyer_role} A role stated here fills the inquiry's Unknown; if the inquiry already records a different role, it is held for review instead of overwriting it.`}>
+              <Select value={customerType || "__none__"} onValueChange={(v) => setCustomerType(v === "__none__" ? "" : v)}>
+                <SelectTrigger id="visit-buyer-role" className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Not stated</SelectItem>
+                  {ROLE_CHOICES.map((o) => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}
+                </SelectContent>
               </Select>
             </Field>
             <MalaysiaAreaFields value={customerArea} onChange={setCustomerArea} />
@@ -479,7 +489,7 @@ export function WalkInWizard({ locations, members }: { locations: { id: string; 
             <Row label="When" value={occurredAt.replace("T", " ")} />
             <Row label="Location" value={locations.find((l) => l.id === locationId)?.name ?? "—"} />
             <Row label="Staff" value={members.find((m) => m.user_id === staffId)?.full_name ?? "—"} />
-            <Row label="Type" value={titleCase(customerType)} />
+            <Row label="Buyer role" value={customerType ? optionLabel("buyer_role", customerType) : "Not stated"} />
             <Row label="From" value={area || "—"} />
             <Row label="Area / renovation" value={renovationArea || "—"} />
             <Row label="How they heard (reported)" value={statusMeta(SOURCE_CHANNEL, source).label} />

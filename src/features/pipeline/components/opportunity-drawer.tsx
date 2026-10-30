@@ -26,6 +26,7 @@ import { EditOpportunityDialog, ReassignDialog } from "@/features/pipeline/compo
 import { QuotePanel } from "@/features/quotes/components/quote-panel";
 import { ActivityDialog, TaskDialog } from "@/features/crm/components/dialogs";
 import { PurchasesList } from "@/features/crm/components/detail-sections";
+import { PursuitClassificationSection } from "@/features/classification/components/pursuit-classification";
 
 type Which = "stage" | "edit" | "activity" | "task" | "reassign" | "archive" | null;
 
@@ -172,6 +173,8 @@ export function OpportunityDrawer({ opp, stages, members, suggestedQuoteNumber, 
         />
         {opp.notes && <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-sm">{opp.notes}</p>}
       </DrawerSection>
+
+      <PursuitClassificationSection key={opp.id} subject={{ opportunity_id: opp.id }} canWrite={canWrite} readOnlyReason={opp.archived_at ? "Restore this opportunity first." : OWNER_ONLY} />
 
       <DrawerSection title="Quotations">
         <QuotePanel key={opp.id} anchor={{ opportunity_id: opp.id }} suggestedNumber={suggestedQuoteNumber} defaultAmount={opp.estimated_value} defaultCurrency={opp.currency} />

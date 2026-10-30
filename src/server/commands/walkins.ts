@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { classificationKey } from "@/features/classification/taxonomy";
 import { z } from "zod";
 import { uuid } from "@/lib/zod";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -261,7 +262,7 @@ export async function commitImportAction(rows: ImportRow[], options: { location_
           const { data: created, error } = await supabase.rpc("create_contact", {
             p_display_name: r.customer_name,
             p_phone: r.phone,
-            p_customer_type: blank(r.customer_type)?.toLowerCase(),
+            p_customer_type: importedRole(r.customer_type),
             p_is_provisional: false,
           });
           if (error || !created) {
@@ -286,11 +287,11 @@ export async function commitImportAction(rows: ImportRow[], options: { location_
           location_id: options.location_id ?? session.defaultLocationId ?? null,
           staff_user_id: staff ?? null,
           occurred_at: new Date(r.date.length === 10 ? `${r.date}T00:00:00+08:00` : r.date).toISOString(),
-          customer_type: blank(r.customer_type)?.toLowerCase() ?? null,
+          customer_type: importedRole(r.customer_type) ?? null,
           origin_area: blank(r.origin_area) ?? null,
           inquiry_source: blank(r.inquiry_source)?.toLowerCase() ?? options.default_source ?? null,
           purpose: purchase ? "purchase" : "browse",
-          notes: `Imported from walk-in workbook (row ${r.row_no})${r.new_existing ? ` · sheet said ${r.new_existing}` : ""}`,
+          notes: `Imported from walk-in workbook (row ${r.row_no})${r.new_existing ? ` · sheet said ${r.new_existing}` : ""}${blank(r.customer_type) ? ` · customer type (sheet): ${r.customer_type}` : ""}`,
           create_opportunity: false,
           product_interest: [],
           purchase: purchase ?? null,
@@ -312,6 +313,12 @@ export async function commitImportAction(rows: ImportRow[], options: { location_
   } catch (e) {
     return fail(e);
   }
+}
+
+/** A workbook's customer type as a buyer role, or undefined (Unknown) when the spelling is not one we know. */
+function importedRole(raw: string | undefined): string | undefined {
+  const key = classificationKey("buyer_role", raw);
+  return key && key !== "unknown" ? key : undefined;
 }
 
 async function resolveStaff(name: string, staffCache: Map<string, string | undefined>): Promise<string | undefined> {

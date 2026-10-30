@@ -10,7 +10,7 @@ export async function createProjectOpportunityAction(input: unknown): Promise<Ac
   const parsed = createProjectOpportunitySchema.safeParse(input);
   if (!parsed.success) return fail("Check the form", parsed.error.flatten().fieldErrors);
   await requireSession();
-  const v = parsed.data;
+  const { classification, ...v } = parsed.data;
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.rpc("opportunity_command", { p_action: "create", p_request_id: v.request_id,
     p_input: { ...v, create_project: true, name: v.opportunity_name || v.project_name, currency: "MYR",
@@ -21,6 +21,19 @@ export async function createProjectOpportunityAction(input: unknown): Promise<Ac
   revalidatePath("/sales/pipeline");
   if (v.contact_id) revalidatePath(`/sales/contacts/${v.contact_id}`);
   if (v.account_id) revalidatePath(`/sales/accounts/${v.account_id}`);
+  // A new opportunity starts Unknown; what the form stated is captured with its
+  // own history row. A retry of the same create reuses the same request.
+  if (result.opportunity_id && classification && Object.values(classification).some((x) => x && x !== "unknown")) {
+    const { error: classifyError } = await supabase.rpc("classify_pursuit", {
+      p_request_id: v.request_id,
+      p_input: { opportunity_id: result.opportunity_id, mode: "capture", expected_version: 0, ...classification,
+        glc_party_role: classification.glc_involvement === "yes" ? (classification.glc_party_role ?? "unknown") : null },
+    });
+    if (classifyError) {
+      const refused = fail(classifyError);
+      return ok(result, `Project and opportunity created, but the classification was not saved${refused.ok ? "" : `: ${refused.error}`} Classify it from the opportunity.`);
+    }
+  }
   return ok(result, result.opportunity_id ? "Project and opportunity created." : "Project created.");
 }
 

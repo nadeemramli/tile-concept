@@ -14,6 +14,7 @@ export type ReportSlug =
   | "walkins"
   | "walkins-by-person"
   | "walkins-period"
+  | "pursuit-segments"
   | "cohorts"
   | "demand"
   | "price"
@@ -236,6 +237,27 @@ export const REPORTS: ReportDef[] = [
       caption: "Reviewed collections against document totals, per period.",
     },
     scopeNote: "A sale paid in a later period shows its collection in that later period, so Collections and Document total are not expected to match row by row.",
+  },
+  {
+    slug: "pursuit-segments",
+    title: "Pursuits by buyer role and project segment",
+    question: "Who is buying, for what kind of project, and how much of it is still unclassified?",
+    rpc: "report_pursuit_segments",
+    metricKey: "pursuit_segments",
+    ranged: true,
+    grain: { default: "week", options: ["day", "week", "month"] },
+    rowKey: ["period_start", "dimension", "value"],
+    columns: [
+      { key: "period_start", label: "Period", format: "period", description: "The Kuala Lumpur day, Monday-to-Sunday week or month in which the pursuit's inquiry arrived (or its opportunity was opened, when it had no inquiry)." },
+      { key: "dimension_label", label: "Dimension", description: "Buyer role, project use, work type, GLC involvement or GLC party role. Each pursuit is counted once in every dimension, so a residential job for a GLC appears under Residential and under GLC involved, never twice in one." },
+      { key: "value_label", label: "Value", description: "Unknown is its own row, never spread across the others. Developer, architect and retailer are earlier-record roles reported as their own groups." },
+      { key: "pursuits", label: "Pursuits", format: "number", description: "Pursuits with this value: an opportunity, or an inquiry that has not become one. Duplicates belong to their original; visits and messages never add a pursuit." },
+      { key: "complete", label: "Classified", format: "number", description: "Of those, pursuits with every dimension stated." },
+      { key: "unreviewed", label: "Not reviewed", format: "number", description: "Of those, pursuits nobody has classified or flagged yet, including records from before classification existed." },
+      { key: "missing_flagged", label: "Missing, flagged", format: "number", description: "Of those, pursuits qualified with values still Unknown and flagged for follow-up." },
+      { key: "conflict", label: "Conflicting", format: "number", description: "Of those, pursuits where a later source disagreed and is waiting for a decision." },
+    ],
+    scopeNote: "Archived opportunities are excluded. Records from before classification existed stay Unknown until they are reviewed or a reviewed backfill fills them.",
   },
   {
     slug: "cohorts",
