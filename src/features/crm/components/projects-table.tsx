@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryState, parseAsString } from "nuqs";
@@ -12,14 +12,26 @@ import { StatusPill } from "@/components/patterns/status-pill";
 import { Gated } from "@/components/patterns/explain";
 import { useSession } from "@/components/shell/session-context";
 import { ClaimProjectButton } from "./project-follow-up";
-import { formatDate, formatRelative, titleCase } from "@/lib/format";
+import { formatDate, titleCase } from "@/lib/format";
+import { followUpRelative, useFollowUpClock } from "@/features/crm/follow-up-time";
 import type { ProjectListRow } from "@/server/queries/projects";
 import type { MemberOption } from "@/features/crm/components/selects";
 import { ProjectOpportunityDialog } from "@/features/crm/components/dialogs";
 import { PROJECT_STATUS } from "@/features/crm/project-status";
 
-export function ProjectsView({ projects, members }: { projects: ProjectListRow[]; members: MemberOption[] }) {
+// The follow-up clock reaches the two time cells through context, so a tick
+// re-renders only their text; changing the column definitions would remount
+// every cell, the claim button included (TILE-90).
+const FollowUpClock = createContext(0);
+
+function FollowUpTime({ value }: { value: string }) {
+  return <>{followUpRelative(value, useContext(FollowUpClock))}</>;
+}
+
+export function ProjectsView({ projects, members, renderedAt }: { projects: ProjectListRow[]; members: MemberOption[]; renderedAt: string }) {
   const router = useRouter();
+  // Server request time until mount, then the browser clock (TILE-90).
+  const now = useFollowUpClock(renderedAt);
   const { session, can } = useSession();
   const canReadSales = can("sales.read");
   const [view, setView] = useState<"all" | "unassigned" | "mine">("all");
@@ -45,8 +57,8 @@ export function ProjectsView({ projects, members }: { projects: ProjectListRow[]
       },
       { accessorKey: "owner_id", header: "Internal handler", meta: { hint: "Who coordinates follow-up. Assignment never hides the project from the rest of the company." }, cell: ({ getValue }) => names.get(getValue<string | null>() ?? "") ?? "Unassigned" },
       { accessorKey: "opportunities_count", header: "Opps", meta: { hint: "Opportunities linked to this project, open or closed. One project can carry several quotes over time." }, cell: ({ getValue }) => <span className="tnum">{getValue<number>()}</span> },
-      { accessorKey: "next_action", header: "Next follow-up", cell: ({ row }) => <div className="max-w-48 text-xs"><p className="truncate">{row.original.next_action ?? "—"}</p>{row.original.next_action_due_at && <p className="text-muted-foreground">{formatRelative(row.original.next_action_due_at)}</p>}</div> },
-      { accessorKey: "last_follow_up_at", header: "Last followed up", cell: ({ row }) => <div className="text-xs">{row.original.last_follow_up_at ? <>{names.get(row.original.last_follow_up_by ?? "") ?? "Staff member"}<p className="text-muted-foreground">{formatRelative(row.original.last_follow_up_at)}</p></> : "Not yet"}</div> },
+      { accessorKey: "next_action", header: "Next follow-up", cell: ({ row }) => <div className="max-w-48 text-xs"><p className="truncate">{row.original.next_action ?? "—"}</p>{row.original.next_action_due_at && <p className="text-muted-foreground"><FollowUpTime value={row.original.next_action_due_at} /></p>}</div> },
+      { accessorKey: "last_follow_up_at", header: "Last followed up", cell: ({ row }) => <div className="text-xs">{row.original.last_follow_up_at ? <>{names.get(row.original.last_follow_up_by ?? "") ?? "Staff member"}<p className="text-muted-foreground"><FollowUpTime value={row.original.last_follow_up_at} /></p></> : "Not yet"}</div> },
       { id: "claim", header: "", cell: ({ row }) => !row.original.owner_id ? <ClaimProjectButton id={row.original.id} version={row.original.version} /> : null },
       { accessorKey: "expected_completion", header: "Expected completion", meta: { hint: "When the site is expected to be finished. Marketing uses it to judge when a shoot could happen." }, cell: ({ getValue }) => <span className="tnum text-xs">{formatDate(getValue<string | null>())}</span> },
     ],
@@ -64,7 +76,9 @@ export function ProjectsView({ projects, members }: { projects: ProjectListRow[]
           </Button>
         </Gated>
       </div>
-      <DataTable columns={cols} data={visible} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => router.push(`/sales/projects/${r.id}`)} emptyTitle="No projects" emptyDescription="Register a project with just a title. Contacts and specifications can be added later." />
+      <FollowUpClock.Provider value={now}>
+        <DataTable columns={cols} data={visible} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => router.push(`/sales/projects/${r.id}`)} emptyTitle="No projects" emptyDescription="Register a project with just a title. Contacts and specifications can be added later." />
+      </FollowUpClock.Provider>
       {newParam === "1" && <ProjectOpportunityDialog open onOpenChange={(o) => !o && setNewParam(null)} members={members} />}
     </div>
   );

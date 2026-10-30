@@ -15,7 +15,7 @@ export default async function ProjectsPage() {
   return (
     <PageBody>
       <PageHeader title="Project registration" description="Register quickly, enrich together. All company projects stay visible; salespeople can claim, assign and follow up." />
-      <ProjectsView projects={projects} members={members} />
+      <ProjectsView projects={projects} members={members} renderedAt={new Date().toISOString()} />
     </PageBody>
   );
 }
