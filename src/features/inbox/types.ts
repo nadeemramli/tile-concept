@@ -100,3 +100,7 @@ export interface InboxCounts {
   aging: number;
   followUpsDue: number;
 }
+
+export interface LeadRoutingAssignment {
+ customer_type: string | null; pool_key: string | null; slot_name: string | null; reason: string;
+}

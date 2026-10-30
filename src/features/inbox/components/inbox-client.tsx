@@ -279,6 +279,7 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
         timeline={openDetail?.timeline ?? []}
         outcomes={openDetail?.outcomes ?? []}
         contact={openDetail?.contact ?? null}
+        routing={openDetail?.routing ?? null}
         loading={detailLoading}
         members={members}
         initialSuggestions={openLeadRow ? suggestions[openLeadRow.id] : undefined}
