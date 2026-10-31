@@ -130,11 +130,12 @@ describe("management oversight stays oversight", () => {
 });
 
 describe("language", () => {
-  it("defaults to Bahasa Melayu and accepts only known locales", () => {
-    expect(DEFAULT_LOCALE).toBe("ms");
-    expect(parseLocale(undefined)).toBe("ms");
+  it("defaults to English and preserves explicit known locales", () => {
+    expect(DEFAULT_LOCALE).toBe("en");
+    expect(parseLocale(undefined)).toBe("en");
+    expect(parseLocale("ms")).toBe("ms");
     expect(parseLocale("en")).toBe("en");
-    expect(parseLocale("fr")).toBe("ms");
+    expect(parseLocale("fr")).toBe("en");
   });
 
   it("has every message in both languages, none empty", () => {

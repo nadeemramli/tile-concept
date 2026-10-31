@@ -369,34 +369,39 @@ test.describe("deep links", () => {
   });
 });
 
-test.describe("Bahasa Melayu by default", () => {
+test.describe("English by default", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("sign-in is in Bahasa Melayu, switches to English and the choice survives reload", async ({ page }) => {
+  test("sign-in defaults to English and an explicit BM choice survives reload", async ({ page }) => {
     await page.goto("/login");
-    // The document stays English (most screens are); the translated sign-in declares Malay.
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    await expect(page.locator("[lang='ms-MY']").filter({ has: page.locator("#email") })).toHaveCount(1);
-    await expect(page.getByRole("button", { name: "Log masuk" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Masuk sebagai tetamu" })).toBeVisible();
-    await page.getByRole("button", { name: "English" }).first().click();
-    await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
-    await page.reload();
-    await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enter as guest", exact: true })).toBeVisible();
     await expect(page.locator("[lang='ms-MY']").filter({ has: page.locator("#email") })).toHaveCount(0);
-    await page.getByRole("button", { name: "Bahasa Melayu" }).first().click();
-    await expect(page.getByRole("button", { name: "Log masuk" })).toBeVisible();
+    await page.getByRole("button", { name: "Bahasa Melayu", exact: true }).first().click();
+    await expect(page.getByRole("button", { name: "Log masuk", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Masuk sebagai tetamu", exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Log masuk", exact: true })).toBeVisible();
+    await expect(page.locator("[lang='ms-MY']").filter({ has: page.locator("#email") })).toHaveCount(1);
+    await page.getByRole("button", { name: "English", exact: true }).first().click();
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   });
 
   test.describe("on a phone", () => {
     test.use({ viewport: { width: 390, height: 844 } });
 
-    test("a driver gets a compact Bahasa Melayu screen with one obvious action", async ({ page }) => {
+    test("a driver defaults to English on a phone and can remember BM", async ({ page }) => {
       await page.goto("/login");
       await page.locator("#email").fill(USERS.driver.email);
       await page.locator("#password").fill(PASSWORD);
-      await page.getByRole("button", { name: "Log masuk" }).click();
+      await submitPasswordForm(page, USERS.driver.email, PASSWORD);
       await page.waitForURL("**/admin/my-deliveries");
+      await expect(page.getByRole("heading", { name: "My Deliveries", level: 1 })).toBeVisible();
+      await expect(page.locator("main").getByRole("button")).toHaveText(["Refresh"]);
+      await page.getByRole("button", { name: "Bahasa Melayu", exact: true }).first().click();
+      await page.reload();
       await expect(page.getByRole("heading", { name: "Penghantaran Saya", level: 1 })).toBeVisible();
       await expect(page.getByText("Belum dibina").first()).toBeVisible();
       await expect(page.locator("main").getByRole("button")).toHaveText(["Semak semula"]);
@@ -419,7 +424,7 @@ test.describe("Bahasa Melayu by default", () => {
       expect(menu && menu.x + menu.width).toBeLessThanOrEqual(390);
       await page.getByRole("button", { name: "Open navigation" }).click();
       // The switcher moves into the phone menu, with its full label.
-      expect(await page.getByRole("dialog").getByTestId("workspace-current").innerText()).toBe("Sistem Operasi");
+      expect(await page.getByRole("dialog").getByTestId("workspace-current").innerText()).toBe("Operating System");
       const nav = page.getByRole("dialog").getByRole("navigation", { name: "Primary" });
       await expect(nav.getByRole("link", { name: "Pipeline" })).toBeVisible();
       await expect(nav.getByRole("link", { name: /Penyediaan pesanan|Order preparation/ })).toHaveCount(0);

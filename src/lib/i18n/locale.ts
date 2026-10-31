@@ -1,12 +1,12 @@
 /**
  * Interface language for the shared sign-in and the workspace entry surfaces.
- * Bahasa Melayu is the default; English is one tap away and remembered in a
+ * English is the default; Bahasa Melayu is one tap away and remembered in a
  * cookie so it also applies before sign-in. Existing Operating System screens
  * are still English-only (see docs/architecture/Workspace Entry.md).
  */
 export const LOCALES = ["ms", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = "ms";
+export const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "tc.locale";
 
 export function parseLocale(value: unknown): Locale {

@@ -86,7 +86,7 @@ also ignores a stored area once its permission is gone. Read in parallel inside
 
 ## Language
 
-Bahasa Melayu by default, English one tap away (`tc.locale` cookie, so it
+English by default (owner direction,31October2026), Bahasa Melayu one tap away (`tc.locale` cookie, so it
 applies before sign-in too). `<html lang>` stays `en` because most screens are
 still English; each translated surface declares its own `lang` (`Localized`,
 the switcher, the Admin area sidebar) so screen readers pronounce it correctly. Translated: sign-in,

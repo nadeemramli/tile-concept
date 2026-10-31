@@ -21,7 +21,7 @@ const LEAD: MyLeadDetail = {
 };
 
 describe("my leads quick actions", () => {
-  it("speaks Bahasa Melayu by default and completes the follow-up through the inbox command", async () => {
+  it("speaks explicitly selected Bahasa Melayu and completes the follow-up through the inbox command", async () => {
     const user = userEvent.setup();
     mock.work.mockResolvedValue({ ok: true, data: undefined });
     render(<LocaleProvider locale="ms"><QuickActions lead={LEAD} /></LocaleProvider>);

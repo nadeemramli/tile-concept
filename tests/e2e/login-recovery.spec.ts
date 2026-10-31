@@ -210,10 +210,12 @@ test.describe("no active membership", () => {
     }
   });
 
-  test("the explanation is in Bahasa Melayu by default and in English on request, across reload", async ({ page, context }) => {
+  test("the explanation defaults to English and remembers Bahasa Melayu across reload", async ({ page, context }) => {
     await context.clearCookies({ name: "tc.locale" });
     await signIn(page, NONE.email);
     await expect(page).toHaveURL(/\/no-access$/);
+    await expect(page.getByRole("heading", { level: 1, name: "No workspace access" })).toBeVisible();
+    await page.getByRole("button", { name: "Bahasa Melayu" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Tiada akses ruang kerja" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Log keluar dan guna akaun lain" })).toBeVisible();
     await page.reload();

@@ -1,6 +1,6 @@
 # My Leads on a phone — TILE-56 handoff
 
-A focused, phone-first list of a salesperson's own inquiries at `/sales/my-leads` (**Prospek Saya**), with one clear next action per lead and quick follow-up updates. Bahasa Melayu by default, English from the language toggle. Local implementation evidence only: no hosted migration, data change or deployment, and no customer was messaged.
+A focused, phone-first list of a salesperson's own inquiries at `/sales/my-leads` (**Prospek Saya**), with one clear next action per lead and quick follow-up updates. English by default (owner direction,31October2026), Bahasa Melayu from the language toggle. Local implementation evidence only: no hosted migration, data change or deployment, and no customer was messaged.
 
 ## What it is
 

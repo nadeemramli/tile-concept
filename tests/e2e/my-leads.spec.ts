@@ -109,15 +109,15 @@ const activities = (leadId: string, where = "true") => Number(sql(`select count(
 const leadCount = () => Number(sql(`select count(*) from sales.leads where raw_name like 'Tile56 %${run}'`));
 const contactCount = () => Number(sql(`select count(*) from identity.contacts where workspace_id='${WORKSPACE}'`));
 
-async function useBahasaDefault(context: BrowserContext) {
-  await context.clearCookies({ name: "tc.locale" });
+async function useBahasa(context: BrowserContext) {
+  await context.addCookies([{ name: "tc.locale", value: "ms", url: test.info().project.use.baseURL! }]);
 }
 
 test.describe("phone (390×844)", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-  test("a rep sees only their own leads, masked, in Bahasa Melayu by default", async ({ page, context }) => {
-    await useBahasaDefault(context);
+  test("a rep sees only their own leads, masked, in explicitly selected Bahasa Melayu", async ({ page, context }) => {
+    await useBahasa(context);
     await signIn(page, REP.email);
     await page.goto("/sales/my-leads?tab=all");
     await expect(page.getByRole("heading", { level: 1, name: "Prospek Saya" })).toBeVisible();
@@ -156,7 +156,7 @@ test.describe("phone (390×844)", () => {
   });
 
   test("one clear next action persists through the inbox command, once, and survives reload", async ({ page, context }) => {
-    await useBahasaDefault(context);
+    await useBahasa(context);
     await signIn(page, REP.email);
     const leadsBefore = leadCount();
     const contactsBefore = contactCount();
@@ -214,7 +214,7 @@ test.describe("phone (390×844)", () => {
   });
 
   test("validation, empty and not-found states are usable", async ({ page, context }) => {
-    await useBahasaDefault(context);
+    await useBahasa(context);
     await signIn(page, REP.email);
     await page.goto(`/sales/my-leads?tab=all&lead=${LEADS.due.id}`);
     await page.getByRole("button", { name: "Susulan selesai" }).first().click();

@@ -3,9 +3,8 @@ import { defineConfig } from "@playwright/test";
 const PORT = Number(process.env.E2E_PORT ?? 3000);
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 
-// The interface defaults to Bahasa Melayu. Existing specs assert English copy,
-// so every context starts with the English cookie; workspace-entry.spec.ts
-// clears it to exercise the Bahasa Melayu default.
+// Pin English for copy-based specs. workspace-entry.spec.ts clears this cookie
+// to exercise the English default and explicitly selects BM to test persistence.
 const english = {
   cookies: [{ name: "tc.locale", value: "en", domain: new URL(baseURL).hostname, path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" as const }],
   origins: [],
