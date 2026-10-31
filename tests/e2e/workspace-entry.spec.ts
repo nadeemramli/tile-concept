@@ -394,13 +394,12 @@ test.describe("English by default", () => {
 
     test("a driver defaults to English on a phone and can remember BM", async ({ page }) => {
       await page.goto("/login");
-      await page.locator("#email").fill(USERS.driver.email);
-      await page.locator("#password").fill(PASSWORD);
       await submitPasswordForm(page, USERS.driver.email, PASSWORD);
       await page.waitForURL("**/admin/my-deliveries");
       await expect(page.getByRole("heading", { name: "My Deliveries", level: 1 })).toBeVisible();
-      await expect(page.locator("main").getByRole("button")).toHaveText(["Refresh"]);
+      await expect(page.locator("main").getByRole("button")).toHaveText(["Check again"]);
       await page.getByRole("button", { name: "Bahasa Melayu", exact: true }).first().click();
+      await expect(page.getByRole("heading", { name: "Penghantaran Saya", level: 1 })).toBeVisible();
       await page.reload();
       await expect(page.getByRole("heading", { name: "Penghantaran Saya", level: 1 })).toBeVisible();
       await expect(page.getByText("Belum dibina").first()).toBeVisible();
