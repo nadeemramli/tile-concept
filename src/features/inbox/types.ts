@@ -39,6 +39,7 @@ export interface LeadRow {
   last_contact_attempt_at: string | null;
   no_next_action_reason: string | null;
   notes: string | null;
+  received_at: string;
   created_at: string;
   updated_at: string;
 }

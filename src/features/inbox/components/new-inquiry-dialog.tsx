@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Field } from "@/components/patterns/field";
 import { CandidateList } from "@/features/inbox/components/candidate-list";
+import { enquiryDateInput, enquiryDateIso } from "@/features/inbox/lib/enquiry-date";
 import { extractFromText } from "@/lib/identity/normalize";
 import { SOURCE_CHANNEL, statusMeta } from "@/lib/domain/status-maps";
 import { createInquiryAction } from "@/server/commands/leads";
@@ -206,6 +207,12 @@ export function NewInquiryDialog({
               </Field>
             </div>
 
+            <Field label="Enquiry received at (Kuala Lumpur)" hint="Leave blank for now. For a historical enquiry, enter when the customer first contacted you." error={err.received_at?.message}>
+              <Controller control={form.control} name="received_at" render={({ field }) => (
+                <Input type="datetime-local" step="0.001" aria-label="Enquiry received at" value={field.value ? enquiryDateInput(field.value) : ""}
+                  onChange={(event) => field.onChange(event.target.value ? enquiryDateIso(event.target.value) ?? event.target.value : undefined)} />
+              )} />
+            </Field>
             <Field label="Product interest">
               <Controller
                 control={form.control}

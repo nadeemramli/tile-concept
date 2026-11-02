@@ -3918,6 +3918,7 @@ export type Database = {
           raw_name: string | null
           raw_phone: string | null
           raw_phone_normalized: string | null
+          received_at: string | null
           recorded_net_sales: number | null
           showroom_visits: number | null
           source_channel: string | null
@@ -4729,20 +4730,29 @@ export type Database = {
           created_by: string | null
           disqualified_reason: string | null
           duplicate_of_lead_id: string | null
+          first_customer_reply_at: string | null
           first_response_at: string | null
           first_response_due_at: string | null
+          first_whatsapp_reply_at: string | null
+          first_whatsapp_sent_at: string | null
           id: string | null
           interest: string | null
+          last_contact_attempt_at: string | null
+          last_customer_reply_at: string | null
+          last_no_response_at: string | null
           location_id: string | null
+          no_next_action_reason: string | null
           notes: string | null
           owner_id: string | null
           product_interest: string[] | null
           qualified_at: string | null
           raw_company: string | null
           raw_email: string | null
+          raw_email_normalized: string | null
           raw_name: string | null
           raw_phone: string | null
           raw_phone_normalized: string | null
+          received_at: string | null
           source_channel: string | null
           source_detail: string | null
           status: string | null
@@ -4760,20 +4770,29 @@ export type Database = {
           created_by?: string | null
           disqualified_reason?: string | null
           duplicate_of_lead_id?: string | null
+          first_customer_reply_at?: string | null
           first_response_at?: string | null
           first_response_due_at?: string | null
+          first_whatsapp_reply_at?: string | null
+          first_whatsapp_sent_at?: string | null
           id?: string | null
           interest?: string | null
+          last_contact_attempt_at?: string | null
+          last_customer_reply_at?: string | null
+          last_no_response_at?: string | null
           location_id?: string | null
+          no_next_action_reason?: string | null
           notes?: string | null
           owner_id?: string | null
           product_interest?: string[] | null
           qualified_at?: string | null
           raw_company?: string | null
           raw_email?: string | null
+          raw_email_normalized?: string | null
           raw_name?: string | null
           raw_phone?: string | null
           raw_phone_normalized?: string | null
+          received_at?: string | null
           source_channel?: string | null
           source_detail?: string | null
           status?: string | null
@@ -4791,20 +4810,29 @@ export type Database = {
           created_by?: string | null
           disqualified_reason?: string | null
           duplicate_of_lead_id?: string | null
+          first_customer_reply_at?: string | null
           first_response_at?: string | null
           first_response_due_at?: string | null
+          first_whatsapp_reply_at?: string | null
+          first_whatsapp_sent_at?: string | null
           id?: string | null
           interest?: string | null
+          last_contact_attempt_at?: string | null
+          last_customer_reply_at?: string | null
+          last_no_response_at?: string | null
           location_id?: string | null
+          no_next_action_reason?: string | null
           notes?: string | null
           owner_id?: string | null
           product_interest?: string[] | null
           qualified_at?: string | null
           raw_company?: string | null
           raw_email?: string | null
+          raw_email_normalized?: string | null
           raw_name?: string | null
           raw_phone?: string | null
           raw_phone_normalized?: string | null
+          received_at?: string | null
           source_channel?: string | null
           source_detail?: string | null
           status?: string | null
@@ -11389,6 +11417,16 @@ export type Database = {
           p_next_action_due_at?: string
           p_opportunity_name?: string
           p_project_name?: string
+        }
+        Returns: Json
+      }
+      correct_inquiry_received_at: {
+        Args: {
+          p_expected_received_at: string
+          p_lead_id: string
+          p_reason: string
+          p_received_at: string
+          p_request_id: string
         }
         Returns: Json
       }

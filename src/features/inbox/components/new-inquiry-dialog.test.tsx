@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NewInquiryDialog } from "./new-inquiry-dialog";
@@ -19,11 +19,13 @@ describe("manual inquiry save recovery", () => {
     render(<NewInquiryDialog open onOpenChange={vi.fn()} members={[]} locations={[]} defaultLocationId={null}
       defaultOwnerId="aaaaaaaa-0000-0000-0000-000000000003" onCreated={created} />);
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Recovery fixture");
+    fireEvent.change(screen.getByLabelText("Enquiry received at"), { target: { value: "2026-10-24T13:00" } });
     await user.click(await screen.findByRole("button", { name: "Save inquiry" }));
     await waitFor(() => expect(mock.error).toHaveBeenCalledWith(expect.stringContaining("Retry with the same fields")));
     await user.click(await screen.findByRole("button", { name: "Save inquiry" }));
     await waitFor(() => expect(created).toHaveBeenCalledOnce());
     expect(mock.create).toHaveBeenCalledTimes(2);
+    expect(mock.create.mock.calls[0][0]).toMatchObject({ received_at: "2026-10-24T05:00:00.000Z" });
     expect(mock.create.mock.calls[0][1]).toBe(mock.create.mock.calls[1][1]);
     expect(screen.getByText(/identifiers are shared, conflicting or provisional/)).toBeInTheDocument();
     expect(screen.queryByText(/Linked to the uniquely matched customer/)).not.toBeInTheDocument();

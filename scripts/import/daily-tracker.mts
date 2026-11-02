@@ -393,8 +393,7 @@ async function main() {
       const { error: pe } = await me.from("visits").update(patch).eq("id", out.visit_id);
       if (pe) errors.push(`${r.sheet} row ${r.rowNo}: visit patch: ${pe.message}`);
     }
-    // The inbox copy of the visit dates from the visit, not from today.
-    await me.from("leads").update({ created_at: noonKl(r.date) }).eq("id", out.lead_id);
+    // The walk-in resolver stores visit time as received_at and preserves system entry.
     if (!staff) await me.from("leads").update({ owner_id: null }).eq("id", out.lead_id);
   }
   log(done.table());

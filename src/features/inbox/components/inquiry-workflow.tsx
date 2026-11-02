@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Field } from "@/components/patterns/field";
 import { DrawerSection } from "@/components/patterns/record-drawer";
 import { formatDateTime, formatMoney } from "@/lib/format";
+import { enquiryDateIso } from "@/features/inbox/lib/enquiry-date";
 import { followUpDueAt } from "@/features/inbox/lib/follow-up";
 import type { InquiryAction } from "@/features/inbox/schema";
 import type { LeadRow } from "@/features/inbox/types";
@@ -52,7 +53,12 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
     if (needsDate && !due) { setError("Choose a follow-up date and time."); return; }
     if (needsReason && body.trim().length < 3) { setError("Record an outcome or reason (at least 3 characters)."); return; }
     const dueDate = due ? new Date(`${due}:00+08:00`) : null;
-    const occurredDate = occurred ? new Date(`${occurred}:00+08:00`) : null;
+    const occurredIso = occurred ? enquiryDateIso(occurred) : null;
+    const occurredDate = occurredIso ? new Date(occurredIso) : null;
+    if (occurred && !occurredDate) { setError("Enter a valid date and time."); return; }
+    if (occurredDate && occurredDate.getTime() < new Date(lead.received_at).getTime()) {
+      setError(`This action is earlier than the enquiry received date (${formatDateTime(lead.received_at)}). Correct the enquiry date first if this is a historical lead.`); return;
+    }
     if ((needsDate && (!dueDate || !Number.isFinite(dueDate.getTime()))) || (occurredDate && !Number.isFinite(occurredDate.getTime()))) {
       setError("Enter a valid date and time."); return;
     }
@@ -145,7 +151,7 @@ export function InquiryWorkflow({ lead, canWrite }: { lead: LeadRow; canWrite: b
             <Input type="datetime-local" value={due} onChange={(event) => setDue(event.target.value)} aria-label="Follow-up date and time" />
             <div className="mt-2 flex gap-2">{[[1,"Tomorrow"],[3,"In 3 days"],[7,"In 1 week"]].map(([days,label]) => <Button key={days} size="sm" type="button" variant="outline" onClick={() => setDue(klInput(followUpDueAt(Number(days))))}>{label}</Button>)}</div>
           </Field>}
-          {!needsDate && action !== "no_next_action" && <Field label="When it happened (Kuala Lumpur; blank means now)"><Input type="datetime-local" value={occurred} onChange={(event) => setOccurred(event.target.value)} aria-label="Action date and time" /></Field>}
+          {!needsDate && action !== "no_next_action" && <Field label="When it happened (Kuala Lumpur; blank means now)"><Input type="datetime-local" step="0.001" value={occurred} onChange={(event) => setOccurred(event.target.value)} aria-label="Action date and time" /></Field>}
           <Field label={needsReason ? "Outcome / reason (required)" : "Notes (optional)"}><Textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={4000} aria-label="Action notes" /></Field>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter><Button variant="outline" disabled={pending} onClick={() => setAction(null)}>Cancel</Button><Button disabled={pending} onClick={submit}>{pending ? "Saving…" : "Save action"}</Button></DialogFooter>
