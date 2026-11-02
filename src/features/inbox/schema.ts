@@ -7,6 +7,7 @@ export const LEAD_VIEWS = ["needs-action", "new", "waiting", "replied", "contact
 export type LeadView = (typeof LEAD_VIEWS)[number];
 
 export const newInquirySchema = z.object({
+  received_at: z.iso.datetime({ offset: true }).optional(),
   source_channel: z.enum(SOURCE_CHANNELS),
   source_detail: z.string().trim().max(200).optional().or(z.literal("")),
   raw_name: z.string().trim().max(200).optional().or(z.literal("")),
@@ -62,3 +63,10 @@ export const inquiryAnnotationSchema = z.object({
   source: z.enum(SOURCE_CHANNELS).optional(), detail: z.string().trim().max(200).optional(),
   expected_source: z.string().optional(), expected_detail: z.string().nullable().optional(),
 }).refine((v) => v.action !== "source" || !!v.source, { message: "Choose a source.", path: ["source"] });
+
+export const inquiryReceivedDateSchema = z.object({
+  lead_id: uuid(), request_id: uuid(),
+  received_at: z.iso.datetime({ offset: true }),
+  expected_received_at: z.iso.datetime({ offset: true }),
+  reason: z.string().trim().min(3).max(4000),
+});

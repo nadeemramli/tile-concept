@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 const PRIMARY_VIEWS: LeadView[] = ["needs-action", "waiting", "replied", "showroom", "won", "follow-ups-due", "upcoming", "disqualified", "all"];
 
 const COLUMN_HINTS = {
-  received: "When the inquiry arrived from the connector or was typed in.",
+  received: "When the customer enquiry was received, including corrected historical dates.",
   source: "Where it came from. The line under the pill is the form or campaign name when the connector sent one.",
   contact: "Phone and email are masked in lists. Revealing them needs the contact.reveal permission and is audited.",
   owner: "The salesperson responsible. Unassigned means nobody is on the clock for this lead.",
@@ -113,7 +113,7 @@ export function InboxClient({ refreshedAt, view, leads, counts, members, locatio
 
   const columns = useMemo<ColumnDef<LeadRow, unknown>[]>(
     () => ([
-      { accessorKey: "created_at", header: "Received", meta: { hint: COLUMN_HINTS.received }, cell: ({ row }) => <span className="tnum text-muted-foreground">{formatRelative(row.original.created_at)}</span> },
+      { accessorKey: "received_at", header: "Received", meta: { hint: COLUMN_HINTS.received }, cell: ({ row }) => <span className="tnum text-muted-foreground">{formatRelative(row.original.received_at)}</span> },
       {
         accessorKey: "source_channel",
         header: "Source",

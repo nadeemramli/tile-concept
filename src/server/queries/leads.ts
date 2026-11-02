@@ -58,6 +58,7 @@ function mapLead(r: RawLead, ownerName: string | null): LeadRow {
     last_contact_attempt_at: (r.last_contact_attempt_at as string | null) ?? null,
     no_next_action_reason: (r.no_next_action_reason as string | null) ?? null,
     notes: (r.notes as string | null) ?? null,
+    received_at: String(r.received_at ?? r.created_at),
     created_at: String(r.created_at),
     updated_at: String(r.updated_at ?? r.created_at),
   };

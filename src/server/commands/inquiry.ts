@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { inquiryActionSchema, inquiryAnnotationSchema } from "@/features/inbox/schema";
+import { inquiryActionSchema, inquiryAnnotationSchema, inquiryReceivedDateSchema } from "@/features/inbox/schema";
 import { requirePermission } from "@/server/session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { fail, ok } from "@/server/action-result";
@@ -47,5 +47,23 @@ export async function annotateInquiryAction(input: z.input<typeof inquiryAnnotat
     if (error) return fail(error);
     for (const path of ["/sales/inbox", "/sales/contacts", "/insights/reports"]) revalidatePath(path);
     return ok(undefined, v.action === "source" ? "Source corrected; original intake and correction history retained." : "Remark added to the inquiry history.");
+  } catch (error) { return fail(error); }
+}
+
+export async function correctInquiryReceivedDateAction(input: z.input<typeof inquiryReceivedDateSchema>) {
+  const parsed = inquiryReceivedDateSchema.safeParse(input);
+  if (!parsed.success) return fail("Choose a valid enquiry date and add a correction reason.");
+  const v = parsed.data;
+  try {
+    await requirePermission("sales.write");
+    const db = await createServerSupabase();
+    const { error } = await db.rpc("correct_inquiry_received_at", {
+      p_lead_id: v.lead_id, p_received_at: v.received_at,
+      p_expected_received_at: v.expected_received_at, p_reason: v.reason, p_request_id: v.request_id,
+    });
+    if (error) return fail(error);
+    for (const path of ["/sales/inbox", "/sales/tasks", "/", "/sales/contacts"]) revalidatePath(path);
+    revalidatePath("/insights/reports", "layout");
+    return ok(undefined, "Enquiry received date corrected. Reports use the corrected date.");
   } catch (error) { return fail(error); }
 }

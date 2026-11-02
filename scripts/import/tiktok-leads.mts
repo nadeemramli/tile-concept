@@ -138,13 +138,7 @@ async function main() {
     if (out.duplicate) duplicates += 1;
     else accepted += 1;
     if (out.matched_contact_id) linked += 1;
-    // The enquiry arrived when TikTok says it did, not when this script ran.
-    if (occurredAt && !out.duplicate) {
-      await admin
-        .from("leads")
-        .update({ created_at: occurredAt, first_response_due_at: new Date(new Date(occurredAt).getTime() + 4 * 3_600_000).toISOString() })
-        .eq("id", out.lead_id);
-    }
+    // accept_intake stores the source received time separately from system entry.
   }
   log(`known before: ${known.size}`);
   log(c.table());

@@ -35,6 +35,7 @@ export async function createInquiryAction(input: NewInquiryInput, requestId: str
 
     revalidatePath(INBOX);
     revalidatePath("/");
+    revalidatePath("/insights/reports", "layout");
     return ok({ lead_id: result.lead_id, identity_state: result.identity_state, suggestions },
       result.identity_state === "matched" ? "Inquiry recorded and linked to the uniquely matched customer."
       : result.identity_state === "needs_review" ? "Inquiry recorded. Shared, conflicting or provisional customer details need review; no contact was linked."
@@ -139,6 +140,7 @@ export async function assignLeadAction(input: { lead_id: string; owner_id: strin
     if (error) return fail(error);
     revalidatePath(INBOX);
     revalidatePath("/");
+    revalidatePath("/insights/reports", "layout");
     return ok(undefined, "Lead assigned.");
   } catch (e) {
     return fail(e);
@@ -157,6 +159,7 @@ export async function bulkAssignLeadsAction(input: { lead_ids: string[]; owner_i
     }
     revalidatePath(INBOX);
     revalidatePath("/");
+    revalidatePath("/insights/reports", "layout");
     return ok({ assigned }, `${assigned} lead${assigned === 1 ? "" : "s"} assigned.`);
   } catch (e) {
     return fail(e);
@@ -185,6 +188,7 @@ export async function logLeadResponseAction(input: z.input<typeof logResponseSch
       .maybeSingle();
     revalidatePath(INBOX);
     revalidatePath("/");
+    revalidatePath("/insights/reports", "layout");
     const logged = v.reached ? "Response logged." : "Attempt logged.";
     if (!after) return ok(undefined, logged);
     const where = whereSentence(
