@@ -14,6 +14,7 @@ export function ScheduleControl({ fields, label, labels, disabled }: {
 }) {
   const [result, action, pending] = useActionState(updateSchedule, "");
   const error = result === "stale" ? labels.stale
+    : result === "recorded" ? labels.recorded
     : result === "notReady" ? labels.notReady
     : result ? labels.failed : "";
   return (

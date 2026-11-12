@@ -1,20 +1,38 @@
+import { z } from "zod";
+import { DeliveryForm } from "./delivery-form";
+import { deliveryLabels } from "./delivery-labels";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { driverSchedules } from "./schedule-data";
 import { scheduleLabels } from "./schedule-labels";
 import { RefreshSchedules, ScheduleControl } from "./schedule-control";
 
+const deliveryResults = z.array(z.object({
+  id: z.uuid(), allocation: z.uuid(), delivered: z.number(), planned: z.number(),
+  pic: z.string().nullable(), reason: z.string().nullable(), proof: z.string().nullable(),
+  recordedAt: z.string(), recordedBy: z.string(),
+}));
+
 export async function DriverSchedules({ locale }: { locale: "en" | "ms" }) {
   const labels = scheduleLabels[locale];
   const supabase = await createServerSupabase();
-  const { data, error } = await supabase.rpc("my_synthetic_schedules");
-  const parsed = driverSchedules.safeParse(data);
-  if (error || !parsed.success) return <p role="alert">{labels.loadFailed}</p>;
+  const delivery = deliveryLabels[locale];
+  const [schedule, results] = await Promise.all([
+    supabase.rpc("my_synthetic_schedules"),
+    supabase.rpc("my_synthetic_delivery_results"),
+  ]);
+  const parsed = driverSchedules.safeParse(schedule.data);
+  if (schedule.error || !parsed.success) return <p role="alert">{labels.loadFailed}</p>;
+  const parsedResults = deliveryResults.safeParse(results.data);
+  const recorded = new Map(parsedResults.data?.map((result) => [result.allocation, result]));
+  const resultsUnavailable = Boolean(results.error) || !parsedResults.success;
   const dates = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
+  const timestamps = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const quantities = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
 
   return (
     <div className="grid gap-4">
       <RefreshSchedules />
+      {resultsUnavailable && <p role="alert">{delivery.loadFailed}</p>}
       {parsed.data.length === 0 && <p>{labels.empty}</p>}
       {parsed.data.map((trip) => {
         const previous = trip.previousStops;
@@ -35,12 +53,30 @@ export async function DriverSchedules({ locale }: { locale: "en" | "ms" }) {
             {reordered && <p>{labels.reordered}</p>}
             {removed.length > 0 && <p>{labels.removed} · {removed.map((stop) => stop.document + " / " + stop.line).join(", ")}</p>}
             <ol className="list-decimal space-y-2 pl-6">
-              {trip.stops.map((stop) => (
-                <li key={stop.id}>
-                  <strong>{stop.document}</strong> · {stop.line} · {stop.item} · {quantities.format(stop.quantity)} {stop.unit}
-                  {previous && !oldIds.has(stop.id) && <span> · {labels.added}</span>}
-                </li>
-              ))}
+              {trip.stops.map((stop) => {
+                const result = recorded.get(stop.id);
+                const amount = (value: number) => quantities.format(value) + " " + stop.unit;
+                return (
+                  <li key={stop.id}>
+                    <strong>{stop.document}</strong> · {stop.line} · {stop.item} · {amount(stop.quantity)}
+                    {previous && !oldIds.has(stop.id) && <span> · {labels.added}</span>}
+                    {result ? (
+                      <div className="mt-2 grid gap-1 rounded-md border p-3">
+                        <p className="font-medium">{result.delivered === 0 ? delivery.failedDelivery :
+                          result.delivered < result.planned ? delivery.partial : delivery.delivered}</p>
+                        <p>{delivery.quantity} {amount(result.delivered)} · {delivery.remaining} {amount(result.planned - result.delivered)}</p>
+                        {result.pic && <p>{delivery.pic} · {result.pic}</p>}
+                        {result.reason && <p>{result.reason}</p>}
+                        <p>{delivery.recordedBy} · {result.recordedBy} · <time dateTime={result.recordedAt}>{timestamps.format(new Date(result.recordedAt))}</time></p>
+                        {result.proof && <a className="inline-flex min-h-11 items-center underline"
+                          href={`/admin/my-deliveries/proof/${result.id}`}>{delivery.download}</a>}
+                      </div>
+                    ) : trip.acknowledgedAt && !resultsUnavailable && (
+                      <DeliveryForm revision={trip.id} allocation={stop.id} planned={stop.quantity} labels={delivery} />
+                    )}
+                  </li>
+                );
+              })}
             </ol>
             {!trip.acknowledgedAt && <ScheduleControl fields={{ action: "acknowledge", revision: trip.id }}
               label={labels.acknowledge} labels={labels} />}

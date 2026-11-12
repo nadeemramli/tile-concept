@@ -14350,6 +14350,7 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: never; Returns: string[] }
+      my_synthetic_delivery_results: { Args: never; Returns: Json }
       my_synthetic_schedules: { Args: never; Returns: Json }
       my_workspace_permissions: { Args: never; Returns: string[] }
       nominate_content_opportunity: {
@@ -14620,6 +14621,19 @@ export type Database = {
           p_supplier_id: string
           p_unit_id?: string
           p_variant_id?: string
+        }
+        Returns: string
+      }
+      record_synthetic_delivery: {
+        Args: {
+          p_allocation: string
+          p_delivered: number
+          p_pic?: string
+          p_proof_base64?: string
+          p_proof_name?: string
+          p_proof_type?: string
+          p_reason?: string
+          p_revision: string
         }
         Returns: string
       }
@@ -15010,6 +15024,7 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: number
       }
+      synthetic_delivery_proof: { Args: { p_result: string }; Returns: Json }
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
       synthetic_schedule_state: { Args: never; Returns: Json }
       transfer_customer_card: {

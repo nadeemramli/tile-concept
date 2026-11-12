@@ -28,6 +28,7 @@ export async function updateSchedule(_previous: string, form: FormData) {
           p_trip: input.trip, p_token: input.token, p_allocation: input.allocation, p_direction: Number(input.direction),
         });
   if (error?.code === "40001") return "stale";
+  if (error?.code === "55000") return "recorded";
   if (error?.code === "23514") return "notReady";
   if (error) return "failed";
   revalidatePath("/admin/dispatch");

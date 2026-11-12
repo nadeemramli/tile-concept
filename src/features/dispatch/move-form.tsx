@@ -16,6 +16,7 @@ type Props = {
 export function MoveDraftForm({ allocation, version, tripId, destinations, labels }: Props) {
   const [result, action, pending] = useActionState(moveDraft, "");
   const error = result === "conflict" ? labels.conflict
+    : result === "recorded" ? labels.recorded
     : result === "invalid" ? labels.invalid
     : result ? labels.failedSave : "";
   return (

@@ -27,6 +27,7 @@ export async function moveDraft(_previous: string, form: FormData): Promise<stri
     p_trip_id: parsed.data.trip || undefined,
   });
   if (error?.code === "40001") return "conflict";
+  if (error?.code === "55000") return "recorded";
   if (error?.code === "22023") return "invalid";
   if (error) return "failed";
   revalidatePath("/admin/dispatch");
