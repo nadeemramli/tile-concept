@@ -14328,6 +14328,10 @@ export type Database = {
         }
         Returns: string
       }
+      move_synthetic_dispatch_draft: {
+        Args: { p_allocation_id: string; p_trip_id?: string; p_version: number }
+        Returns: undefined
+      }
       my_membership: {
         Args: never
         Returns: {
@@ -14988,6 +14992,7 @@ export type Database = {
         Args: { p_contact_id: string }
         Returns: number
       }
+      synthetic_dispatch_drafts: { Args: never; Returns: Json }
       transfer_customer_card: {
         Args: {
           p_card: string

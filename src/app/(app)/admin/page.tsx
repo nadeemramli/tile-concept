@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { dispatchLabels } from "@/features/dispatch/labels";
 import { CalendarClock, PackageCheck, Truck } from "lucide-react";
 import { requireSession } from "@/server/session";
 import { getLocale } from "@/server/locale";
@@ -18,6 +19,8 @@ export default async function AdminHomePage() {
   const [session, locale] = await Promise.all([requireSession(), getLocale()]);
   const t = messages(locale);
   const perms = session.permissions;
+  const dispatch = dispatchLabels[locale];
+  const showDrafts = process.env.TILE_SYNTHETIC_PREPARATION === "1" && perms.includes("admin.coordinate");
   if (!perms.includes("workspace.admin")) {
     const landing = resolveLanding(perms, session.defaultArea);
     return (
@@ -34,6 +37,9 @@ export default async function AdminHomePage() {
         <div className="grid gap-3 md:grid-cols-2">
           {perms.includes("preparation.read") && (
             <EntryCard icon={PackageCheck} title={t.queues.preparation} summary={t.queues.preparationSummary} href="/admin/preparation" action={`${t.areas.open}: ${t.queues.preparation}`} />
+          )}
+          {showDrafts && (
+            <EntryCard icon={CalendarClock} title={dispatch.title} summary={dispatch.description} href="/admin/dispatch" action={`${t.areas.open}: ${dispatch.title}`} />
           )}
           {perms.includes("delivery.read_own") && (
             <EntryCard icon={Truck} title={t.queues.myDeliveries} summary={t.queues.myDeliveriesSummary} href="/admin/my-deliveries" action={`${t.areas.open}: ${t.queues.myDeliveries}`} />
