@@ -14509,6 +14509,10 @@ export type Database = {
           week_start: string
         }[]
       }
+      receive_synthetic_original_do: {
+        Args: { p_document: string }
+        Returns: undefined
+      }
       record_extraction: {
         Args: {
           p_error?: string
@@ -15026,6 +15030,7 @@ export type Database = {
       }
       synthetic_delivery_proof: { Args: { p_result: string }; Returns: Json }
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
+      synthetic_original_do_returns: { Args: never; Returns: Json }
       synthetic_schedule_state: { Args: never; Returns: Json }
       transfer_customer_card: {
         Args: {

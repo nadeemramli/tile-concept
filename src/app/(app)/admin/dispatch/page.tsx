@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { originalDoLabels } from "@/features/dispatch/original-do-labels";
+import { OriginalDoReturns } from "@/features/dispatch/original-do-returns";
 import { coordinatorSchedules } from "@/features/dispatch/schedule-data";
 import { scheduleLabels } from "@/features/dispatch/schedule-labels";
 import { ScheduleControl } from "@/features/dispatch/schedule-control";
@@ -45,6 +47,9 @@ export default async function DispatchPage() {
     <Localized locale={locale}>
       <PageBody className="max-w-7xl">
         <PageHeader title={labels.title} description={labels.description} />
+        <a href="#original-do-title" className="inline-flex min-h-11 items-center underline">
+          {originalDoLabels[locale].title}
+        </a>
         {error || !parsed.success ? <p role="alert">{labels.failed}</p> : (
           <div className="grid gap-4 lg:grid-cols-3">
             {[{ id: null, label: labels.unassigned, date: null }, ...parsed.data.board.trips].map((trip) => {
@@ -95,6 +100,7 @@ export default async function DispatchPage() {
             })}
           </div>
         )}
+        <OriginalDoReturns locale={locale} />
       </PageBody>
     </Localized>
   );
