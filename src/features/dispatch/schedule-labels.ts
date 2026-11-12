@@ -1,0 +1,28 @@
+export const scheduleLabels = {
+  en: {
+    up: "Move stop up", down: "Move stop down", publish: "Publish schedule",
+    acknowledge: "Acknowledge revision", saving: "Saving…",
+    revision: "Revision", noRevision: "No published schedule",
+    pending: "Awaiting driver acknowledgement", acknowledged: "Acknowledged",
+    changed: "Unpublished changes", noDriver: "No active driver assigned",
+    notReady: "All stops must be ready and a driver assigned before publishing.",
+    stale: "The schedule changed. Refresh and review the latest revision.",
+    failed: "The action could not be completed. Refresh and try again.",
+    loadFailed: "Could not load schedules. Refresh to try again.",
+    empty: "No published schedules assigned to you.",
+    added: "Added", removed: "Removed", reordered: "Order changed",
+  },
+  ms: {
+    up: "Naikkan hentian", down: "Turunkan hentian", publish: "Terbitkan jadual",
+    acknowledge: "Sahkan penerimaan versi", saving: "Sedang menyimpan…",
+    revision: "Versi", noRevision: "Tiada jadual diterbitkan",
+    pending: "Menunggu pengesahan pemandu", acknowledged: "Penerimaan disahkan",
+    changed: "Perubahan belum diterbitkan", noDriver: "Tiada pemandu aktif ditugaskan",
+    notReady: "Semua hentian mesti sedia dan pemandu mesti ditugaskan sebelum diterbitkan.",
+    stale: "Jadual telah berubah. Muat semula dan semak versi terkini.",
+    failed: "Tindakan tidak dapat diselesaikan. Muat semula dan cuba lagi.",
+    loadFailed: "Jadual tidak dapat dimuatkan. Muat semula untuk mencuba lagi.",
+    empty: "Tiada jadual diterbitkan yang ditugaskan kepada anda.",
+    added: "Ditambah", removed: "Dibuang", reordered: "Susunan berubah",
+  },
+};

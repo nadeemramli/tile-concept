@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { coordinatorSchedules } from "@/features/dispatch/schedule-data";
+import { scheduleLabels } from "@/features/dispatch/schedule-labels";
+import { ScheduleControl } from "@/features/dispatch/schedule-control";
 import { z } from "zod";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { Localized } from "@/components/i18n/localized";
@@ -32,8 +35,9 @@ export default async function DispatchPage() {
     );
   }
   const supabase = await createServerSupabase();
-  const { data, error } = await supabase.rpc("synthetic_dispatch_drafts");
-  const parsed = draftBoard.safeParse(data);
+  const { data, error } = await supabase.rpc("synthetic_schedule_state");
+  const parsed = z.object({ board: draftBoard, schedules: coordinatorSchedules }).safeParse(data);
+  const scheduleText = scheduleLabels[locale];
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
 
@@ -43,24 +47,46 @@ export default async function DispatchPage() {
         <PageHeader title={labels.title} description={labels.description} />
         {error || !parsed.success ? <p role="alert">{labels.failed}</p> : (
           <div className="grid gap-4 lg:grid-cols-3">
-            {[{ id: null, label: labels.unassigned, date: null }, ...parsed.data.trips].map((trip) => {
-              const items = parsed.data.allocations.filter((item) => item.tripId === trip.id);
+            {[{ id: null, label: labels.unassigned, date: null }, ...parsed.data.board.trips].map((trip) => {
+              const state = parsed.data.schedules.find((entry) => entry.tripId === trip.id);
+              const items = state
+                ? state.stops.flatMap((stop) => parsed.data.board.allocations.filter((item) => item.id === stop.id))
+                : parsed.data.board.allocations.filter((item) => item.tripId === trip.id);
               return (
                 <section aria-label={trip.label} key={trip.id ?? "unassigned"} className="grid content-start gap-3 rounded-lg border p-4">
                   <header>
                     <h2 className="font-semibold">{trip.label}</h2>
                     {trip.date && <time className="text-sm text-muted-foreground" dateTime={trip.date}>{date.format(new Date(trip.date))}</time>}
+                    {state && <div className="mt-2 grid gap-1 text-sm">
+                      <p>{state.driver ?? scheduleText.noDriver}</p>
+                      <p role="status">{state.revision
+                        ? `${scheduleText.revision} ${state.revision} · ${state.acknowledgedAt ? scheduleText.acknowledged : scheduleText.pending}`
+                        : scheduleText.noRevision}</p>
+                      {state.revision && state.changed && <p>{scheduleText.changed}</p>}
+                      {(!state.driver || state.stops.length === 0 || state.stops.some((stop) => !stop.ready)) &&
+                        <p>{scheduleText.notReady}</p>}
+                      <ScheduleControl key={state.token + String(state.revision)} fields={{ action: "publish", trip: state.tripId, token: state.token }}
+                        label={scheduleText.publish} labels={scheduleText} />
+                    </div>}
                   </header>
                   {items.length === 0 && <p className="text-sm text-muted-foreground">{labels.empty}</p>}
-                  {items.map((item) => (
+                  {items.map((item, index) => (
                     <article key={item.id} className="grid gap-2 rounded-md border p-3">
                       <h3 className="font-medium">{item.document} · {item.item}</h3>
                       <p className="text-sm">{labels.line} {item.line} · {item.origin} · {number.format(item.quantity)} {item.unit}</p>
                       <p className="text-sm font-medium">{item.confirmed >= item.quantity ? labels.ready : labels.pending}
                         {" · "}{number.format(item.confirmed)} / {number.format(item.quantity)} {item.unit}</p>
                       {item.handedOver > 0 && <p className="text-sm">{labels.handedOver} {number.format(item.handedOver)} {item.unit}</p>}
+                      {state && <div className="flex flex-wrap gap-2">
+                        {([-1, 1] as const).map((direction) => (
+                          <ScheduleControl key={state.token + direction} fields={{ action: "reorder", trip: state.tripId,
+                            token: state.token, allocation: item.id, direction: String(direction) }}
+                            disabled={direction === -1 ? index === 0 : index === items.length - 1}
+                            label={direction === -1 ? scheduleText.up : scheduleText.down} labels={scheduleText} />
+                        ))}
+                      </div>}
                       <MoveDraftForm key={item.version} allocation={item.id} version={item.version} tripId={item.tripId}
-                        destinations={parsed.data.trips.map((destination) => ({ id: destination.id, label: destination.label + " · " + date.format(new Date(destination.date)) }))}
+                        destinations={parsed.data.board.trips.map((destination) => ({ id: destination.id, label: destination.label + " · " + date.format(new Date(destination.date)) }))}
                         labels={labels} />
                     </article>
                   ))}

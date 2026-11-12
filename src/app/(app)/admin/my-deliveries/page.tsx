@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DriverSchedules } from "@/features/dispatch/driver-schedules";
 import { requireSession } from "@/server/session";
 import { getLocale } from "@/server/locale";
 import { messages } from "@/lib/i18n/messages";
@@ -10,10 +11,6 @@ import { CheckAgainButton } from "@/features/workspace/components/check-again-bu
 
 export const metadata: Metadata = { title: "My Deliveries" };
 
-/**
- * A driver's whole app on a phone. Scheduling and delivery records are a later
- * issue; until then this states that nothing is recorded, with one action.
- */
 export default async function MyDeliveriesPage() {
   const [session, locale] = await Promise.all([requireSession(), getLocale()]);
   const t = messages(locale);
@@ -29,9 +26,11 @@ export default async function MyDeliveriesPage() {
     <Localized locale={locale}>
       <PageBody className="max-w-2xl">
         <PageHeader title={t.myDeliveries.title} description={session.fullName} />
-        <NotBuiltState title={t.myDeliveries.emptyTitle} description={t.myDeliveries.emptyDescription} t={t}>
+        {process.env.TILE_SYNTHETIC_PREPARATION === "1" ? <DriverSchedules locale={locale} /> : (
+          <NotBuiltState title={t.myDeliveries.emptyTitle} description={t.myDeliveries.emptyDescription} t={t}>
           <CheckAgainButton label={t.myDeliveries.checkAgain} pendingLabel={t.myDeliveries.checking} />
-        </NotBuiltState>
+          </NotBuiltState>
+        )}
       </PageBody>
     </Localized>
   );

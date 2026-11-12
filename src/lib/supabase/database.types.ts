@@ -13819,6 +13819,10 @@ export type Database = {
         }
         Returns: Json
       }
+      acknowledge_synthetic_schedule: {
+        Args: { p_revision: string }
+        Returns: undefined
+      }
       add_manual_review_item: {
         Args: {
           p_item_type?: string
@@ -14346,6 +14350,7 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: never; Returns: string[] }
+      my_synthetic_schedules: { Args: never; Returns: Json }
       my_workspace_permissions: { Args: never; Returns: string[] }
       nominate_content_opportunity: {
         Args: {
@@ -14477,6 +14482,10 @@ export type Database = {
           p_sort_order?: number
         }
         Returns: string
+      }
+      publish_synthetic_schedule: {
+        Args: { p_token: string; p_trip: string }
+        Returns: number
       }
       pursuit_outcome_command: {
         Args: { p_action: string; p_input: Json; p_request_id: string }
@@ -14685,6 +14694,15 @@ export type Database = {
       }
       reject_review_item: {
         Args: { p_reason: string; p_review_item_id: string }
+        Returns: undefined
+      }
+      reorder_synthetic_stop: {
+        Args: {
+          p_allocation: string
+          p_direction: number
+          p_token: string
+          p_trip: string
+        }
         Returns: undefined
       }
       replace_catalog_media: {
@@ -14993,6 +15011,7 @@ export type Database = {
         Returns: number
       }
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
+      synthetic_schedule_state: { Args: never; Returns: Json }
       transfer_customer_card: {
         Args: {
           p_card: string
