@@ -17,6 +17,13 @@ const queue = z.array(z.object({
   allocations: z.array(z.object({
     id: z.uuid(),
     allocated: z.number(),
+    warehouse: z.array(z.object({
+      stage: z.enum(["ready", "handed_over"]),
+      quantity: z.number(),
+      recipient: z.string().nullable(),
+      recordedAt: z.string(),
+      recordedBy: z.string(),
+    })),
     updates: z.array(z.object({
       packed: z.number(),
       shortage: z.number(),
@@ -49,16 +56,22 @@ export async function PreparationQueue({ session, locale }: { session: AppSessio
       {parsed.data.map((line) => {
         const allocations = line.allocations.map((allocation) => ({
           ...allocation,
+          ready: allocation.warehouse.reduce((sum, event) => sum + (event.stage === "ready" ? event.quantity : 0), 0),
+          handedOver: allocation.warehouse.reduce((sum, event) => sum + (event.stage === "handed_over" ? event.quantity : 0), 0),
           packed: allocation.updates.reduce((sum, update) => sum + update.packed, 0),
           shortage: allocation.updates.reduce((sum, update) => sum + update.shortage, 0),
         }));
         const allocated = allocations.reduce((sum, item) => sum + item.allocated, 0);
         const packed = allocations.reduce((sum, item) => sum + item.packed, 0);
+        const ready = allocations.reduce((sum, item) => sum + item.ready, 0);
+        const handedOver = allocations.reduce((sum, item) => sum + item.handedOver, 0);
         const shortage = allocations.reduce((sum, item) => sum + item.shortage, 0);
         const quantity = (value: number) => format.format(Math.max(0, value)) + " " + line.unit;
         const metrics = [
           [labels.ordered, line.ordered], [labels.allocated, allocated], [labels.packed, packed],
           [labels.shortage, shortage], [labels.outstanding, line.ordered - packed],
+          [labels.ready, ready - handedOver], [labels.handedOver, handedOver],
+          [labels.notHandedOver, line.ordered - handedOver],
         ] as const;
         return (
           <article key={line.id} className="grid gap-4 rounded-lg border p-4">
@@ -87,10 +100,25 @@ export async function PreparationQueue({ session, locale }: { session: AppSessio
                       {" · "}{update.recordedBy} · <time dateTime={update.recordedAt}>{date.format(new Date(update.recordedAt))}</time>
                     </li>
                   ))}
+                  {allocation.warehouse.map((event, i) => (
+                    <li key={"warehouse-" + i}>
+                      {event.stage === "ready" ? labels.ready : labels.handedOver} {quantity(event.quantity)}
+                      {event.recipient && <> · {labels.recipient} {event.recipient}</>}
+                      {" · "}{event.recordedBy} · <time dateTime={event.recordedAt}>{date.format(new Date(event.recordedAt))}</time>
+                    </li>
+                  ))}
                 </ul>
                 {canWrite && Math.round((allocation.allocated - allocation.packed - allocation.shortage) * 1000) > 0 && (
                   <PreparationForm key={line.version} line={line.id} version={line.version} request={randomUUID()}
                     allocation={allocation.id} labels={labels} />
+                )}
+                {canWrite && Math.round((allocation.packed - allocation.ready) * 1000) > 0 && (
+                  <PreparationForm key={"ready-" + line.version} line={line.id} version={line.version}
+                    request={randomUUID()} allocation={allocation.id} stage="ready" labels={labels} />
+                )}
+                {canWrite && Math.round((allocation.ready - allocation.handedOver) * 1000) > 0 && (
+                  <PreparationForm key={"handover-" + line.version} line={line.id} version={line.version}
+                    request={randomUUID()} allocation={allocation.id} stage="handed_over" labels={labels} />
                 )}
               </section>
             ))}

@@ -7,6 +7,16 @@ import { requireSession } from "@/server/session";
 
 const quantity = z.string().regex(/^\d{1,11}(\.\d{1,3})?$/).transform(Number);
 
+const versionNumber = z.string().regex(/^\d+$/).transform(Number).pipe(z.int().max(2147483647));
+
+function preparationError(code: string) {
+  if (code === "40001" || code === "P0001" || code === "23505") return "stale";
+  if (code === "23514") return "limit";
+  if (code === "42501") return "denied";
+  if (code === "22023") return "invalid";
+  return "failed";
+}
+
 export async function recordPreparation(_previous: string, form: FormData): Promise<string> {
   const session = await requireSession();
   if (process.env.TILE_SYNTHETIC_PREPARATION !== "1" || !session.permissions.includes("preparation.read")) {
@@ -14,7 +24,7 @@ export async function recordPreparation(_previous: string, form: FormData): Prom
   }
   const request = z.object({
     line: z.uuid(),
-    version: z.string().regex(/^\d+$/).transform(Number).pipe(z.int().max(2147483647)),
+    version: versionNumber,
     request: z.uuid(),
     quantity,
     shortage: quantity,
@@ -34,13 +44,43 @@ export async function recordPreparation(_previous: string, form: FormData): Prom
     p_line_id: line, p_version: version, p_request_id: id,
     p_quantity: amount, p_shortage: shortage, p_allocation_id: allocation,
   });
-  if (error) {
-    if (error.code === "40001" || error.code === "P0001" || error.code === "23505") return "stale";
-    if (error.code === "23514") return "limit";
-    if (error.code === "42501") return "denied";
-    if (error.code === "22023") return "invalid";
-    return "failed";
+  if (error) return preparationError(error.code);
+  revalidatePath("/admin/preparation");
+  return "";
+}
+
+
+export async function recordWarehouseStage(_previous: string, form: FormData): Promise<string> {
+  const session = await requireSession();
+  if (process.env.TILE_SYNTHETIC_PREPARATION !== "1" || !session.permissions.includes("preparation.read")) {
+    return "denied";
   }
+  const request = z.object({
+    line: z.uuid(),
+    allocation: z.uuid(),
+    version: versionNumber,
+    request: z.uuid(),
+    stage: z.enum(["ready", "handed_over"]),
+    quantity,
+    recipient: z.string().trim().min(1).max(120).optional(),
+  }).safeParse({
+    line: form.get("line"),
+    allocation: form.get("allocation"),
+    version: form.get("version"),
+    request: form.get("request"),
+    stage: form.get("stage"),
+    quantity: form.get("quantity"),
+    recipient: form.get("recipient") ?? undefined,
+  });
+  if (!request.success) return "invalid";
+  const { line, allocation, version, request: id, stage, quantity: amount, recipient } = request.data;
+  if (stage === "handed_over" && !recipient) return "recipient";
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.rpc("record_warehouse_stage", {
+    p_line_id: line, p_allocation_id: allocation, p_version: version,
+    p_request_id: id, p_stage: stage, p_quantity: amount, p_recipient: recipient,
+  });
+  if (error) return preparationError(error.code);
   revalidatePath("/admin/preparation");
   return "";
 }

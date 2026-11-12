@@ -14631,6 +14631,18 @@ export type Database = {
         }
         Returns: Json
       }
+      record_warehouse_stage: {
+        Args: {
+          p_allocation_id: string
+          p_line_id: string
+          p_quantity: number
+          p_recipient?: string
+          p_request_id: string
+          p_stage: string
+          p_version: number
+        }
+        Returns: undefined
+      }
       register_shoot_output: {
         Args: {
           p_caption?: string
