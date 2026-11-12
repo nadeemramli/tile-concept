@@ -7,9 +7,10 @@ import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { Localized } from "@/components/i18n/localized";
 import { AreaDenied, NotBuiltState } from "@/features/workspace/components/entry";
 
+import { PreparationQueue } from "@/features/preparation/preparation-queue";
+
 export const metadata: Metadata = { title: "Order preparation" };
 
-/** Warehouse landing. The queue itself is a later issue; this says so plainly. */
 export default async function PreparationPage() {
   const [session, locale] = await Promise.all([requireSession(), getLocale()]);
   const t = messages(locale);
@@ -25,7 +26,11 @@ export default async function PreparationPage() {
     <Localized locale={locale}>
       <PageBody className="max-w-2xl">
         <PageHeader title={t.preparation.title} />
-        <NotBuiltState title={t.preparation.emptyTitle} description={t.preparation.emptyDescription} t={t} />
+        {process.env.TILE_SYNTHETIC_PREPARATION === "1" ? (
+          <PreparationQueue session={session} locale={locale} />
+        ) : (
+          <NotBuiltState title={t.preparation.emptyTitle} description={t.preparation.emptyDescription} t={t} />
+        )}
       </PageBody>
     </Localized>
   );

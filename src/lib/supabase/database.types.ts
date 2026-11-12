@@ -14414,6 +14414,7 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: Json
       }
+      preparation_queue: { Args: never; Returns: Json }
       prepare_feedback_photo: {
         Args: {
           p_media_id: string
@@ -14549,6 +14550,17 @@ export type Database = {
           p_status: string
         }
         Returns: string
+      }
+      record_preparation: {
+        Args: {
+          p_allocation_id?: string
+          p_line_id: string
+          p_quantity: number
+          p_request_id: string
+          p_shortage: number
+          p_version: number
+        }
+        Returns: undefined
       }
       record_purchase: {
         Args: {
