@@ -14641,6 +14641,18 @@ export type Database = {
         }
         Returns: string
       }
+      record_synthetic_proof_review: {
+        Args: {
+          p_action: string
+          p_note?: string
+          p_previous: string
+          p_price?: number
+          p_quantity?: number
+          p_result: string
+          p_version: string
+        }
+        Returns: undefined
+      }
       record_walk_in: {
         Args: {
           p_account_id?: string
@@ -15031,6 +15043,7 @@ export type Database = {
       synthetic_delivery_proof: { Args: { p_result: string }; Returns: Json }
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
       synthetic_original_do_returns: { Args: never; Returns: Json }
+      synthetic_proof_review_queue: { Args: never; Returns: Json }
       synthetic_schedule_state: { Args: never; Returns: Json }
       transfer_customer_card: {
         Args: {

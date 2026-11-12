@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { dispatchLabels } from "@/features/dispatch/labels";
-import { CalendarClock, PackageCheck, Truck } from "lucide-react";
+import { proofReviewLabels } from "@/features/dispatch/proof-review-labels";
+import { CalendarClock, FileCheck, PackageCheck, Truck } from "lucide-react";
 import { requireSession } from "@/server/session";
 import { getLocale } from "@/server/locale";
 import { messages } from "@/lib/i18n/messages";
@@ -21,6 +22,8 @@ export default async function AdminHomePage() {
   const perms = session.permissions;
   const dispatch = dispatchLabels[locale];
   const showDrafts = process.env.TILE_SYNTHETIC_PREPARATION === "1" && perms.includes("admin.coordinate");
+  const showProofReview = showDrafts && ["admin", "business_admin", "management"].includes(session.roleKey);
+  const proof = proofReviewLabels[locale];
   if (!perms.includes("workspace.admin")) {
     const landing = resolveLanding(perms, session.defaultArea);
     return (
@@ -41,6 +44,8 @@ export default async function AdminHomePage() {
           {showDrafts && (
             <EntryCard icon={CalendarClock} title={dispatch.title} summary={dispatch.description} href="/admin/dispatch" action={`${t.areas.open}: ${dispatch.title}`} />
           )}
+          {showProofReview && <EntryCard icon={FileCheck} title={proof.title} summary={proof.summary}
+            href="/admin/proof-review" action={proof.title} />}
           {perms.includes("delivery.read_own") && (
             <EntryCard icon={Truck} title={t.queues.myDeliveries} summary={t.queues.myDeliveriesSummary} href="/admin/my-deliveries" action={`${t.areas.open}: ${t.queues.myDeliveries}`} />
           )}
