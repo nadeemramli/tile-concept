@@ -14641,6 +14641,16 @@ export type Database = {
         }
         Returns: string
       }
+      record_synthetic_delivery_recovery: {
+        Args: {
+          p_kind: string
+          p_note?: string
+          p_quantity: number
+          p_request: string
+          p_result: string
+        }
+        Returns: undefined
+      }
       record_synthetic_proof_review: {
         Args: {
           p_action: string
@@ -15041,6 +15051,7 @@ export type Database = {
         Returns: number
       }
       synthetic_delivery_proof: { Args: { p_result: string }; Returns: Json }
+      synthetic_delivery_recovery_queue: { Args: never; Returns: Json }
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
       synthetic_original_do_returns: { Args: never; Returns: Json }
       synthetic_proof_review_queue: { Args: never; Returns: Json }

@@ -17,6 +17,7 @@ const queue = z.array(z.object({
   allocations: z.array(z.object({
     id: z.uuid(),
     allocated: z.number(),
+    redelivery: z.boolean(),
     warehouse: z.array(z.object({
       stage: z.enum(["ready", "handed_over"]),
       quantity: z.number(),
@@ -61,11 +62,13 @@ export async function PreparationQueue({ session, locale }: { session: AppSessio
           packed: allocation.updates.reduce((sum, update) => sum + update.packed, 0),
           shortage: allocation.updates.reduce((sum, update) => sum + update.shortage, 0),
         }));
-        const allocated = allocations.reduce((sum, item) => sum + item.allocated, 0);
-        const packed = allocations.reduce((sum, item) => sum + item.packed, 0);
-        const ready = allocations.reduce((sum, item) => sum + item.ready, 0);
-        const handedOver = allocations.reduce((sum, item) => sum + item.handedOver, 0);
-        const shortage = allocations.reduce((sum, item) => sum + item.shortage, 0);
+        // A redelivery re-plans goods already counted once, so line totals use first allocations only.
+        const first = allocations.filter((item) => !item.redelivery);
+        const allocated = first.reduce((sum, item) => sum + item.allocated, 0);
+        const packed = first.reduce((sum, item) => sum + item.packed, 0);
+        const ready = first.reduce((sum, item) => sum + item.ready, 0);
+        const handedOver = first.reduce((sum, item) => sum + item.handedOver, 0);
+        const shortage = first.reduce((sum, item) => sum + item.shortage, 0);
         const quantity = (value: number) => format.format(Math.max(0, value)) + " " + line.unit;
         const metrics = [
           [labels.ordered, line.ordered], [labels.allocated, allocated], [labels.packed, packed],
@@ -92,7 +95,8 @@ export async function PreparationQueue({ session, locale }: { session: AppSessio
             )}
             {allocations.map((allocation, index) => (
               <section key={allocation.id} aria-label={labels.allocation + " " + (index + 1)} className="grid gap-3 border-t pt-3">
-                <h4 className="font-medium">{labels.allocation} {index + 1} · {quantity(allocation.allocated)}</h4>
+                <h4 className="font-medium">{labels.allocation} {index + 1} · {quantity(allocation.allocated)}
+                  {allocation.redelivery && <> · {labels.redelivery}</>}</h4>
                 <ul className="grid gap-1 text-sm">
                   {allocation.updates.map((update, i) => (
                     <li key={i}>

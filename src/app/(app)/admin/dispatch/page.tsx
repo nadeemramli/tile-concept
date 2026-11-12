@@ -22,7 +22,7 @@ const draftBoard = z.object({
   allocations: z.array(z.object({
     id: z.uuid(), document: z.string(), line: z.string(), item: z.string(), origin: z.string(),
     quantity: z.number(), unit: z.string(), confirmed: z.number(), handedOver: z.number(),
-    tripId: z.uuid().nullable(), version: z.int(),
+    tripId: z.uuid().nullable(), version: z.int(), redelivery: z.boolean(),
   })),
 });
 
@@ -77,7 +77,7 @@ export default async function DispatchPage() {
                   {items.length === 0 && <p className="text-sm text-muted-foreground">{labels.empty}</p>}
                   {items.map((item, index) => (
                     <article key={item.id} className="grid gap-2 rounded-md border p-3">
-                      <h3 className="font-medium">{item.document} · {item.item}</h3>
+                      <h3 className="font-medium">{item.document} · {item.item}{item.redelivery && <> · {labels.redelivery}</>}</h3>
                       <p className="text-sm">{labels.line} {item.line} · {item.origin} · {number.format(item.quantity)} {item.unit}</p>
                       <p className="text-sm font-medium">{item.confirmed >= item.quantity ? labels.ready : labels.pending}
                         {" · "}{number.format(item.confirmed)} / {number.format(item.quantity)} {item.unit}</p>
