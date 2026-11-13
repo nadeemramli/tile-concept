@@ -385,6 +385,9 @@ test.describe("English by default", () => {
     await expect(page.getByRole("button", { name: "Log masuk", exact: true })).toBeVisible();
     await expect(page.locator("[lang='ms-MY']").filter({ has: page.locator("#email") })).toHaveCount(1);
     await page.getByRole("button", { name: "English", exact: true }).first().click();
+    // The choice is saved by a server action; wait for it to land, as the BM step above does,
+    // so the reload checks persistence instead of racing the save.
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   });
