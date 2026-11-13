@@ -14351,6 +14351,7 @@ export type Database = {
       }
       my_permissions: { Args: never; Returns: string[] }
       my_synthetic_delivery_results: { Args: never; Returns: Json }
+      my_synthetic_pickups: { Args: never; Returns: Json }
       my_synthetic_schedules: { Args: never; Returns: Json }
       my_workspace_permissions: { Args: never; Returns: string[] }
       nominate_content_opportunity: {
@@ -14648,6 +14649,16 @@ export type Database = {
           p_quantity: number
           p_request: string
           p_result: string
+        }
+        Returns: undefined
+      }
+      record_synthetic_pickup: {
+        Args: {
+          p_allocation: string
+          p_note?: string
+          p_quantity: number
+          p_request: string
+          p_stage: string
         }
         Returns: undefined
       }
@@ -15056,6 +15067,7 @@ export type Database = {
       synthetic_original_do_returns: { Args: never; Returns: Json }
       synthetic_proof_review_queue: { Args: never; Returns: Json }
       synthetic_schedule_state: { Args: never; Returns: Json }
+      synthetic_supplier_pickups: { Args: never; Returns: Json }
       transfer_customer_card: {
         Args: {
           p_card: string

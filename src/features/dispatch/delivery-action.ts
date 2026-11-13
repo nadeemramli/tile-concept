@@ -35,6 +35,7 @@ export async function recordDelivery(_previous: string, form: FormData): Promise
   if (error?.code === "23505") return "recorded";
   if (error?.code === "23514") return "quantity";
   if (error?.code === "22023") return error.message.includes("proof") ? "proof" : "details";
+  if (error?.code === "TP001") return "pickup";
   if (error?.code === "42501") return "denied";
   if (error) return "failed";
   revalidatePath("/admin/my-deliveries");

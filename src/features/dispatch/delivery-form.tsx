@@ -12,7 +12,7 @@ export function DeliveryForm({ revision, allocation, planned, labels }: {
   const [result, action, pending] = useActionState(recordDelivery, "");
   const errors: Record<string, string> = {
     details: labels.details, proof: labels.proofError, stale: labels.stale,
-    recorded: labels.recorded, quantity: labels.quantityError, denied: labels.denied,
+    recorded: labels.recorded, quantity: labels.quantityError, denied: labels.denied, pickup: labels.pickupFirst,
   };
   return (
     <form action={action} className="mt-2 grid gap-3 rounded-md border p-3">

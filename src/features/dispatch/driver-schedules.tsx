@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { DeliveryForm } from "./delivery-form";
+import { PickupForm } from "./pickup-form";
+import { pickupLabels } from "./pickup-labels";
 import { deliveryLabels } from "./delivery-labels";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { driverSchedules } from "./schedule-data";
@@ -16,10 +19,15 @@ export async function DriverSchedules({ locale }: { locale: "en" | "ms" }) {
   const labels = scheduleLabels[locale];
   const supabase = await createServerSupabase();
   const delivery = deliveryLabels[locale];
-  const [schedule, results] = await Promise.all([
+  const pickupText = pickupLabels[locale];
+  const [schedule, results, pickups] = await Promise.all([
     supabase.rpc("my_synthetic_schedules"),
     supabase.rpc("my_synthetic_delivery_results"),
+    supabase.rpc("my_synthetic_pickups"),
   ]);
+  const parsedPickups = z.array(z.object({ allocation: z.uuid(), ready: z.number(), pickedUp: z.number() }))
+    .safeParse(pickups.data);
+  const collected = new Map(parsedPickups.data?.map((entry) => [entry.allocation, entry]));
   const parsed = driverSchedules.safeParse(schedule.data);
   if (schedule.error || !parsed.success) return <p role="alert">{labels.loadFailed}</p>;
   const parsedResults = deliveryResults.safeParse(results.data);
@@ -60,6 +68,20 @@ export async function DriverSchedules({ locale }: { locale: "en" | "ms" }) {
                   <li key={stop.id}>
                     <strong>{stop.document}</strong> · {stop.line} · {stop.item} · {amount(stop.quantity)}
                     {previous && !oldIds.has(stop.id) && <span> · {labels.added}</span>}
+                    {stop.pickup && (() => {
+                      const state = collected.get(stop.id);
+                      const left = (state?.ready ?? 0) - (state?.pickedUp ?? 0);
+                      return (
+                        <div className="mt-2 grid gap-1 rounded-md border p-3">
+                          <p className="font-medium">{pickupText.pickupAt} {stop.pickup}</p>
+                          <p>{pickupText.driverPicked} {amount(state?.pickedUp ?? 0)} / {amount(stop.quantity)}</p>
+                          {!state || state.ready === 0 ? <p>{pickupText.driverWaiting}</p> : null}
+                          {!result && trip.acknowledgedAt && Math.round(left * 1000) > 0 && <PickupForm
+                            key={"pickup" + (state?.pickedUp ?? 0)} request={randomUUID()} allocation={stop.id}
+                            stage="picked_up" remaining={left} labels={pickupText} />}
+                        </div>
+                      );
+                    })()}
                     {result ? (
                       <div className="mt-2 grid gap-1 rounded-md border p-3">
                         <p className="font-medium">{result.delivered === 0 ? delivery.failedDelivery :

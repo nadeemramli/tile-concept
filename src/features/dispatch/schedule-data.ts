@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const stop = z.object({
   id: z.uuid(), document: z.string(), line: z.string(), item: z.string(),
-  quantity: z.number(), unit: z.string(), ready: z.boolean(),
+  quantity: z.number(), unit: z.string(), ready: z.boolean(), pickup: z.string().optional(),
 });
 
 export const coordinatorSchedules = z.array(z.object({

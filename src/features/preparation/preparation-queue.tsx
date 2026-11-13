@@ -12,6 +12,7 @@ const queue = z.array(z.object({
   item: z.string(),
   unit: z.string(),
   origin: z.string(),
+  supplier: z.boolean(),
   ordered: z.number(),
   version: z.int(),
   allocations: z.array(z.object({
@@ -93,6 +94,7 @@ export async function PreparationQueue({ session, locale }: { session: AppSessio
             {canWrite && Math.round((line.ordered - allocated) * 1000) > 0 && (
               <PreparationForm key={line.version} line={line.id} version={line.version} request={randomUUID()} labels={labels} />
             )}
+            {line.supplier && <p className="text-sm">{labels.supplierPickup}</p>}
             {allocations.map((allocation, index) => (
               <section key={allocation.id} aria-label={labels.allocation + " " + (index + 1)} className="grid gap-3 border-t pt-3">
                 <h4 className="font-medium">{labels.allocation} {index + 1} · {quantity(allocation.allocated)}
@@ -112,7 +114,7 @@ export async function PreparationQueue({ session, locale }: { session: AppSessio
                     </li>
                   ))}
                 </ul>
-                {canWrite && Math.round((allocation.allocated - allocation.packed - allocation.shortage) * 1000) > 0 && (
+                {canWrite && !line.supplier && Math.round((allocation.allocated - allocation.packed - allocation.shortage) * 1000) > 0 && (
                   <PreparationForm key={line.version} line={line.id} version={line.version} request={randomUUID()}
                     allocation={allocation.id} labels={labels} />
                 )}

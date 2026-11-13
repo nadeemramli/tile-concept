@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { dispatchLabels } from "@/features/dispatch/labels";
 import { proofReviewLabels } from "@/features/dispatch/proof-review-labels";
+import { pickupLabels } from "@/features/dispatch/pickup-labels";
 import { recoveryLabels } from "@/features/dispatch/recovery-labels";
-import { CalendarClock, FileCheck, PackageCheck, RotateCcw, Truck } from "lucide-react";
+import { CalendarClock, FileCheck, PackageCheck, RotateCcw, Store, Truck } from "lucide-react";
 import { requireSession } from "@/server/session";
 import { getLocale } from "@/server/locale";
 import { messages } from "@/lib/i18n/messages";
@@ -26,6 +27,7 @@ export default async function AdminHomePage() {
   const showProofReview = showDrafts && ["admin", "business_admin", "management"].includes(session.roleKey);
   const proof = proofReviewLabels[locale];
   const recovery = recoveryLabels[locale];
+  const pickup = pickupLabels[locale];
   if (!perms.includes("workspace.admin")) {
     const landing = resolveLanding(perms, session.defaultArea);
     return (
@@ -50,6 +52,8 @@ export default async function AdminHomePage() {
             href="/admin/proof-review" action={proof.title} />}
           {showProofReview && <EntryCard icon={RotateCcw} title={recovery.title} summary={recovery.summary}
             href="/admin/delivery-recovery" action={`${t.areas.open}: ${recovery.title}`} />}
+          {showProofReview && <EntryCard icon={Store} title={pickup.title} summary={pickup.summary}
+            href="/admin/supplier-pickup" action={`${t.areas.open}: ${pickup.title}`} />}
           {perms.includes("delivery.read_own") && (
             <EntryCard icon={Truck} title={t.queues.myDeliveries} summary={t.queues.myDeliveriesSummary} href="/admin/my-deliveries" action={`${t.areas.open}: ${t.queues.myDeliveries}`} />
           )}
