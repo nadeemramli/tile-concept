@@ -13823,24 +13823,6 @@ export type Database = {
         Args: { p_revision: string }
         Returns: undefined
       }
-      assign_synthetic_trip_driver: {
-        Args: { p_driver?: string; p_token: string; p_trip: string }
-        Returns: undefined
-      }
-      attach_synthetic_delivery_proof: {
-        Args: {
-          p_base64: string
-          p_name: string
-          p_reason?: string
-          p_result: string
-          p_type: string
-        }
-        Returns: undefined
-      }
-      create_synthetic_trip: {
-        Args: { p_date: string; p_driver?: string; p_label: string }
-        Returns: string
-      }
       add_manual_review_item: {
         Args: {
           p_item_type?: string
@@ -13887,6 +13869,10 @@ export type Database = {
         Args: { p_lead_id: string; p_owner_id: string; p_reason?: string }
         Returns: undefined
       }
+      assign_synthetic_trip_driver: {
+        Args: { p_driver?: string; p_token: string; p_trip: string }
+        Returns: undefined
+      }
       attach_feedback_media: {
         Args: {
           p_mime_type: string
@@ -13895,6 +13881,16 @@ export type Database = {
           p_size_bytes: number
         }
         Returns: string
+      }
+      attach_synthetic_delivery_proof: {
+        Args: {
+          p_base64: string
+          p_name: string
+          p_reason?: string
+          p_result: string
+          p_type: string
+        }
+        Returns: undefined
       }
       begin_telegram_link: {
         Args: { p_token_hash: string }
@@ -13995,6 +13991,10 @@ export type Database = {
       create_manual_inquiry: {
         Args: { p_input: Json; p_request_id: string }
         Returns: Json
+      }
+      create_synthetic_trip: {
+        Args: { p_date: string; p_driver?: string; p_label: string }
+        Returns: string
       }
       creative_command: {
         Args: {
@@ -14289,6 +14289,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      load_synthetic_fulfilment_samples: { Args: never; Returns: number }
       log_feedback_customer_event: {
         Args: { p_event_type: string; p_token_hash: string }
         Returns: boolean
@@ -14368,7 +14369,6 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: never; Returns: string[] }
-      load_synthetic_fulfilment_samples: { Args: never; Returns: number }
       my_synthetic_delivery_results: { Args: never; Returns: Json }
       my_synthetic_pickups: { Args: never; Returns: Json }
       my_synthetic_schedules: { Args: never; Returns: Json }
