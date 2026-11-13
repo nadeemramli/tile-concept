@@ -2,6 +2,8 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { DeliveryForm } from "./delivery-form";
 import { PickupForm } from "./pickup-form";
+import { ProofUploadForm } from "./proof-upload-form";
+import { proofUploadLabels } from "./proof-upload-labels";
 import { pickupLabels } from "./pickup-labels";
 import { deliveryLabels } from "./delivery-labels";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -92,6 +94,8 @@ export async function DriverSchedules({ locale }: { locale: "en" | "ms" }) {
                         <p>{delivery.recordedBy} · {result.recordedBy} · <time dateTime={result.recordedAt}>{timestamps.format(new Date(result.recordedAt))}</time></p>
                         {result.proof && <a className="inline-flex min-h-11 items-center underline"
                           href={`/admin/my-deliveries/proof/${result.id}`}>{delivery.download}</a>}
+                        {!result.proof && result.delivered > 0 && <ProofUploadForm result={result.id} behalf={false}
+                          labels={proofUploadLabels[locale]} />}
                       </div>
                     ) : trip.acknowledgedAt && !resultsUnavailable && (
                       <DeliveryForm revision={trip.id} allocation={stop.id} planned={stop.quantity} labels={delivery} />

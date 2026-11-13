@@ -2,7 +2,7 @@ export const deliveryLabels = {
   en: {
     record: "Record delivery", saving: "Saving delivery…", quantity: "Delivered quantity",
     pic: "Receiving PIC", reason: "Reason (required for partial or failed delivery)",
-    proof: "Signed proof (PDF, JPEG or PNG, up to 700 KB)",
+    proof: "Signed proof (PDF, JPEG or PNG, up to 700 KB). If you cannot upload now, add it later on this page.",
     download: "Download signed proof", delivered: "Delivered", partial: "Partially delivered",
     failedDelivery: "Delivery failed", remaining: "Outstanding", recordedBy: "Recorded by",
     details: "Enter the receiving PIC for a delivery, or a reason for a partial or failed delivery.",
@@ -18,7 +18,7 @@ export const deliveryLabels = {
   ms: {
     record: "Rekod penghantaran", saving: "Sedang menyimpan penghantaran…", quantity: "Kuantiti dihantar",
     pic: "Nama penerima", reason: "Sebab (wajib jika penghantaran separa atau gagal)",
-    proof: "Bukti bertandatangan (PDF, JPEG atau PNG, sehingga 700 KB)",
+    proof: "Bukti bertandatangan (PDF, JPEG atau PNG, sehingga 700 KB). Jika tidak dapat dimuat naik sekarang, tambah kemudian di halaman ini.",
     download: "Muat turun bukti bertandatangan", delivered: "Telah dihantar", partial: "Penghantaran separa",
     failedDelivery: "Penghantaran gagal", remaining: "Baki", recordedBy: "Direkod oleh",
     details: "Masukkan nama penerima atau sebab penghantaran separa atau gagal.",

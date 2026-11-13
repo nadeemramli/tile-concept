@@ -3,6 +3,8 @@ import { z } from "zod";
 import { Localized } from "@/components/i18n/localized";
 import { PageBody, PageHeader } from "@/components/patterns/page-header";
 import { ProofReviewForm } from "@/features/dispatch/proof-review-form";
+import { ProofUploadForm } from "@/features/dispatch/proof-upload-form";
+import { proofUploadLabels } from "@/features/dispatch/proof-upload-labels";
 import { proofReviewLabels } from "@/features/dispatch/proof-review-labels";
 import { AreaDenied } from "@/features/workspace/components/entry";
 import { messages } from "@/lib/i18n/messages";
@@ -36,6 +38,11 @@ export default async function ProofReviewPage() {
     && session.permissions.includes("admin.coordinate") && ["admin", "business_admin", "management"].includes(session.roleKey);
   const response = enabled ? await supabase.rpc("synthetic_proof_review_queue") : null;
   const parsed = queue.safeParse(response?.data);
+  const uploadText = proofUploadLabels[locale];
+  const uploadsResponse = enabled ? await supabase.rpc("synthetic_proof_uploads") : null;
+  const uploads = new Map(z.array(z.object({
+    result: z.uuid(), driver: z.string(), uploader: z.string().nullable(), reason: z.string().nullable(), onBehalf: z.boolean(),
+  })).safeParse(uploadsResponse?.data).data?.map((entry) => [entry.result, entry]));
   const quantities = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
   const price = new Intl.NumberFormat(locale, { style: "currency", currency: session.currency.trim(), maximumFractionDigits: 4 });
   const time = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: session.timezone });
@@ -65,6 +72,10 @@ export default async function ProofReviewPage() {
                       <p>{labels.agreement} {row.agreement} · {labels.agreedPrice} {price.format(row.unitPrice)}</p>}
                     {row.proof && <a className="inline-flex min-h-11 items-center justify-self-start underline"
                       href={`/admin/my-deliveries/proof/${row.id}`}>{labels.download}</a>}
+                    {uploads.get(row.id)?.onBehalf && <p className="break-words">
+                      {uploadText.uploadedBehalf} {uploads.get(row.id)?.driver} {uploadText.by} {uploads.get(row.id)?.uploader}
+                      {uploads.get(row.id)?.reason && <>: {uploads.get(row.id)?.reason}</>}</p>}
+                    {row.status === "missing" && <ProofUploadForm result={row.id} behalf labels={uploadText} />}
                     {row.history.length > 0 && <details>
                       <summary className="min-h-11 cursor-pointer py-2">{labels.history}</summary>
                       <ol className="grid gap-2">

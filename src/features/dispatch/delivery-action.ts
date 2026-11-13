@@ -21,8 +21,9 @@ export async function recordDelivery(_previous: string, form: FormData): Promise
   const file = form.get("proof");
   const proof = file instanceof File && file.size ? file : undefined;
   if (quantity > 0 && !pic) return "details";
-  if ((quantity > 0 && !proof) || (proof && (proof.size > 700 * 1024 ||
-      !["application/pdf", "image/jpeg", "image/png"].includes(proof.type)))) return "proof";
+  // Proof may follow later (own upload or on-behalf upload); a file that is supplied must be valid.
+  if (proof && (proof.size > 700 * 1024 ||
+      !["application/pdf", "image/jpeg", "image/png"].includes(proof.type))) return "proof";
 
   const supabase = await createServerSupabase();
   const { error } = await supabase.rpc("record_synthetic_delivery", {

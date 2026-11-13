@@ -13823,6 +13823,16 @@ export type Database = {
         Args: { p_revision: string }
         Returns: undefined
       }
+      attach_synthetic_delivery_proof: {
+        Args: {
+          p_base64: string
+          p_name: string
+          p_reason?: string
+          p_result: string
+          p_type: string
+        }
+        Returns: undefined
+      }
       add_manual_review_item: {
         Args: {
           p_item_type?: string
@@ -15066,6 +15076,7 @@ export type Database = {
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
       synthetic_original_do_returns: { Args: never; Returns: Json }
       synthetic_proof_review_queue: { Args: never; Returns: Json }
+      synthetic_proof_uploads: { Args: never; Returns: Json }
       synthetic_schedule_state: { Args: never; Returns: Json }
       synthetic_supplier_pickups: { Args: never; Returns: Json }
       transfer_customer_card: {
