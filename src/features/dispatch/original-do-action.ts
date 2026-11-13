@@ -10,7 +10,7 @@ export async function receiveOriginalDo(_previous: string, form: FormData) {
     return "failed";
   }
   const session = await requireSession();
-  if (!session.permissions.includes("admin.coordinate")) return "failed";
+  if (!session.permissions.includes("admin.coordinate") || !["admin", "business_admin"].includes(session.roleKey)) return "failed";
 
   const supabase = await createServerSupabase();
   const { error } = await supabase.rpc("receive_synthetic_original_do", { p_document: document });

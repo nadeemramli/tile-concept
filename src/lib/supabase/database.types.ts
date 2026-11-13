@@ -13823,6 +13823,10 @@ export type Database = {
         Args: { p_revision: string }
         Returns: undefined
       }
+      assign_synthetic_trip_driver: {
+        Args: { p_driver?: string; p_token: string; p_trip: string }
+        Returns: undefined
+      }
       attach_synthetic_delivery_proof: {
         Args: {
           p_base64: string
@@ -13832,6 +13836,10 @@ export type Database = {
           p_type: string
         }
         Returns: undefined
+      }
+      create_synthetic_trip: {
+        Args: { p_date: string; p_driver?: string; p_label: string }
+        Returns: string
       }
       add_manual_review_item: {
         Args: {
@@ -14360,6 +14368,7 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: never; Returns: string[] }
+      load_synthetic_fulfilment_samples: { Args: never; Returns: number }
       my_synthetic_delivery_results: { Args: never; Returns: Json }
       my_synthetic_pickups: { Args: never; Returns: Json }
       my_synthetic_schedules: { Args: never; Returns: Json }
@@ -15074,6 +15083,7 @@ export type Database = {
       synthetic_delivery_proof: { Args: { p_result: string }; Returns: Json }
       synthetic_delivery_recovery_queue: { Args: never; Returns: Json }
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
+      synthetic_drivers: { Args: never; Returns: Json }
       synthetic_management_exceptions: {
         Args: { p_today: string }
         Returns: Json

@@ -10,7 +10,7 @@ const originalReturns = z.array(z.object({
   receivedBy: z.string().nullable(),
 }));
 
-export async function OriginalDoReturns({ locale }: { locale: "en" | "ms" }) {
+export async function OriginalDoReturns({ locale, canReceive }: { locale: "en" | "ms"; canReceive: boolean }) {
   const labels = originalDoLabels[locale];
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.rpc("synthetic_original_do_returns");
@@ -42,7 +42,7 @@ export async function OriginalDoReturns({ locale }: { locale: "en" | "ms" }) {
                       href={`/admin/my-deliveries/proof/${proof.id}`}>{labels.proofFor} {proof.line}</a>
                   ))}
                 </div>
-                {!record.receivedAt && <OriginalDoForm document={record.document} labels={labels} />}
+                {!record.receivedAt && canReceive && <OriginalDoForm document={record.document} labels={labels} />}
               </article>
             </li>
           ))}

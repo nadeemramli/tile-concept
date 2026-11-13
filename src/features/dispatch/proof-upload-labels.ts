@@ -2,7 +2,7 @@ export const proofUploadLabels = {
   en: {
     ownTitle: "Signed proof not uploaded yet",
     behalfTitle: "Upload proof on the driver's behalf",
-    file: "Signed proof (PDF, JPEG or PNG, up to 700 KB)",
+    file: "Signed proof (PDF, JPEG or PNG; large photos are reduced automatically)",
     reason: "Why you are uploading for the driver (required)",
     upload: "Upload signed proof", saving: "Uploading…",
     uploadedBehalf: "Uploaded on behalf of", by: "by",
@@ -15,7 +15,7 @@ export const proofUploadLabels = {
   ms: {
     ownTitle: "Bukti bertandatangan belum dimuat naik",
     behalfTitle: "Muat naik bukti bagi pihak pemandu",
-    file: "Bukti bertandatangan (PDF, JPEG atau PNG, sehingga 700 KB)",
+    file: "Bukti bertandatangan (PDF, JPEG atau PNG; gambar besar dikecilkan secara automatik)",
     reason: "Sebab anda memuat naik bagi pihak pemandu (wajib)",
     upload: "Muat naik bukti bertandatangan", saving: "Memuat naik…",
     uploadedBehalf: "Dimuat naik bagi pihak", by: "oleh",

@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import type { AppSession } from "@/server/session";
 import { preparationLabels } from "./labels";
 import { PreparationForm } from "./preparation-form";
+import { LoadSamplesForm } from "@/features/dispatch/trip-form";
 
 const queue = z.array(z.object({
   id: z.uuid(),
@@ -55,6 +56,10 @@ export async function PreparationQueue({ session, locale }: { session: AppSessio
         <p className="text-muted-foreground">{labels.description}</p>
       </div>
       {parsed.data.length === 0 && <p>{labels.noOrders}</p>}
+      {["admin", "business_admin"].includes(session.roleKey) && <LoadSamplesForm labels={{
+        load: labels.loadSamples, saving: labels.saving, added: labels.samplesAdded,
+        none: labels.samplesPresent, failed: labels.failedSave,
+      }} />}
       {parsed.data.map((line) => {
         const allocations = line.allocations.map((allocation) => ({
           ...allocation,

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { attachProof } from "./proof-upload-action";
+import { shrinkProof } from "./shrink-proof";
 import type { proofUploadLabels } from "./proof-upload-labels";
 
 export function ProofUploadForm({ result, behalf, labels }: {
@@ -20,7 +21,8 @@ export function ProofUploadForm({ result, behalf, labels }: {
       <input type="hidden" name="result" value={result} />
       <input type="hidden" name="behalf" value={behalf ? "1" : "0"} />
       <label className="grid gap-1 text-sm">{labels.file}
-        <input className={fieldClass} name="proof" type="file" accept="application/pdf,image/jpeg,image/png" required />
+        <input className={fieldClass} name="proof" type="file" accept="application/pdf,image/jpeg,image/png" required
+          onChange={(event) => { void shrinkProof(event.currentTarget); }} />
       </label>
       {behalf && <label className="grid gap-1 text-sm">{labels.reason}
         <textarea className={fieldClass} name="reason" maxLength={500} required

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { recordDelivery } from "./delivery-action";
+import { shrinkProof } from "./shrink-proof";
 import type { deliveryLabels } from "./delivery-labels";
 
 export function DeliveryForm({ revision, allocation, planned, labels }: {
@@ -32,7 +33,8 @@ export function DeliveryForm({ revision, allocation, planned, labels }: {
       </label>
       <label className="grid gap-1 text-sm">
         {labels.proof}
-        <Input className="min-h-11" name="proof" type="file" accept="application/pdf,image/jpeg,image/png" />
+        <Input className="min-h-11" name="proof" type="file" accept="application/pdf,image/jpeg,image/png"
+          onChange={(event) => { void shrinkProof(event.currentTarget); }} />
       </label>
       <Button type="submit" className="min-h-11 justify-self-start" disabled={pending}>
         {pending ? labels.saving : labels.record}

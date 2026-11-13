@@ -10,6 +10,8 @@ import { Localized } from "@/components/i18n/localized";
 import { AreaDenied } from "@/features/workspace/components/entry";
 import { dispatchLabels } from "@/features/dispatch/labels";
 import { MoveDraftForm } from "@/features/dispatch/move-form";
+import { AssignDriverForm, NewTripForm } from "@/features/dispatch/trip-form";
+import { tripLabels } from "@/features/dispatch/trip-labels";
 import { messages } from "@/lib/i18n/messages";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getLocale } from "@/server/locale";
@@ -38,6 +40,11 @@ export default async function DispatchPage() {
   }
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.rpc("synthetic_schedule_state");
+  // PRD 3.5: management can inspect the board; planning and publishing belong to admin employees.
+  const canPlan = ["admin", "business_admin"].includes(session.roleKey);
+  const tripText = tripLabels[locale];
+  const driversResponse = canPlan ? await supabase.rpc("synthetic_drivers") : null;
+  const drivers = z.array(z.object({ id: z.uuid(), name: z.string() })).safeParse(driversResponse?.data).data ?? [];
   const parsed = z.object({ board: draftBoard, schedules: coordinatorSchedules }).safeParse(data);
   const scheduleText = scheduleLabels[locale];
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
@@ -50,6 +57,8 @@ export default async function DispatchPage() {
         <a href="#original-do-title" className="inline-flex min-h-11 items-center underline">
           {originalDoLabels[locale].title}
         </a>
+        {!canPlan && <p>{tripText.readOnly}</p>}
+        {canPlan && <NewTripForm drivers={drivers} labels={tripText} />}
         {error || !parsed.success ? <p role="alert">{labels.failed}</p> : (
           <div className="grid gap-4 lg:grid-cols-3">
             {[{ id: null, label: labels.unassigned, date: null }, ...parsed.data.board.trips].map((trip) => {
@@ -70,8 +79,10 @@ export default async function DispatchPage() {
                       {state.revision && state.changed && <p>{scheduleText.changed}</p>}
                       {(!state.driver || state.stops.length === 0 || state.stops.some((stop) => !stop.ready)) &&
                         <p>{scheduleText.notReady}</p>}
-                      <ScheduleControl key={state.token + String(state.revision)} fields={{ action: "publish", trip: state.tripId, token: state.token }}
-                        label={scheduleText.publish} labels={scheduleText} />
+                      {canPlan && <AssignDriverForm key={"driver" + state.token} trip={state.tripId} token={state.token}
+                        current={drivers.find((entry) => entry.name === state.driver)?.id ?? ""} drivers={drivers} labels={tripText} />}
+                      {canPlan && <ScheduleControl key={state.token + String(state.revision)} fields={{ action: "publish", trip: state.tripId, token: state.token }}
+                        label={scheduleText.publish} labels={scheduleText} />}
                     </div>}
                   </header>
                   {items.length === 0 && <p className="text-sm text-muted-foreground">{labels.empty}</p>}
@@ -82,7 +93,7 @@ export default async function DispatchPage() {
                       <p className="text-sm font-medium">{item.confirmed >= item.quantity ? (item.supplier ? labels.supplierReady : labels.ready) : (item.supplier ? labels.supplierPending : labels.pending)}
                         {" · "}{number.format(item.confirmed)} / {number.format(item.quantity)} {item.unit}</p>
                       {item.handedOver > 0 && <p className="text-sm">{item.supplier ? labels.pickedUp : labels.handedOver} {number.format(item.handedOver)} {item.unit}</p>}
-                      {state && <div className="flex flex-wrap gap-2">
+                      {state && canPlan && <div className="flex flex-wrap gap-2">
                         {([-1, 1] as const).map((direction) => (
                           <ScheduleControl key={state.token + direction} fields={{ action: "reorder", trip: state.tripId,
                             token: state.token, allocation: item.id, direction: String(direction) }}
@@ -90,9 +101,9 @@ export default async function DispatchPage() {
                             label={direction === -1 ? scheduleText.up : scheduleText.down} labels={scheduleText} />
                         ))}
                       </div>}
-                      <MoveDraftForm key={item.version} allocation={item.id} version={item.version} tripId={item.tripId}
+                      {canPlan && <MoveDraftForm key={item.version} allocation={item.id} version={item.version} tripId={item.tripId}
                         destinations={parsed.data.board.trips.map((destination) => ({ id: destination.id, label: destination.label + " · " + date.format(new Date(destination.date)) }))}
-                        labels={labels} />
+                        labels={labels} />}
                     </article>
                   ))}
                 </section>
@@ -100,7 +111,7 @@ export default async function DispatchPage() {
             })}
           </div>
         )}
-        <OriginalDoReturns locale={locale} />
+        <OriginalDoReturns locale={locale} canReceive={canPlan} />
       </PageBody>
     </Localized>
   );
