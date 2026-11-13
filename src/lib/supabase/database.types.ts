@@ -15074,6 +15074,10 @@ export type Database = {
       synthetic_delivery_proof: { Args: { p_result: string }; Returns: Json }
       synthetic_delivery_recovery_queue: { Args: never; Returns: Json }
       synthetic_dispatch_drafts: { Args: never; Returns: Json }
+      synthetic_management_exceptions: {
+        Args: { p_today: string }
+        Returns: Json
+      }
       synthetic_original_do_returns: { Args: never; Returns: Json }
       synthetic_proof_review_queue: { Args: never; Returns: Json }
       synthetic_proof_uploads: { Args: never; Returns: Json }

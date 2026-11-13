@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { dispatchLabels } from "@/features/dispatch/labels";
 import { proofReviewLabels } from "@/features/dispatch/proof-review-labels";
+import { exceptionLabels } from "@/features/dispatch/exceptions-labels";
 import { pickupLabels } from "@/features/dispatch/pickup-labels";
 import { recoveryLabels } from "@/features/dispatch/recovery-labels";
-import { CalendarClock, FileCheck, PackageCheck, RotateCcw, Store, Truck } from "lucide-react";
+import { AlertTriangle, CalendarClock, FileCheck, PackageCheck, RotateCcw, Store, Truck } from "lucide-react";
 import { requireSession } from "@/server/session";
 import { getLocale } from "@/server/locale";
 import { messages } from "@/lib/i18n/messages";
@@ -28,6 +29,7 @@ export default async function AdminHomePage() {
   const proof = proofReviewLabels[locale];
   const recovery = recoveryLabels[locale];
   const pickup = pickupLabels[locale];
+  const exceptions = exceptionLabels[locale];
   if (!perms.includes("workspace.admin")) {
     const landing = resolveLanding(perms, session.defaultArea);
     return (
@@ -42,6 +44,8 @@ export default async function AdminHomePage() {
       <PageBody className="max-w-5xl">
         <PageHeader title={t.adminHome.title} description={t.adminHome.description} />
         <div className="grid gap-3 md:grid-cols-2">
+          {showProofReview && <EntryCard icon={AlertTriangle} title={exceptions.title} summary={exceptions.summary}
+            href="/admin/exceptions" action={`${t.areas.open}: ${exceptions.title}`} />}
           {perms.includes("preparation.read") && (
             <EntryCard icon={PackageCheck} title={t.queues.preparation} summary={t.queues.preparationSummary} href="/admin/preparation" action={`${t.areas.open}: ${t.queues.preparation}`} />
           )}
