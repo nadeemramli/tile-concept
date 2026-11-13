@@ -22,6 +22,11 @@ describe("humanizeDbError", () => {
     expect(out).toMatch(/Content Opportunities/);
   });
 
+  it("keeps the customer-card PIC refusal word for word", () => {
+    const msg = "You can only create or edit customer cards assigned to your own account.";
+    expect(humanizeDbError(msg)).toBe(msg);
+  });
+
   it("leaves unknown messages alone", () => {
     expect(humanizeDbError("a checksum is required so re-imports can be detected")).toBe("a checksum is required so re-imports can be detected");
   });

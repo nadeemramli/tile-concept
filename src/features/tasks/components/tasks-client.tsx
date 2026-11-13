@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { createContext, useContext, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
@@ -20,7 +20,8 @@ import { RecordDrawer, DrawerSection, FactList } from "@/components/patterns/rec
 import { Field } from "@/components/patterns/field";
 import { ViewsBar } from "@/features/inbox/components/views-bar";
 import { TASK_PRIORITY, TASK_STATUS } from "@/lib/domain/status-maps";
-import { formatDateTime, formatRelative, isOverdue } from "@/lib/format";
+import { formatDateTime, formatRelative } from "@/lib/format";
+import { dueLabel, isDuePast, useDueClock } from "@/features/tasks/due";
 import { useSession } from "@/components/shell/session-context";
 import { cn } from "@/lib/utils";
 import { cancelTaskAction, completeTaskAction, createTaskAction, reopenTaskAction, updateTaskAction } from "@/server/commands/tasks";
@@ -34,6 +35,8 @@ interface Props {
   counts: { mine: number; overdue: number; open: number; doneWeek: number };
   members: ProfileRef[];
   prefill: { contact_id?: string; opportunity_id?: string; lead_id?: string; account_id?: string; project_id?: string };
+  /** The server's request time (ISO); Due labels are measured from it until mount. */
+  renderedAt: string;
 }
 
 const COLUMN_HINTS = {
@@ -49,6 +52,18 @@ const VIEW_HINTS = {
   done: "Completed and cancelled tasks, most recent first.",
 } as const;
 
+// The Due clock reaches the Due cells through context, so a tick re-renders
+// only their text and styling; changing the column definitions would remount
+// every cell, the row's linked contact and opportunity included (TILE-92).
+const DueClock = createContext(0);
+
+function DueCell({ task }: { task: TaskRow }) {
+  const now = useContext(DueClock);
+  if (!task.due_at) return <span className="text-muted-foreground">—</span>;
+  const over = task.status === "open" && isDuePast(task.due_at, now);
+  return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")} title={formatDateTime(task.due_at)}>{dueLabel(task.due_at, now)}</span>;
+}
+
 function toLocalInput(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -56,7 +71,7 @@ function toLocalInput(iso: string | null) {
   return d.toISOString().slice(0, 16);
 }
 
-export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
+export function TasksClient({ view, tasks, counts, members, prefill, renderedAt }: Props) {
   const router = useRouter();
   const { session, can } = useSession();
   const [taskId, setTaskId] = useQueryState("task");
@@ -64,6 +79,7 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
   const [pending, start] = useTransition();
   const [outcome, setOutcome] = useState("");
   const [completing, setCompleting] = useState(false);
+  const now = useDueClock(renderedAt);
 
   const task = tasks.find((t) => t.id === taskId) ?? null;
 
@@ -87,12 +103,7 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
         accessorKey: "due_at",
         header: "Due",
         meta: { hint: COLUMN_HINTS.due },
-        cell: ({ row }) => {
-          const t = row.original;
-          if (!t.due_at) return <span className="text-muted-foreground">—</span>;
-          const over = t.status === "open" && isOverdue(t.due_at);
-          return <span className={cn("tnum", over ? "font-medium text-destructive" : "text-muted-foreground")} title={formatDateTime(t.due_at)}>{formatRelative(t.due_at)}</span>;
-        },
+        cell: ({ row }) => <DueCell task={row.original} />,
       },
       { accessorKey: "assignee_name", header: "Assignee", meta: { hint: COLUMN_HINTS.assignee }, cell: ({ row }) => row.original.assignee_name ?? <span className="text-muted-foreground">Unassigned</span> },
       {
@@ -140,7 +151,9 @@ export function TasksClient({ view, tasks, counts, members, prefill }: Props) {
         }
       />
 
-      <DataTable columns={columns} data={tasks} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setTaskId(r.id)} isRowActive={(r) => r.id === taskId} emptyTitle="No tasks here" emptyDescription="Tasks are created from leads, opportunities and contacts, or directly." />
+      <DueClock.Provider value={now}>
+        <DataTable columns={columns} data={tasks} rowKey={(r) => r.id} searchable columnToggle onRowClick={(r) => setTaskId(r.id)} isRowActive={(r) => r.id === taskId} emptyTitle="No tasks here" emptyDescription="Tasks are created from leads, opportunities and contacts, or directly." />
+      </DueClock.Provider>
 
       <RecordDrawer
         open={!!task}

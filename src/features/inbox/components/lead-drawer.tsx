@@ -22,12 +22,14 @@ import { FormAnswers } from "@/features/inbox/components/form-answers";
 import { mergeFormAnswers } from "@/features/inbox/lib/payload";
 import { InquiryWorkflow } from "./inquiry-workflow";
 import { InquiryRemarks } from "./inquiry-remarks";
+import { QuotePanel } from "@/features/quotes/components/quote-panel";
 import { formatRelative, isOverdue, maskValue, titleCase } from "@/lib/format";
 import { buildLeadWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp";
 import { useSession } from "@/components/shell/session-context";
 import { VIEW_LABELS, whereIsLead } from "@/features/inbox/lib/whereabouts";
 import type { LeadView } from "@/features/inbox/schema";
-import type { IdentityCandidate, IntakeEventRow, LeadRow } from "@/features/inbox/types";
+import type { IdentityCandidate, IntakeEventRow, LeadRow, LeadRoutingAssignment } from "@/features/inbox/types";
+import type { PursuitOutcome } from "@/features/outcomes/types";
 import type { ProfileRef } from "@/server/queries/reference";
 import {
   assignLeadAction,
@@ -35,13 +37,17 @@ import {
   createContactForLeadAction,
   findLeadMatchesAction,
   linkLeadIdentityAction,
-  qualifyLeadAction,
 } from "@/server/commands/leads";
+import { PursuitClassificationSection } from "@/features/classification/components/pursuit-classification";
+import { CONTACT_CUSTOMER_TYPES, CONTACT_CUSTOMER_TYPE_LABEL } from "@/features/classification/taxonomy";
 
 interface Props {
+  routing?: LeadRoutingAssignment | null;
   lead: LeadRow | null;
   intake: IntakeEventRow[];
   timeline: TimelineItem[];
+  /** Recorded losses, rejections and deferrals, newest first. */
+  outcomes: PursuitOutcome[];
   contact: { id: string; display_name: string; lifecycle_state: string; customer_type: string | null } | null;
   /** Intake history and activity are still being read; the lead row itself is already current. */
   loading?: boolean;
@@ -53,13 +59,13 @@ interface Props {
   onClose: () => void;
 }
 
-type Panel = null | "matches" | "convert" | "assign";
+type Panel = null | "matches" | "convert" | "assign" | "qualify";
 
 const TIMELINE_PREVIEW = 5;
 
 const MASKED_HINT = "Shown masked because your role does not include contact.reveal. Revealing a phone number or email is audited with who, when and which record.";
 
-export function LeadDrawer({ lead, intake, timeline, contact, loading = false, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
+export function LeadDrawer({ lead, intake, timeline, outcomes, contact, routing, loading = false, members, initialSuggestions, view, inCurrentView, onClose }: Props) {
   const router = useRouter();
   const { can, session } = useSession();
   const [pending, start] = useTransition();
@@ -138,7 +144,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
             {lead.raw_name ?? lead.raw_company ?? "Inquiry"} <StatusPill map={LEAD_STATUS} value={lead.confirmed_sales > 0 ? "won" : lead.status} size="md" />
           </span>
         }
-        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · received ${formatRelative(lead.created_at)} · ${lead.confirmed_sales > 0 ? "Documented sale confirmed" : responseLine}`}
+        description={`${titleCase(lead.source_channel)}${sourceContext ? ` · ${sourceContext}` : ""} · arrived ${formatRelative(lead.created_at)} · ${lead.confirmed_sales > 0 ? "Documented sale confirmed" : responseLine}`}
       >
         {/* Where the lead lives now, so a response never makes it vanish. */}
         {view && inCurrentView === false && view !== "all" && view !== where.home && (
@@ -212,8 +218,8 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
                   </DropdownMenuItem>
                 )}
                 {canWrite && lead.status !== "qualified" && (
-                  <DropdownMenuItem onSelect={() => run(() => qualifyLeadAction(lead.id))}>
-                    <Check className="size-3.5" aria-hidden /> Mark as qualified
+                  <DropdownMenuItem onSelect={() => setPanel("qualify")}>
+                    <Check className="size-3.5" aria-hidden /> Qualify…
                   </DropdownMenuItem>
                 )}
                 {canWrite && (
@@ -232,12 +238,20 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
             This customer has been waiting {formatRelative(lead.first_response_due_at).replace(" ago", "")} past the 4-hour reply target. Message them now.
           </p>
         )}
-        {lead.disqualified_reason && <p className="text-sm text-destructive">Lost: {lead.disqualified_reason}</p>}
+        {lead.disqualified_reason && (
+          <p className="text-sm text-destructive">
+            {outcomes.find((o) => o.closes_lead && !o.reopened_at)?.outcome_type === "rejected" ? "Rejected at qualification" : "Lost"}: {lead.disqualified_reason}
+          </p>
+        )}
 
         <div className="@container">
           <div className="grid gap-5 @3xl:grid-cols-[3fr_2fr]">
             {/* Left: who they are and what they want */}
             <div className="space-y-5">
+              {routing && <DrawerSection title="Initial lead routing">
+                <FactList items={[{label:"Customer type",value:titleCase(routing.customer_type ?? "Needs review")},{label:"Pool",value:routing.pool_key ? titleCase(routing.pool_key) : "Needs review"},{label:"Salesperson slot",value:routing.slot_name ?? "Not assigned"}]}/>
+                <p className="mt-2 text-sm text-muted-foreground">{routing.reason}. Later ownership changes are recorded separately.</p>
+              </DrawerSection>}
               <DrawerSection title="Contact">
                 <FactList
                   className="sm:grid-cols-3"
@@ -308,6 +322,14 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
                 )}
               </DrawerSection>
 
+              <PursuitClassificationSection
+                key={lead.id}
+                subject={{ lead_id: lead.id }}
+                canWrite={canWrite && lead.status !== "duplicate"}
+                readOnlyReason={lead.status === "duplicate" ? "A duplicate belongs to its original inquiry; classify that one." : OWNER_ONLY}
+                qualifyOpen={panel === "qualify"}
+                onQualifyOpenChange={(o) => !o && setPanel(null)}
+              />
               <InquiryRemarks lead={lead} canWrite={canWrite} />
               <DrawerSection title="What they asked for">
                 {lead.interest && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{lead.interest}</p>}
@@ -326,7 +348,11 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
 
             {/* Right: what happens next and what has happened */}
             <div className="order-first space-y-5 @3xl:order-last">
-              <InquiryWorkflow key={lead.id} lead={lead} canWrite={canWrite} />
+              <InquiryWorkflow key={lead.id} lead={lead} canWrite={canWrite} outcomes={outcomes} />
+
+              <DrawerSection title="Quotations">
+                <QuotePanel key={lead.id} anchor={{ lead_id: lead.id }} />
+              </DrawerSection>
 
               <DrawerSection
                 title="Activity"
@@ -404,7 +430,7 @@ export function LeadDrawer({ lead, intake, timeline, contact, loading = false, m
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Convert to project opportunity</DialogTitle>
-            <DialogDescription>Creates a project and an opportunity at the Qualified stage, linked to {contact?.display_name ?? "the contact"}. The original source is preserved.</DialogDescription>
+            <DialogDescription>Creates a project and an opportunity at the Qualified stage, linked to {contact?.display_name ?? "the contact"}. The original source and this inquiry&apos;s classification carry over.</DialogDescription>
           </DialogHeader>
           <ConvertForm
             lead={lead}
@@ -473,7 +499,8 @@ export function ReasonForm({ label, submitLabel, destructive, pending, onSubmit,
 
 function CreateContactInline({ defaultName, pending, onCreate }: { defaultName: string; pending: boolean; onCreate: (name: string, type: string | null) => void }) {
   const [name, setName] = useState(defaultName);
-  const [type, setType] = useState<string>("homeowner");
+  // Not stated until someone says: the person's type is never assumed.
+  const [type, setType] = useState<string>("");
   return (
     <div className="rounded-md border border-dashed p-3">
       <div className="mb-2 flex items-center gap-1.5 text-xs font-medium">
@@ -481,14 +508,15 @@ function CreateContactInline({ defaultName, pending, onCreate }: { defaultName: 
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
         <Input className="h-8" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
-        <Select value={type} onValueChange={setType}>
-          <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
+        <Select value={type || "__none__"} onValueChange={(v) => setType(v === "__none__" ? "" : v)}>
+          <SelectTrigger className="h-8 w-40" aria-label="Customer type"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {["homeowner", "contractor", "designer", "developer", "retailer", "architect", "other"].map((t) => <SelectItem key={t} value={t}>{titleCase(t)}</SelectItem>)}
+            <SelectItem value="__none__">Type not stated</SelectItem>
+            {CONTACT_CUSTOMER_TYPES.filter((t) => t !== "homeowner" && t !== "designer").map((t) => <SelectItem key={t} value={t}>{CONTACT_CUSTOMER_TYPE_LABEL[t]}</SelectItem>)}
           </SelectContent>
         </Select>
         <DisabledHint reason={name.trim().length < 2 ? "Enter the customer's name (at least 2 characters) first." : null}>
-          <Button size="sm" className="h-8" disabled={name.trim().length < 2 || pending} onClick={() => onCreate(name.trim(), type)}>
+          <Button size="sm" className="h-8" disabled={name.trim().length < 2 || pending} onClick={() => onCreate(name.trim(), type || null)}>
             Create & link
           </Button>
         </DisabledHint>

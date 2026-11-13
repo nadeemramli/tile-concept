@@ -1,3 +1,4 @@
+import { submitPasswordForm } from "./login-form";
 /**
  * Catalogue media journey against a running app and the LOCAL Supabase stack.
  * Synthetic fixtures only; refuses hosted targets. Needs ffmpeg for real media.
@@ -25,7 +26,7 @@ const MiB = 1024 * 1024;
 function sql(query: string) {
   return execFileSync("docker", ["exec", process.env.E2E_DB_CONTAINER ?? "supabase_db_tile-concept", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc", query], { encoding: "utf8" }).trim();
 }
-const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
+const status = JSON.parse(execFileSync("pnpm", ["exec", "supabase", "status", "--output", "json", ...(process.env.E2E_SUPABASE_WORKDIR ? ["--workdir", process.env.E2E_SUPABASE_WORKDIR] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 assert(["127.0.0.1", "localhost"].includes(new URL(status.API_URL).hostname), "This test refuses hosted targets");
 const admin = createClient(status.API_URL, status.SERVICE_ROLE_KEY ?? status.SECRET_KEY, { auth: { persistSession: false } });
 
@@ -67,10 +68,8 @@ test.afterAll(async () => {
 });
 
 async function login(page: Page, email: string) {
-  await page.goto("/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.goto("/login?next=%2F");
+  await submitPasswordForm(page, email, PASSWORD);
   await page.waitForURL("**/");
 }
 async function openMedia(page: Page) {
@@ -84,7 +83,8 @@ async function imageLoaded(img: Locator) {
 
 test("catalogue operator uploads every supported type, edits, sets primary, replaces and archives", async ({ page }) => {
   test.setTimeout(180_000);
-  await login(page, "demo.catalog@tileconcept.test");
+  // Any catalog.write role; E2E_MEDIA_OPERATOR=demo.admin@tileconcept.test runs it as an administrator.
+  await login(page, process.env.E2E_MEDIA_OPERATOR ?? "demo.catalog@tileconcept.test");
   await openMedia(page);
   await expect(page.getByRole("tab", { name: "Media (1)" })).toBeVisible(); // the unreviewed import
 

@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { uuid } from "@/lib/zod";
+import { CONTACT_CUSTOMER_TYPES } from "@/features/classification/taxonomy";
+import { classificationValuesSchema } from "@/features/classification/schema";
 
-export const CUSTOMER_TYPES = ["homeowner", "contractor", "designer", "developer", "retailer", "architect", "other"] as const;
+/** A person's own customer type (not a pursuit's buyer role). Mirrors identity.contacts_customer_type_check. */
+export const CUSTOMER_TYPES = CONTACT_CUSTOMER_TYPES;
 export const ACCOUNT_TYPES = ["contractor", "developer", "designer", "retailer", "corporate", "government", "other"] as const;
 export const PROJECT_TYPES = ["residential", "commercial", "renovation", "new_build", "hospitality", "other"] as const;
 export const PROJECT_STATUSES = ["planning", "active", "completed", "on_hold", "cancelled"] as const;
@@ -19,6 +22,8 @@ export const createContactSchema = z.object({
   customer_type: z.enum(CUSTOMER_TYPES).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   source: z.enum(SOURCE_CHANNELS).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   account_id: optionalUuid,
+  /** The card PIC. The database accepts only the caller; anything else is refused, not ignored. */
+  owner_id: optionalUuid,
   notes: optionalStr,
 });
 export type CreateContactInput = z.input<typeof createContactSchema>;
@@ -31,6 +36,8 @@ export const updateContactSchema = z.object({
   customer_type: z.enum(CUSTOMER_TYPES).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   preferred_language: optionalStr,
   notes: optionalStr,
+  /** Only sent when a caller tries to change it; the PIC changes through transferCustomerCardAction. */
+  owner_id: optionalUuid,
 });
 
 export const createAccountSchema = z.object({
@@ -47,6 +54,15 @@ export const createAccountSchema = z.object({
 });
 
 export const updateAccountSchema = createAccountSchema.extend({ id: uuid() });
+
+export const CUSTOMER_CARDS = ["contact", "account"] as const;
+
+export const transferCustomerCardSchema = z.object({
+  card: z.enum(CUSTOMER_CARDS),
+  id: uuid(),
+  owner_id: uuid(),
+  reason: z.string().trim().min(3, "Say why the PIC is changing").max(1000),
+});
 
 export const addActivitySchema = z.object({
   kind: z.enum(ACTIVITY_KINDS),
@@ -90,6 +106,8 @@ export const createProjectOpportunitySchema = z.object({
   next_action_due_at: optionalStr,
   product_interest: z.array(z.enum(PRODUCT_INTERESTS)).default([]),
   source_channel: z.enum(SOURCE_CHANNELS).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
+  /** The new opportunity's classification, saved through api.classify_pursuit after it is created. */
+  classification: classificationValuesSchema.optional(),
 });
 
 export const linkContactAccountSchema = z.object({
@@ -109,10 +127,15 @@ export const addSiteSchema = z.object({
 });
 
 export const updateProjectSchema = z.object({
+  request_id: uuid(),
+  version: z.coerce.number().int().positive(),
+  account_id: optionalUuid,
+  contact_id: optionalUuid,
+  site_address: z.string().trim().max(1000).optional(),
   follow_up_contact_id: optionalUuid,
   product_specification: z.string().trim().max(4000).optional(),
   id: uuid(),
-  name: z.string().trim().min(2),
+  name: z.string().trim().min(2).max(200),
   project_type: z.enum(PROJECT_TYPES),
   status: z.enum(PROJECT_STATUSES),
   area: optionalStr,
@@ -120,4 +143,21 @@ export const updateProjectSchema = z.object({
   expected_start: optionalStr,
   expected_completion: optionalStr,
   notes: optionalStr,
+});
+
+export const registerProjectSchema = z.object({
+  request_id: uuid(), name: z.string().trim().min(2, "Project title is required").max(200),
+  project_type: z.enum(PROJECT_TYPES).default("other"), area: optionalStr,
+  account_id: optionalUuid, contact_id: optionalUuid, follow_up_contact_id: optionalUuid, owner_id: optionalUuid,
+  site_address: z.string().trim().max(1000).optional(), product_specification: z.string().trim().max(4000).optional(),
+  expected_start: optionalStr, expected_completion: optionalStr, notes: z.string().trim().max(4000).optional(),
+});
+export const assignProjectSchema = z.object({
+  id: uuid(), version: z.coerce.number().int().positive(), request_id: uuid(), owner_id: optionalUuid,
+  note: z.string().trim().max(4000).optional(),
+});
+export const followUpProjectSchema = z.object({
+  id: uuid(), version: z.coerce.number().int().positive(), request_id: uuid(),
+  note: z.string().trim().min(1, "Describe the follow-up").max(4000),
+  next_action: z.string().trim().max(1000).optional(), next_action_due_at: optionalStr,
 });

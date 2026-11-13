@@ -92,8 +92,10 @@ jobs:
       # The catalogue media spec renders real JPEG/PNG/WebP/MP4/WebM files with
       # ffmpeg so the server's signature checks and the browser's decoders see
       # genuine media. Without it the spec fails at import and no test runs.
-      - name: Install ffmpeg for media fixtures
-        run: sudo apt-get install -y --no-install-recommends ffmpeg
+      # The OCR import spec runs the real worker, so it needs Tesseract with
+      # English data; Ghostscript makes its password-protected PDF fixture.
+      - name: Install ffmpeg for media fixtures, Tesseract and Ghostscript for OCR
+        run: sudo apt-get install -y --no-install-recommends ffmpeg tesseract-ocr tesseract-ocr-eng ghostscript
       - run: pnpm exec playwright test --reporter=list
       - uses: actions/upload-artifact@v5
         if: failure()

@@ -3,28 +3,49 @@
 import { type ReactNode, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Briefcase, ChevronsLeft, ChevronsRight, LayoutDashboard, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SIDEBAR_GROUPS, isRouteActive, sidebarRoutes } from "@/lib/nav/routes";
+import { SIDEBAR_GROUPS, isRouteActive, routeLabel, sidebarRoutes, type RouteDef } from "@/lib/nav/routes";
+import { areaForPath, areaHome, permittedAreas } from "@/lib/workspace/areas";
 import { useSession } from "@/components/shell/session-context";
+import { useLocale } from "@/components/i18n/locale-context";
+import { htmlLang } from "@/lib/i18n/locale";
 import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/patterns/explain";
 import { LogoMark } from "@/components/brand/logo";
 
+/**
+ * Above both areas (overview, chooser) the sidebar lists the areas themselves
+ * instead of every module from both — the same entries the switcher offers.
+ */
+function neutralRoutes(permissions: ReadonlySet<string>, t: ReturnType<typeof useLocale>["t"]): RouteDef[] {
+  const entries: RouteDef[] = [];
+  if (permissions.has("overview.read")) entries.push({ key: "overview", label: t.areas.overview, path: "/overview", icon: LayoutDashboard, group: "Command Centre", status: "live" });
+  for (const a of permittedAreas(permissions)) {
+    entries.push({ key: `area-${a}`, label: a === "operating" ? t.areas.operating : t.areas.admin, path: areaHome(a, permissions), icon: a === "operating" ? Briefcase : Truck, group: "Command Centre", status: "live" });
+  }
+  return entries;
+}
+
 export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname();
   const { permissions } = useSession();
-  const routes = sidebarRoutes(permissions);
+  const { locale, t } = useLocale();
+  const area = areaForPath(pathname);
+  const routes = area === "neutral" ? neutralRoutes(permissions, t) : sidebarRoutes(permissions, area);
   // Resolve the groups that actually render, so the collapsed separator can
   // key off position rather than naming a group that may be empty.
-  const groups = SIDEBAR_GROUPS.map((group) => ({ group, items: routes.filter((r) => r.group === group) })).filter((g) => g.items.length > 0);
+  const groups = area === "neutral"
+    ? [{ group: t.areas.workspace, items: routes }]
+    : SIDEBAR_GROUPS.map((group) => ({ group: group === "Admin" ? t.areas.admin : group, items: routes.filter((r) => r.group === group) })).filter((g) => g.items.length > 0);
 
   return (
     // Sized to fit without scrolling: Platform lives in the user menu, Command
     // Centre is the brand, Tasks is in the top bar, and density is tight.
     // `auto` only engages on a window shorter than the list, where scrolling
     // beats hiding items.
-    <nav className={cn("flex-1 space-y-3 overflow-y-auto py-3", collapsed ? "px-2" : "px-3")} aria-label="Primary">
+    // Operating System labels are still English; the other areas are translated.
+    <nav lang={area === "operating" ? undefined : htmlLang(locale)} className={cn("flex-1 space-y-3 overflow-y-auto py-3", collapsed ? "px-2" : "px-3")} aria-label="Primary">
       {groups.map(({ group, items }, groupIndex) => (
         <div key={group} className={cn(collapsed && groupIndex > 0 && "border-t border-sidebar-border/60 pt-3")}>
           {!collapsed && (
@@ -33,9 +54,10 @@ export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () 
           <ul className="space-y-1">
             {items.map((r) => {
               const active = isRouteActive(r, pathname);
+              const label = routeLabel(r, locale);
               return (
                 <li key={r.key}>
-                  <Hint content={collapsed ? r.label : undefined} side="right">
+                  <Hint content={collapsed ? label : undefined} side="right">
                   <Link
                     href={r.path}
                     onClick={onNavigate}
@@ -52,7 +74,7 @@ export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () 
                     )}
                   >
                     <r.icon className="size-4 shrink-0" aria-hidden />
-                    {!collapsed && <span className="flex-1 truncate">{r.label}</span>}
+                    {!collapsed && <span className="flex-1 truncate">{label}</span>}
                     {!collapsed && r.status === "next-module" && (
                       <Badge variant="outline" className="h-4 rounded px-1 text-[10px] font-normal text-muted-foreground">
                         {r.nextModule?.phase?.replace("Phase ", "P") ?? "Next"}
@@ -76,15 +98,21 @@ export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () 
  * passes nothing and closes itself through `onNavigate`.
  */
 export function SidebarBrand({ collapsed = false, onNavigate, action }: { collapsed?: boolean; onNavigate?: () => void; action?: ReactNode }) {
-  const { session } = useSession();
+  const { session, permissions } = useSession();
+  const { locale, t } = useLocale();
   const pathname = usePathname();
-  const active = pathname === "/";
+  // In the Admin System the brand leads to that area's start, not to the
+  // Operating System's Command Centre.
+  const area = areaForPath(pathname);
+  const home = area === "admin" ? areaHome("admin", permissions) : area === "neutral" ? (permissions.has("overview.read") ? "/overview" : "/start") : "/";
+  const subtitle = area === "admin" ? t.areas.admin : area === "neutral" ? t.areas.workspace : "Command Centre";
+  const active = pathname === home;
 
   return (
     <div className={cn("flex h-14 items-center border-b border-sidebar-border", collapsed ? "justify-center px-2" : "gap-1 pl-3 pr-2")}>
-      <Hint content="Command Centre" side="right">
+      <Hint content={subtitle} side="right">
         <Link
-          href="/"
+          href={home}
           onClick={onNavigate}
           aria-current={active ? "page" : undefined}
           className={cn(
@@ -99,7 +127,7 @@ export function SidebarBrand({ collapsed = false, onNavigate, action }: { collap
           {!collapsed && (
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold tracking-tight">{session.workspaceName}</div>
-              <div className="truncate text-[11px] leading-tight text-muted-foreground">Command Centre</div>
+              <div lang={area === "operating" ? undefined : htmlLang(locale)} className="truncate text-[11px] leading-tight text-muted-foreground">{subtitle}</div>
             </div>
           )}
         </Link>

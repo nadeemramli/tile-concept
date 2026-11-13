@@ -1,20 +1,22 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
-import { useQueryState } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Info, ShieldCheck } from "lucide-react";
+import { Info, Search, ShieldCheck, X } from "lucide-react";
 import { DataTable, MonoCell } from "@/components/patterns/data-table";
 import { StatusPill } from "@/components/patterns/status-pill";
 import { RecordDrawer, DrawerSection } from "@/components/patterns/record-drawer";
 import { FreshnessBadge } from "@/components/patterns/freshness-badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Hint, InfoTip } from "@/components/patterns/explain";
 import { SimpleSelect } from "@/features/catalog/components/selects";
 import { AVAILABILITY_STATUS, CHANNEL_HINT, CHANNEL_LABEL, SOURCE_KIND } from "@/features/stock/status";
 import { AvailabilityCell, EvidenceCell, QuantityCell } from "@/features/stock/components/quantity-cell";
+import { stockFilterParsers, type StockFilterKey } from "@/features/stock/url-state";
 import { formatDate, formatDateTime, formatNumber, titleCase } from "@/lib/format";
 import { getSnapshotHistoryAction } from "@/server/commands/stock-history";
 import type { AvailabilityRow, SnapshotHistoryRow } from "@/server/queries/stock";
@@ -49,13 +51,20 @@ function ChannelLabel({ channel }: { channel: string | null }) {
 }
 
 export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
-  const [category, setCategory] = useQueryState("category");
-  const [brand, setBrand] = useQueryState("brand");
-  const [supplier, setSupplier] = useQueryState("supplier");
-  const [sourceKind, setSourceKind] = useQueryState("sourceKind");
-  const [freshness, setFreshness] = useQueryState("freshness");
-  const [availability, setAvailability] = useQueryState("availability");
-  const [q, setQ] = useQueryState("q");
+  // The server filters the rows (page.tsx → listAvailability), so every
+  // filter change must reach it: shallow: false. Each applied search or filter
+  // is its own history entry; the table stays dimmed and busy until the new
+  // rows arrive. The search box is a draft until Enter or Search is pressed.
+  const [filtersPending, startFilters] = useTransition();
+  const [filters, setFilters] = useQueryStates(stockFilterParsers, { shallow: false, history: "push", scroll: false, startTransition: startFilters });
+  const [draftQuery, setDraftQuery] = useState(filters.q ?? "");
+  // Back/forward or a cleared filter changes ?q= from outside: show it.
+  const [appliedQuery, setAppliedQuery] = useState(filters.q);
+  if (appliedQuery !== filters.q) {
+    setAppliedQuery(filters.q);
+    setDraftQuery(filters.q ?? "");
+  }
+  // Opening the drawer is client-only (the server never reads ?variant=).
   const [variantId, setVariantId] = useQueryState("variant");
 
   const [history, setHistory] = useState<SnapshotHistoryRow[]>([]);
@@ -140,27 +149,48 @@ export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
     [],
   );
 
+  const setFilter = (key: Exclude<StockFilterKey, "q">) => (value: string) => void setFilters({ [key]: value || null });
+  const search = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void setFilters({ q: draftQuery.trim() || null });
+  };
+  const clear = () => {
+    setDraftQuery("");
+    void setFilters(Object.fromEntries(Object.keys(stockFilterParsers).map((key) => [key, null])));
+  };
+  const hasFilters = Object.values(filters).some(Boolean);
+
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2">
+      <form onSubmit={search} className="flex items-center gap-1" role="search">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Input value={draftQuery} onChange={(e) => setDraftQuery(e.target.value)} placeholder="Search code, product, supplier…" className="h-8 w-56 pl-7 text-sm" aria-label="Search availability" />
+        </div>
+        <Button type="submit" size="sm" variant="outline" className="h-8" disabled={filtersPending}>
+          Search
+        </Button>
+      </form>
       <div className="w-40">
-        <SimpleSelect value={category} onChange={(v) => setCategory(v || null)} options={categories.map((c) => ({ value: c.id, label: c.label }))} noneLabel="All categories" placeholder="Category" />
+        <SimpleSelect ariaLabel="Category" value={filters.category} onChange={setFilter("category")} options={categories.map((c) => ({ value: c.id, label: c.label }))} noneLabel="All categories" placeholder="Category" />
       </div>
       <div className="w-36">
-        <SimpleSelect value={brand} onChange={(v) => setBrand(v || null)} options={brands.map((b) => ({ value: b.id, label: b.name }))} noneLabel="All brands" placeholder="Brand" />
+        <SimpleSelect ariaLabel="Brand" value={filters.brand} onChange={setFilter("brand")} options={brands.map((b) => ({ value: b.id, label: b.name }))} noneLabel="All brands" placeholder="Brand" />
       </div>
       <div className="w-44">
-        <SimpleSelect value={supplier} onChange={(v) => setSupplier(v || null)} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} noneLabel="All suppliers" placeholder="Supplier" />
+        <SimpleSelect ariaLabel="Supplier" value={filters.supplier} onChange={setFilter("supplier")} options={suppliers.map((s) => ({ value: s.id, label: s.name }))} noneLabel="All suppliers" placeholder="Supplier" />
       </div>
       <div className="w-36">
-        <SimpleSelect value={sourceKind} onChange={(v) => setSourceKind(v || null)} options={[{ value: "in_house", label: "In-house" }, { value: "supplier", label: "Supplier" }]} noneLabel="Both sources" placeholder="Source" />
+        <SimpleSelect ariaLabel="Source" value={filters.sourceKind} onChange={setFilter("sourceKind")} options={[{ value: "in_house", label: "In-house" }, { value: "supplier", label: "Supplier" }]} noneLabel="Both sources" placeholder="Source" />
       </div>
       <div className="w-36">
-        <SimpleSelect value={availability} onChange={(v) => setAvailability(v || null)} options={AVAILABILITY_OPTIONS} noneLabel="Any state" placeholder="Availability" />
+        <SimpleSelect ariaLabel="Availability" value={filters.availability} onChange={setFilter("availability")} options={AVAILABILITY_OPTIONS} noneLabel="Any state" placeholder="Availability" />
       </div>
       <div className="w-36">
         <SimpleSelect
-          value={freshness}
-          onChange={(v) => setFreshness(v || null)}
+          ariaLabel="Freshness"
+          value={filters.freshness}
+          onChange={setFilter("freshness")}
           options={[
             { value: "fresh", label: "Fresh" },
             { value: "aging", label: "Aging" },
@@ -172,7 +202,11 @@ export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
         />
       </div>
       <InfoTip label="Filters" content={COLUMN_HINTS.filters} />
-      <Input value={q ?? ""} onChange={(e) => setQ(e.target.value || null)} placeholder="Search code, product, supplier…" className="h-8 w-56 text-sm" aria-label="Search availability" />
+      {hasFilters && (
+        <Button type="button" size="sm" variant="ghost" className="h-8" onClick={clear} disabled={filtersPending}>
+          <X className="size-3.5" aria-hidden /> Clear filters
+        </Button>
+      )}
     </div>
   );
 
@@ -185,6 +219,7 @@ export function OverviewTab({ rows, categories, brands, suppliers }: Props) {
         rowKey={(r) => r.key}
         onRowClick={openVariant}
         toolbar={toolbar}
+        loading={filtersPending}
         columnToggle
         emptyTitle="No availability recorded"
         emptyDescription="Nothing matches these filters. In-house stock arrives from the SQL Account connector; supplier figures are entered on the Supplier updates tab."

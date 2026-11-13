@@ -25,7 +25,7 @@ export const VIEW_LABELS: Record<LeadView, string> = {
   "follow-ups-due": "Follow-ups due",
   duplicates: "Duplicate review",
   qualified: "Qualified",
-  disqualified: "Lost",
+  disqualified: "Lost / rejected",
   all: "All inquiries",
   aging: "Aging",
 };

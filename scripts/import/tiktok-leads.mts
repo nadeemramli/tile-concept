@@ -11,8 +11,19 @@
  * The export's column order differs between TikTok's two download shapes
  * (Phone/Email/Final page/Name vs Email/Final page/Name/Phone), and a sheet
  * updated by hand can hold both. Each row is read by content, not position.
+ *
+ * Arrival: an accepted row's inquiry arrived when TikTok says it did, so its
+ * arrival is set to the export's created_time with basis "import" (the
+ * database validates it). A row without a parseable time keeps the time it
+ * was accepted.
+ *
+ * Classification: the "who are you" and "this project is" answers map through
+ * the shared taxonomy (src/features/classification/taxonomy.ts). An answer it
+ * does not recognise stays Unknown; the answer itself remains in the intake
+ * payload and the inquiry notes.
  */
 import XLSX from "xlsx";
+import { classificationKey } from "../../src/features/classification/taxonomy.ts";
 import { adminClient, args, counter, log, normalizePhone, norm, readWorkbook, target, text } from "./lib.mts";
 
 const WORKSPACE_ID = process.env.TC_INTAKE_WORKSPACE_ID ?? "638c7f4d-39f2-420b-96d7-6e403cf51cc3"; // Tile Concept
@@ -98,7 +109,10 @@ async function main() {
     const productInterest = looking ? PRODUCT_INTEREST.filter(([re]) => re.test(looking)).map(([, k]) => k) : [];
     c.add(`looking for: ${looking ?? "blank"}`);
     c.add(`state: ${state ?? "blank"}`);
-    c.add(`who: ${who ?? "blank"}`);
+    const role = classificationKey("buyer_role", who);
+    const use = classificationKey("project_use", project);
+    c.add(`who: ${who ?? "blank"} → buyer role ${role ?? "unknown"}`);
+    c.add(`project: ${project ?? "blank"} → project use ${use ?? "unknown"}`);
     c.add(`source: ${source ?? "blank"}`);
 
     if (!commit) {
@@ -138,12 +152,22 @@ async function main() {
     if (out.duplicate) duplicates += 1;
     else accepted += 1;
     if (out.matched_contact_id) linked += 1;
-    // The enquiry arrived when TikTok says it did, not when this script ran.
-    if (occurredAt && !out.duplicate) {
-      await admin
-        .from("leads")
-        .update({ created_at: occurredAt, first_response_due_at: new Date(new Date(occurredAt).getTime() + 4 * 3_600_000).toISOString() })
-        .eq("id", out.lead_id);
+    // The enquiry arrived when TikTok says it did, not when this script ran,
+    // and says what it can about who is buying and for what.
+    if (!out.duplicate) {
+      const patch: Record<string, unknown> = {};
+      if (occurredAt) {
+        Object.assign(patch, { created_at: occurredAt, arrival_basis: "import", arrival_precision: "exact", arrival_note: "TikTok lead export created_time",
+          first_response_due_at: new Date(new Date(occurredAt).getTime() + 4 * 3_600_000).toISOString() });
+      }
+      if ((role && role !== "unknown") || (use && use !== "unknown")) {
+        Object.assign(patch, { buyer_role: role ?? "unknown", project_use: use ?? "unknown", classification_basis: "import",
+          classification_note: `TikTok lead form: who="${who ?? ""}" project="${project ?? ""}"` });
+      }
+      if (Object.keys(patch).length) {
+        const { error: pe } = await admin.from("leads").update(patch).eq("id", out.lead_id);
+        if (pe) c.add(`arrival/classification not saved: ${pe.message.slice(0, 60)}`);
+      }
     }
   }
   log(`known before: ${known.size}`);

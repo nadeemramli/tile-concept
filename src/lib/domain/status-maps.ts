@@ -7,6 +7,8 @@
  * shows it on hover and focus, and Help & glossary lists it, so the wording
  * lives here and nowhere else.
  */
+import { COMPETITOR_EVIDENCE as EVIDENCE, COMPETITOR_RELATIONSHIPS as RELATIONSHIPS, OUTCOME_REASONS } from "@/lib/domain/outcome-reasons";
+
 export type StatusTone = "neutral" | "success" | "warning" | "destructive" | "info" | "ai";
 
 export interface StatusMeta {
@@ -23,19 +25,47 @@ export const LEAD_STATUS: StatusMap = {
   contact_attempted: { label: "Contact attempted", tone: "warning", hint: "Someone tried to reach the customer but has not spoken to them yet." },
   contacted: { label: "Contacted", tone: "info", hint: "A conversation happened. The first-response clock has stopped." },
   qualified: { label: "Qualified", tone: "success", hint: "A real need with a budget and timing. Ready to convert into a project and opportunity." },
-  disqualified: { label: "Lost", tone: "neutral", hint: "Closed without a sale, with a recorded reason. History remains searchable; reopen when the customer returns." },
+  disqualified: { label: "Lost / rejected", tone: "neutral", hint: "Closed without a sale: either a sales loss or rejected at qualification (spam, test, not a buying inquiry). The drawer shows which, the reason and the effective date. Reopening keeps the earlier outcome in history." },
   converted: { label: "Opportunity created", tone: "info", hint: "A project and opportunity were created. This does not mean a purchase was recorded." },
-  duplicate: { label: "Duplicate", tone: "neutral", hint: "The same person already had a lead or contact. This one is linked, not deleted." },
+  duplicate: { label: "Duplicate", tone: "neutral", hint: "Rejected at qualification because the same buying need is already handled. Linked or explained, not deleted, and never counted as a sales loss." },
 };
 
 export const OPPORTUNITY_STATUS: StatusMap = {
   open: { label: "Open", tone: "info", hint: "Still being worked. Counts toward open pipeline value." },
   won: { label: "Won", tone: "success", hint: "Closed with a sale. A reason is recorded when the stage is set." },
-  lost: { label: "Lost", tone: "destructive", hint: "Closed without a sale. The reason is required and kept." },
-  deferred: { label: "Deferred", tone: "neutral", hint: "Parked by the customer, not lost. Leaves open pipeline until reopened." },
+  lost: { label: "Lost", tone: "destructive", hint: "Closed without a sale. A listed reason and the date it took effect are required; reopening keeps this loss in history." },
+  deferred: { label: "Deferred", tone: "neutral", hint: "Parked by the customer with a review date, not lost. Leaves open pipeline until reopened or closed." },
 };
 
 export const STAGE_GROUP_TONE: Record<string, StatusTone> = { open: "info", won: "success", lost: "destructive", deferred: "neutral" };
+
+/** Likelihood bands on a forecast. Bands are labels, never probability weights. */
+export const FORECAST_BAND: StatusMap = {
+  high: { label: "High", tone: "success", hint: "The owner judges this likely to close by its expected date. A band, not a percentage: values are never weighted by it." },
+  medium: { label: "Medium", tone: "info", hint: "The owner judges this as uncertain but realistic for its expected date. Not a percentage and never used as a weight." },
+  low: { label: "Low", tone: "warning", hint: "The owner judges this unlikely by its expected date but still open. Not a percentage and never used as a weight." },
+  unknown: { label: "Unknown", tone: "neutral", hint: "No likelihood has been stated. It stays unknown until someone reviews the forecast; nothing fills it in." },
+};
+
+/** The selected-week list and the exception queues on Weekly forecast. */
+export const FORECAST_QUEUE: StatusMap = {
+  week: { label: "Closing this week", tone: "info", hint: "Open, unarchived opportunities whose expected close date falls in the selected Monday-to-Sunday week (Kuala Lumpur), however old they are." },
+  missing_date: { label: "No close date", tone: "warning", hint: "Open work with no expected close date. It cannot appear in any week until someone states one." },
+  missing_band: { label: "No likelihood", tone: "warning", hint: "Open work with no likelihood band. It is counted as Unknown, never spread across the bands." },
+  missing_value: { label: "No value", tone: "warning", hint: "Open work with no estimated value. Counted in totals as unknown, never as zero." },
+  overdue_date: { label: "Close date passed", tone: "destructive", hint: "The expected close date is before today and the work is still open. Dates never roll forward on their own: review it, set a new date, or close it." },
+  stale_review: { label: "Stale review", tone: "warning", hint: "Reviewed before, but not within the chosen number of days. Review it to confirm or correct the forecast." },
+  never_reviewed: { label: "Never reviewed", tone: "neutral", hint: "Nobody has reviewed this forecast since forecast reviews began, including work created before then. Its fields may still have values from earlier edits." },
+  not_recorded: { label: "Not recorded", tone: "neutral", hint: "As-recorded view only: the opportunity existed then, but forecast history had no state for it yet. Nothing is guessed for it." },
+};
+
+/** What kind of change a forecast history row records. */
+export const FORECAST_HISTORY_KIND: StatusMap = {
+  review: { label: "Reviewed", tone: "success", hint: "Someone reviewed the forecast and stated its date, likelihood, value, evidence and next step." },
+  change: { label: "Changed", tone: "info", hint: "A forecast field, stage or status changed through another action, such as an edit or a stage move. Not a review." },
+  created: { label: "Created", tone: "neutral", hint: "The opportunity was created with these values." },
+  baseline: { label: "History began", tone: "neutral", hint: "The state when forecast history started. Earlier changes were not recorded." },
+};
 
 export const TASK_STATUS: StatusMap = {
   open: { label: "Open", tone: "info", hint: "Still to do. Overdue once the due date passes." },
@@ -83,6 +113,41 @@ export const REVIEW_STATE: StatusMap = {
   reviewed: { label: "Reviewed", tone: "success", hint: "A catalog operator confirmed the attributes and provenance." },
   conflicted: { label: "Conflicted", tone: "destructive", hint: "Two sources disagree, or a published price overlaps another for the same scope. Blocked until resolved." },
   rejected: { label: "Rejected", tone: "neutral", hint: "Reviewed and refused, with a reason. Kept as evidence, not used." },
+};
+
+/** Imported image → variant association (ingest.media_asset_variant_links). */
+export const MEDIA_LINK_STATE: StatusMap = {
+  pending_review: { label: "Needs review", tone: "warning", hint: "The importer proposed this match. Nobody has confirmed which product or variant the image shows." },
+  needs_correction: { label: "Needs correction", tone: "warning", hint: "A reviewer said the proposed match is wrong. Choose the right variant or reject it." },
+  approved: { label: "Confirmed", tone: "success", hint: "A catalogue operator confirmed which variant this image shows. Publishing still needs reviewed evidence and accepted usage rights." },
+  rejected: { label: "Rejected", tone: "neutral", hint: "Reviewed and refused with a reason. The evidence is kept; it is never published from this association." },
+  superseded: { label: "Superseded", tone: "neutral", hint: "Replaced by a newer, human-confirmed association. Kept for provenance." },
+};
+
+/** Whether the imported image itself is usable evidence (ingest.media_assets.review_state). */
+export const MEDIA_EVIDENCE_STATE: StatusMap = {
+  pending_review: { label: "Evidence unreviewed", tone: "warning", hint: "Nobody has checked that this image or page is legible, complete and the right one. It cannot be published yet." },
+  needs_correction: { label: "Evidence needs work", tone: "warning", hint: "A reviewer flagged the image (wrong crop, illegible, wrong page). Fix the source, then review again." },
+  approved: { label: "Evidence reviewed", tone: "success", hint: "A catalogue operator checked the image itself. Publishing also needs a confirmed variant and accepted usage rights." },
+  rejected: { label: "Evidence rejected", tone: "neutral", hint: "Not usable as catalogue media. Any image published from it was withdrawn and archived." },
+  superseded: { label: "Superseded", tone: "neutral", hint: "A newer import replaced this evidence." },
+};
+
+/** Usage rights for an image — a separate decision from whether it is correct. */
+export const USAGE_RIGHTS_STATE: StatusMap = {
+  unreviewed: { label: "Rights unknown", tone: "warning", hint: "Nobody has recorded whether we may use this image. Unknown is not permission: it cannot be published or made primary." },
+  accepted: { label: "Rights accepted", tone: "success", hint: "A catalogue operator recorded the basis for using this image in the internal catalogue." },
+  restricted: { label: "Rights restricted", tone: "destructive", hint: "Use is limited (for example, reference only). It is not published, and anything already published from it was withdrawn." },
+  denied: { label: "Rights denied", tone: "destructive", hint: "We may not use this image. Anything published from it was withdrawn; the original is kept as evidence." },
+};
+
+/** How the importer arrived at an image → variant association. */
+export const MEDIA_LINK_BASIS: StatusMap = {
+  exact_supplier_code: { label: "Supplier code", tone: "info", hint: "The supplier's code printed with the image matched a variant exactly." },
+  exact_ocr_code: { label: "OCR code", tone: "ai", hint: "A code read by OCR matched a variant. OCR can misread characters, so check the page." },
+  same_catalog_page: { label: "Same page", tone: "ai", hint: "The image and the code appear on the same catalogue page. Several products often share a page, so confirm which one." },
+  same_source_document: { label: "Same document", tone: "neutral", hint: "Only known to come from the same PDF. Discovery context, never a match: confirming it records a new human match." },
+  manual_match: { label: "Human match", tone: "success", hint: "A person chose the variant." },
 };
 
 export const PRICE_STATE: StatusMap = {
@@ -187,6 +252,101 @@ export const FEEDBACK_REQUEST_STATUS: StatusMap = {
   expired: { label: "Expired", tone: "destructive", hint: "The 7-day private link lapsed before the customer answered." },
   revoked: { label: "Revoked", tone: "destructive", hint: "Staff withdrew the request. The link no longer works." },
 };
+
+/** Where a quotation is. Preparation, issue and sending are separate facts. */
+export const QUOTE_LIFECYCLE: StatusMap = {
+  prepared: { label: "Prepared", tone: "neutral", hint: "Drafted but not issued or sent. Not counted as a quotation sent." },
+  issued: { label: "Issued", tone: "info", hint: "A version was finalised, but no send to the customer is recorded yet. Record the send when it actually goes out." },
+  sent: { label: "Sent", tone: "success", hint: "At least one version reached the customer, with its time, channel and sender recorded. This is not a sale." },
+  accepted: { label: "Accepted", tone: "success", hint: "The customer accepted this quote. It does not record a sale or move the opportunity; record the purchase separately." },
+  rejected: { label: "Rejected", tone: "destructive", hint: "The customer turned the quote down, with a reason. Reopen it if they come back." },
+  expired: { label: "Expired", tone: "warning", hint: "The quote lapsed without an answer. Reopen it to revise or resend." },
+};
+
+export const QUOTE_VERSION_STATE: StatusMap = {
+  prepared: { label: "Prepared", tone: "neutral", hint: "Drafted only. Issue it before recording that it was sent." },
+  issued: { label: "Issued", tone: "info", hint: "Finalised and now immutable. A change is a new revision; earlier versions are kept." },
+};
+
+/** How a recorded send counts. */
+export const QUOTE_SEND_KIND: StatusMap = {
+  first_quote: { label: "First quotation", tone: "success", hint: "The first time this quote reached the customer, whichever version that was. Counts once as a quotation sent." },
+  revision: { label: "Revision", tone: "info", hint: "The first send of a later (or different) version. Counts as a revision, not a new quotation." },
+  resend: { label: "Resend", tone: "neutral", hint: "A version the customer already received, sent again. Not counted as a quotation or revision." },
+};
+
+export const QUOTE_CHANNEL: StatusMap = {
+  whatsapp: { label: "WhatsApp", tone: "neutral", hint: "Sent in a WhatsApp chat. Staff record it; the app sends nothing." },
+  email: { label: "Email", tone: "neutral", hint: "Sent by email from staff mail." },
+  in_person: { label: "In person", tone: "neutral", hint: "Handed to the customer at the showroom or site." },
+  printed: { label: "Printed copy", tone: "neutral", hint: "A printed copy was given or posted." },
+  phone_call: { label: "Phone call", tone: "neutral", hint: "Read out or agreed on a call." },
+  other: { label: "Other", tone: "neutral", hint: "Another channel; describe it in the note." },
+};
+
+export const QUOTE_SEND_EVIDENCE: StatusMap = {
+  staff_attested: { label: "Staff confirms", tone: "neutral", hint: "The sender states it went out. The weakest evidence, but it names who and when." },
+  message_reference: { label: "Message reference", tone: "info", hint: "A message or email reference identifies the send. Do not paste phone numbers or addresses." },
+  customer_acknowledged: { label: "Customer acknowledged", tone: "success", hint: "The customer confirmed receiving it." },
+};
+
+export const QUOTE_EVIDENCE_STATE: StatusMap = {
+  staff_entered: { label: "Entered", tone: "neutral", hint: "Recorded by staff from the quotation itself." },
+  unverified_historical: { label: "Unverified", tone: "warning", hint: "Created by a reviewer from a historical visit note or file. Its contents and sending were not confirmed, so it never counts as sent." },
+  legacy: { label: "Legacy", tone: "neutral", hint: "Recorded before quotations had separate issue and send facts. No send evidence is implied." },
+};
+
+/** What a visit's SQ note or quotation file is. */
+export const VISIT_QUOTE_RESOLUTION: StatusMap = {
+  unreviewed: { label: "Needs review", tone: "warning", hint: "A visit note or file nobody has matched to a quote yet. It is evidence only and is not counted." },
+  matched: { label: "Matched by SQ number", tone: "info", hint: "The SQ number on the visit is already a quote reference, so it points at that quote. No new quote was created." },
+  linked: { label: "Linked", tone: "success", hint: "A reviewer linked this evidence to a canonical quote or version." },
+  unresolved: { label: "Unresolved", tone: "destructive", hint: "A reviewer could not tell which quote this is, and said why. It stays out of every count." },
+  not_a_quote: { label: "Not a quote", tone: "neutral", hint: "A reviewer decided this note or file is not a quotation." },
+};
+
+export const CLASSIFICATION_STATE: StatusMap = {
+  unreviewed: { label: "Not reviewed", tone: "neutral", hint: "Saved with whatever was known, possibly all Unknown. Nobody has confirmed or flagged it yet; qualification asks." },
+  complete: { label: "Classified", tone: "success", hint: "Buyer role, project use, work type and GLC involvement are all stated." },
+  missing_flagged: { label: "Missing, flagged", tone: "warning", hint: "Someone qualified the work while some values were still unknown and said why. It stays in Classification Review until they are filled." },
+  conflict: { label: "Conflicting source", tone: "destructive", hint: "A later source, such as a showroom visit, disagreed with a recorded value. The recorded value stands until someone decides and gives a reason." },
+};
+
+export const CLASSIFICATION_BASIS: StatusMap = {
+  legacy: { label: "Before classification", tone: "neutral", hint: "Recorded before classification existed and not yet reviewed. Historical coverage only: shown as Unknown, never inferred." },
+  capture: { label: "Captured", tone: "info", hint: "Stated when the inquiry or opportunity was entered." },
+  qualification: { label: "Qualification", tone: "success", hint: "Confirmed or flagged when the inquiry was qualified." },
+  correction: { label: "Correction", tone: "warning", hint: "Changed after it was first recorded. A reason is kept whenever a known value changed." },
+  walk_in: { label: "Showroom visit", tone: "info", hint: "The buyer role recorded at a showroom visit for this inquiry. It fills an Unknown; it never overwrites a recorded value." },
+  import: { label: "Import", tone: "info", hint: "Supplied by an import. The original source wording is kept with the record." },
+  inherited: { label: "From inquiry", tone: "info", hint: "Carried over when the inquiry became an opportunity. The two stay in step." },
+  backfill: { label: "Reviewed backfill", tone: "ai", hint: "Filled from evidence already held, after a dry run was reviewed and the write was authorised." },
+};
+
+export const ARRIVAL_BASIS: StatusMap = {
+  native: { label: "Live", tone: "success", hint: "Recorded as the inquiry arrived. Arrival and recording time are the same moment." },
+  backdated: { label: "Backdated", tone: "warning", hint: "Entered later with the time the customer actually got in touch. Response times are measured from that arrival." },
+  import: { label: "Imported", tone: "info", hint: "The arrival time came from the provider's export or connector, not from when it was imported." },
+  tracker: { label: "Daily Tracker", tone: "info", hint: "The showroom Daily Tracker gave the date only. It is stored as the start of that day and left out of response-time medians." },
+  legacy: { label: "Historical", tone: "neutral", hint: "Recorded before arrival tracking. The time shown may be when the record was created rather than when the customer arrived." },
+};
+/** What happened to a pursuit. Each outcome is kept as an event; reopening adds one instead of erasing. */
+export const PURSUIT_OUTCOME: StatusMap = {
+  lost: { label: "Lost", tone: "destructive", hint: "A genuine sales loss, with a listed reason and the date it took effect. Counted in loss reports for that week even if reopened later." },
+  rejected: { label: "Rejected at qualification", tone: "neutral", hint: "Not a valid buying inquiry: spam, test, duplicate, out of area or out of scope. Never counted as a sales loss." },
+  deferred: { label: "Deferred", tone: "warning", hint: "The customer is not ready. A review date and a reminder are set; it is neither lost nor dropped." },
+  reopened: { label: "Reopened", tone: "info", hint: "Work resumed. The earlier outcome, its reason, who recorded it and its evidence remain in history." },
+};
+
+const reasonMap = (type: keyof typeof OUTCOME_REASONS, tone: StatusTone): StatusMap =>
+  Object.fromEntries(OUTCOME_REASONS[type].map((r) => [r.key, { label: r.label, tone, hint: r.hint }]));
+
+/** Reason picklists shared with core.outcome_reasons; see src/lib/domain/outcome-reasons.ts. */
+export const LOSS_REASON: StatusMap = reasonMap("lost", "destructive");
+export const REJECTION_REASON: StatusMap = reasonMap("rejected", "neutral");
+export const DEFERRAL_REASON: StatusMap = reasonMap("deferred", "warning");
+export const COMPETITOR_RELATIONSHIP: StatusMap = Object.fromEntries(RELATIONSHIPS.map((r) => [r.key, { label: r.label, tone: "neutral" as const, hint: r.hint }]));
+export const COMPETITOR_EVIDENCE: StatusMap = Object.fromEntries(EVIDENCE.map((r) => [r.key, { label: r.label, tone: "neutral" as const, hint: r.hint }]));
 
 export function statusMeta(map: StatusMap, value: string | null | undefined): StatusMeta {
   if (!value) return { label: "—", tone: "neutral" };

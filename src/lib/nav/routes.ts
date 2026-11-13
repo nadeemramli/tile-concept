@@ -17,6 +17,7 @@ import {
   Library,
   ListTodo,
   Megaphone,
+  PhoneCall,
   MessageSquareText,
   Package,
   ScrollText,
@@ -25,9 +26,14 @@ import {
   Tags,
   UserCheck,
   Building2,
+  LayoutGrid,
+  PackageCheck,
+  Truck,
   Webhook,
 } from "lucide-react";
 import type { PermissionKey } from "@/lib/rbac/matrix";
+import type { Locale } from "@/lib/i18n/locale";
+import type { Area } from "@/lib/workspace/areas";
 
 export const ROUTE_GROUPS = [
   "Command Centre",
@@ -37,6 +43,7 @@ export const ROUTE_GROUPS = [
   "Merchandise",
   "Sources",
   "Insights",
+  "Admin",
   "Platform",
 ] as const;
 export type RouteGroup = (typeof ROUTE_GROUPS)[number];
@@ -57,6 +64,10 @@ export interface RouteDef {
    * sidebar, which keeps the list short enough never to scroll.
    */
   placement?: "brand" | "top-bar" | "user-menu";
+  /** Which workspace area lists this route; undefined = the Operating System. */
+  area?: Area;
+  /** Localised labels for routes on the bilingual entry surfaces. */
+  labels?: Record<Locale, string>;
   description?: string;
   nextModule?: { phase: string; summary: string; workflow: string[]; unlocks: string[] };
 }
@@ -73,11 +84,15 @@ export const ROUTES: RouteDef[] = [
     description: "What needs attention now: aging leads, overdue follow-ups, data health.",
   },
   // Sales
+  { key: "projects", label: "Project registration", path: "/sales/projects", icon: FolderKanban, group: "Sales", status: "live", permission: "projects.read", description: "Shared projects: register, enrich, assign and follow up." },
   { key: "pipeline", label: "Pipeline", path: "/sales/pipeline", icon: KanbanSquare, group: "Sales", status: "live", permission: "sales.read" },
-  { key: "projects", label: "Projects", path: "/sales/projects", icon: FolderKanban, group: "Sales", status: "live", permission: "sales.read" },
   { key: "walkins", label: "Walk-ins & Purchases", path: "/sales/walk-ins", icon: Store, group: "Sales", status: "live", permission: "sales.read" },
   { key: "feedback", label: "Customer Feedback", path: "/sales/feedback", icon: MessageSquareText, group: "Sales", status: "live", permission: "sales.read" },
   { key: "tasks", label: "Tasks", path: "/sales/tasks", icon: ListTodo, group: "Sales", status: "live", permission: "sales.read", placement: "top-bar" },
+  // A salesperson's own leads, phone first. In the top bar so it is one tap
+  // away on a phone without lengthening the sidebar; the page itself only
+  // needs sales.read, but only members who work leads get the shortcut.
+  { key: "my-leads", label: "My Leads", labels: { ms: "Prospek Saya", en: "My Leads" }, path: "/sales/my-leads", icon: PhoneCall, group: "Customer", status: "live", permission: "sales.write", placement: "top-bar", description: "Your own inquiries: what is due, one next action and quick follow-up updates." },
   // Customer — the resolved identity records behind the sales work
   { key: "inbox", label: "Inquiry Inbox", path: "/sales/inbox", icon: Inbox, group: "Customer", status: "live", permission: "sales.read" },
   { key: "accounts", label: "Accounts & Contacts", path: "/sales/accounts", icon: Contact, group: "Customer", status: "live", permission: "sales.read" },
@@ -95,10 +110,18 @@ export const ROUTES: RouteDef[] = [
   { key: "review", label: "Imports & OCR Review", path: "/sources/review", icon: ClipboardCheck, group: "Sources", status: "live", permission: "review.approve", placement: "user-menu" },
   // Insights
   { key: "reports", label: "Reports", path: "/insights/reports", icon: BarChart3, group: "Insights", status: "live", permission: "report.read" },
+  // Admin System — business administration, a separate area of the same
+  // workspace (not platform administration). Only listed in the Admin area's
+  // sidebar, so the Operating System list does not grow.
+  { key: "admin-home", label: "Admin home", labels: { ms: "Utama Admin", en: "Admin home" }, path: "/admin", icon: LayoutGrid, group: "Admin", area: "admin", status: "live", permission: "admin.coordinate" },
+  { key: "preparation", label: "Order preparation", labels: { ms: "Penyediaan pesanan", en: "Order preparation" }, path: "/admin/preparation", icon: PackageCheck, group: "Admin", area: "admin", status: "live", permission: "preparation.read" },
+  { key: "my-deliveries", label: "My Deliveries", labels: { ms: "Penghantaran Saya", en: "My Deliveries" }, path: "/admin/my-deliveries", icon: Truck, group: "Admin", area: "admin", status: "live", permission: "delivery.read_own" },
   // Platform — administration, reached from the user menu
   // Identity Review is a periodic clean-up queue, not daily work, so it sits
   // with the other administration surfaces rather than in the sidebar.
   { key: "identity", label: "Identity Review", path: "/sales/identity-review", icon: UserCheck, group: "Platform", status: "live", permission: "sales.read" },
+  // The classification correction queue is periodic review work too.
+  { key: "classification", label: "Classification Review", path: "/sales/classification-review", icon: Tags, group: "Platform", status: "live", permission: "sales.read" },
   { key: "integrations", label: "Integrations", path: "/platform/integrations", icon: Cable, group: "Platform", status: "live", permission: "audit.read" },
   { key: "connectors", label: "Lead Connectors", path: "/platform/connectors", icon: Webhook, group: "Platform", status: "live", permission: "settings.manage" },
   { key: "data-health", label: "Data Health", path: "/platform/data-health", icon: Activity, group: "Platform", status: "live", permission: "audit.read" },
@@ -119,8 +142,13 @@ export function visibleRoutes(perms: ReadonlySet<string>): RouteDef[] {
  */
 export const SIDEBAR_GROUPS = ROUTE_GROUPS.filter((g) => g !== "Platform");
 
-export function sidebarRoutes(perms: ReadonlySet<string>): RouteDef[] {
-  return visibleRoutes(perms).filter((r) => r.group !== "Platform" && !r.placement);
+/** The sidebar lists one area at a time, never every module at once. */
+export function sidebarRoutes(perms: ReadonlySet<string>, area: Area = "operating"): RouteDef[] {
+  return visibleRoutes(perms).filter((r) => r.group !== "Platform" && !r.placement && (r.area ?? "operating") === area);
+}
+
+export function routeLabel(route: RouteDef, locale: Locale): string {
+  return route.labels?.[locale] ?? route.label;
 }
 
 /** Routes the shell chrome renders itself, so the sidebar can leave them out. */
@@ -140,6 +168,7 @@ export function routeForPath(pathname: string): RouteDef | undefined {
 
 export function isRouteActive(route: RouteDef, pathname: string): boolean {
   if (route.path === "/") return pathname === "/";
+  if (route.path === "/admin") return pathname === "/admin";
   if (route.key === "accounts") return pathname.startsWith("/sales/accounts") || pathname.startsWith("/sales/contacts");
   return pathname === route.path || pathname.startsWith(`${route.path}/`);
 }

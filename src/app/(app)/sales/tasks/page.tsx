@@ -20,7 +20,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/sales/task
   return (
     <PageBody>
       <PageHeader title="Tasks" description="Next actions and follow-ups ordered by urgency. Completing a task writes the outcome to the linked record’s timeline." />
-      <TasksClient view={view} tasks={tasks} counts={counts} members={members} prefill={{ contact_id: str("contact_id"), opportunity_id: str("opportunity_id"), lead_id: str("lead_id"), account_id: str("account_id"), project_id: str("project_id") }} />
+      <TasksClient view={view} tasks={tasks} counts={counts} members={members} prefill={{ contact_id: str("contact_id"), opportunity_id: str("opportunity_id"), lead_id: str("lead_id"), account_id: str("account_id"), project_id: str("project_id") }} renderedAt={new Date().toISOString()} />
     </PageBody>
   );
 }

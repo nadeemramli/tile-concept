@@ -5,7 +5,8 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
 import { requireSession } from "@/server/session";
 import { fail, ok, type ActionResult } from "@/server/action-result";
-import { addQuoteVersionSchema, changeStageSchema, reassignSchema, updateOpportunitySchema, createOpportunitySchema, archiveOpportunitySchema, opportunityPhotoSchema } from "@/features/pipeline/schema";
+import { captureForecast, withForecastNote } from "@/server/forecast-capture";
+import { changeStageSchema, reassignSchema, updateOpportunitySchema, createOpportunitySchema, archiveOpportunitySchema, opportunityPhotoSchema } from "@/features/pipeline/schema";
 
 function revalidateOpp(contactId?: string | null, accountId?: string | null, projectId?: string | null) {
   revalidatePath("/sales/pipeline");
@@ -17,7 +18,7 @@ function revalidateOpp(contactId?: string | null, accountId?: string | null, pro
 export async function changeStageAction(input: unknown): Promise<ActionResult> {
   const parsed = changeStageSchema.safeParse(input);
   if (!parsed.success) return fail("Check the form", parsed.error.flatten().fieldErrors);
-  const v = parsed.data;
+  const { forecast_close_date, forecast_band, forecast_evidence, ...v } = parsed.data;
   const supabase = await createServerSupabase();
   const { error } = await supabase.rpc("change_opportunity_stage", {
     p_opportunity_id: v.opportunity_id,
@@ -28,10 +29,13 @@ export async function changeStageAction(input: unknown): Promise<ActionResult> {
     p_outcome_date: v.outcome_date,
   });
   if (error) return fail(error);
-  const { data: o } = await supabase.from("opportunities").select("contact_id, account_id, project_id").eq("id", v.opportunity_id).maybeSingle();
+  const { data: o } = await supabase.from("opportunities").select("contact_id, account_id, project_id, status").eq("id", v.opportunity_id).maybeSingle();
+  // Forecast fields only describe work that is still open after the move.
+  const forecastError = o?.status === "open" ? await captureForecast(supabase, v.opportunity_id, "stage", { forecast_close_date, forecast_band, forecast_evidence }) : null;
   revalidateOpp(o?.contact_id, o?.account_id, o?.project_id);
+  revalidatePath("/sales/pipeline/forecast");
   revalidatePath("/");
-  return ok(undefined, "Stage updated.");
+  return ok(undefined, withForecastNote("Stage updated.", forecastError));
 }
 
 /** datetime-local is entered in showroom time, independent of the server timezone. */
@@ -55,8 +59,13 @@ async function command(action: string, input: Record<string, unknown>, requestId
 export async function createOpportunityAction(input: unknown) {
   const parsed = createOpportunitySchema.safeParse(input);
   if (!parsed.success) return fail("Check the form", parsed.error.flatten().fieldErrors);
-  const { request_id, ...v } = parsed.data;
-  return command("create", { ...v, next_action_due_at: showroomTime(v.next_action_due_at) }, request_id);
+  const { request_id, forecast_close_date, forecast_band, forecast_evidence, ...v } = parsed.data;
+  const result = await command("create", { ...v, next_action_due_at: showroomTime(v.next_action_due_at) }, request_id);
+  if (!result.ok || !result.data.opportunity_id) return result;
+  const supabase = await createServerSupabase();
+  const forecastError = await captureForecast(supabase, result.data.opportunity_id, "create", { forecast_close_date, forecast_band, forecast_evidence });
+  revalidatePath("/sales/pipeline/forecast");
+  return ok(result.data, withForecastNote(result.message ?? "Opportunity created.", forecastError));
 }
 
 export async function updateOpportunityAction(input: unknown): Promise<ActionResult> {
@@ -93,44 +102,4 @@ export async function opportunityPhotoAction(input: unknown): Promise<ActionResu
   if (error || !data) return fail(error ?? "Photo could not be saved");
   revalidateOpp();
   return ok({ path: data }, action === "remove" ? "Photo removed." : "Photo saved.");
-}
-
-export async function addQuoteVersionAction(input: unknown): Promise<ActionResult<{ quote_id: string; version_no: number }>> {
-  const parsed = addQuoteVersionSchema.safeParse(input);
-  if (!parsed.success) return fail("Check the form", parsed.error.flatten().fieldErrors);
-  const session = await requireSession();
-  const v = parsed.data;
-  const supabase = await createServerSupabase();
-
-  let quoteId = v.quote_id;
-  let versionNo = 1;
-  if (quoteId) {
-    const { data: q } = await supabase.from("quotes").select("current_version_no").eq("id", quoteId).maybeSingle();
-    versionNo = (q?.current_version_no ?? 0) + 1;
-  } else {
-    const { data: q, error } = await supabase.from("quotes").insert({ workspace_id: session.workspaceId, opportunity_id: v.opportunity_id, quote_number: v.quote_number, status: "draft", current_version_no: 0, created_by: session.userId }).select("id").single();
-    if (error || !q?.id) return fail(error ?? "Could not create quote");
-    quoteId = q.id;
-  }
-  const { error: vErr } = await supabase.from("quote_versions").insert({
-    workspace_id: session.workspaceId,
-    quote_id: quoteId,
-    version_no: versionNo,
-    issued_at: v.issued_at ? new Date(v.issued_at).toISOString() : new Date().toISOString(),
-    valid_until: v.valid_until ?? null,
-    total_amount: v.total_amount ?? null,
-    currency: v.currency,
-    external_ref: v.external_ref ?? null,
-    notes: v.notes ?? null,
-    created_by: session.userId,
-  });
-  if (vErr) return fail(vErr);
-  await supabase.from("quotes").update({ current_version_no: versionNo, status: versionNo > 1 ? "revised" : "issued", quote_number: v.quote_number }).eq("id", quoteId);
-  if (v.link_sql_document && v.external_ref) {
-    await supabase.from("external_document_links").insert({ workspace_id: session.workspaceId, object_type: "quote", object_id: quoteId, system: "sql_account", document_type: "quotation", document_number: v.external_ref, created_by: session.userId });
-  }
-  const { data: o } = await supabase.from("opportunities").select("contact_id, account_id, project_id").eq("id", v.opportunity_id).maybeSingle();
-  await supabase.from("activities").insert({ workspace_id: session.workspaceId, kind: "note", subject: `Quote ${v.quote_number} v${versionNo} issued`, body: v.total_amount ? `Total ${v.currency} ${v.total_amount}` : null, actor_id: session.userId, opportunity_id: v.opportunity_id, contact_id: o?.contact_id ?? null, account_id: o?.account_id ?? null, project_id: o?.project_id ?? null });
-  revalidateOpp(o?.contact_id, o?.account_id, o?.project_id);
-  return ok({ quote_id: quoteId, version_no: versionNo }, `Quote version ${versionNo} added.`);
 }

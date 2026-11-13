@@ -62,6 +62,7 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
               </span>
             )}
             {contact.is_provisional && <TonePill tone="warning" label="Provisional — identity review pending" hint={PROVISIONAL_HINT} />}
+            <span>· PIC {contact.owner_id ? memberNames.get(contact.owner_id) ?? "—" : "not assigned"}</span>
           </span>
         }
       >
@@ -210,6 +211,8 @@ export default async function ContactPage({ params }: PageProps<"/sales/contacts
               items={[
                 { label: "Original acquisition source", value: contact.original_acquisition_source ? titleCase(contact.original_acquisition_source) : "Unknown" },
                 { label: "First seen", value: formatDateTime(contact.original_acquisition_at ?? contact.created_at) },
+                { label: "PIC", value: contact.owner_id ? memberNames.get(contact.owner_id) ?? "—" : "No PIC yet (read-only until assigned)" },
+                { label: "PIC assigned", value: contact.owner_assigned_at ? `${formatDateTime(contact.owner_assigned_at)} by ${memberNames.get(contact.owner_assigned_by ?? "") ?? "—"}` : "—" },
                 { label: "Created by", value: memberNames.get(contact.created_by ?? "") ?? "—" },
                 { label: "Created", value: formatDateTime(contact.created_at) },
                 { label: "Updated", value: formatDateTime(contact.updated_at) },

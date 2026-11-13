@@ -1,0 +1,28 @@
+export const proofUploadLabels = {
+  en: {
+    ownTitle: "Signed proof not uploaded yet",
+    behalfTitle: "Upload proof on the driver's behalf",
+    file: "Signed proof (PDF, JPEG or PNG; large photos are reduced automatically)",
+    reason: "Why you are uploading for the driver (required)",
+    upload: "Upload signed proof", saving: "Uploading…",
+    uploadedBehalf: "Uploaded on behalf of", by: "by",
+    proof: "Choose a valid signed PDF, JPEG or PNG up to 700 KB.",
+    reasonRequired: "Enter the reason you are uploading for the driver.",
+    stored: "Proof was already uploaded for this delivery. Refresh to see it.",
+    denied: "Your account cannot upload proof for this delivery.",
+    failed: "The upload could not be confirmed. Refresh to check before trying again.",
+  },
+  ms: {
+    ownTitle: "Bukti bertandatangan belum dimuat naik",
+    behalfTitle: "Muat naik bukti bagi pihak pemandu",
+    file: "Bukti bertandatangan (PDF, JPEG atau PNG; gambar besar dikecilkan secara automatik)",
+    reason: "Sebab anda memuat naik bagi pihak pemandu (wajib)",
+    upload: "Muat naik bukti bertandatangan", saving: "Memuat naik…",
+    uploadedBehalf: "Dimuat naik bagi pihak", by: "oleh",
+    proof: "Pilih bukti PDF, JPEG atau PNG bertandatangan yang sah, sehingga 700 KB.",
+    reasonRequired: "Masukkan sebab anda memuat naik bagi pihak pemandu.",
+    stored: "Bukti telah dimuat naik untuk penghantaran ini. Muat semula untuk melihatnya.",
+    denied: "Akaun anda tidak boleh memuat naik bukti untuk penghantaran ini.",
+    failed: "Muat naik tidak dapat disahkan. Muat semula untuk menyemak sebelum mencuba lagi.",
+  },
+};

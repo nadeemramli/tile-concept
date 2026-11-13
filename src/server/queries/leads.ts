@@ -1,3 +1,4 @@
+import type { LeadRoutingAssignment } from "@/features/inbox/types";
 import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -5,6 +6,8 @@ import { getMemberMap } from "@/server/queries/reference";
 import type { InboxCounts, IntakeEventRow, LeadRow } from "@/features/inbox/types";
 import type { LeadView } from "@/features/inbox/schema";
 import type { TimelineItem } from "@/components/patterns/timeline";
+import type { PursuitOutcome } from "@/features/outcomes/types";
+import { getPursuitOutcomes } from "@/server/queries/outcomes";
 
 type RawLead = Record<string, unknown>;
 
@@ -157,9 +160,11 @@ export async function getLinkedContactSummary(contactId: string | null) {
 }
 
 export interface InquiryDetail {
+  routing?: LeadRoutingAssignment | null;
   lead: LeadRow;
   intake: IntakeEventRow[];
   timeline: TimelineItem[];
+  outcomes: PursuitOutcome[];
   contact: Awaited<ReturnType<typeof getLinkedContactSummary>>;
 }
 
@@ -169,8 +174,15 @@ export interface InquiryDetail {
  * on the lead row; only the linked contact summary depends on it.
  */
 export async function getInquiryDetail(leadId: string): Promise<InquiryDetail | null> {
-  const [lead, intake, timeline] = await Promise.all([getLead(leadId), getLeadIntakeEvents(leadId), getLeadTimeline(leadId)]);
+  const [lead, intake, timeline, outcomes, routing] = await Promise.all([getLead(leadId), getLeadIntakeEvents(leadId), getLeadTimeline(leadId), getPursuitOutcomes({ leadId }), getLeadRoutingAssignment(leadId)]);
   if (!lead) return null;
   const contact = await getLinkedContactSummary(lead.contact_id);
-  return { lead, intake, timeline, contact };
+  return { lead, intake, timeline, outcomes, contact, routing };
+}
+
+async function getLeadRoutingAssignment(leadId: string): Promise<LeadRoutingAssignment | null> {
+ const db=await createServerSupabase();
+ const {data,error}=await db.from("lead_routing_assignments").select("customer_type,pool_key,slot_name,reason").eq("lead_id",leadId).maybeSingle();
+ if(error) throw new Error("Inquiry assignment details could not be loaded.");
+ return data ? {customer_type:data.customer_type,pool_key:data.pool_key,slot_name:data.slot_name,reason:data.reason ?? "Review routing"} : null;
 }

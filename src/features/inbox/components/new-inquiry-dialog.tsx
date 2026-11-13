@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ClipboardPaste, Sparkles } from "lucide-react";
@@ -20,6 +20,7 @@ import { newInquirySchema, PRODUCT_INTERESTS, SOURCE_CHANNELS, type NewInquiryIn
 import type { IdentityCandidate } from "@/features/inbox/types";
 import type { ProfileRef } from "@/server/queries/reference";
 import { useSession } from "@/components/shell/session-context";
+import { ClassificationFields } from "@/features/classification/components/classification-fields";
 
 const INTEREST_LABEL: Record<string, string> = { wall_panel: "Wall panel", tile: "Tile", cut_tile: "Cut tile", mosaic: "Mosaic", finishing: "Finishing", accessory: "Accessory" };
 
@@ -61,8 +62,16 @@ export function NewInquiryDialog({
       owner_id: defaultOwnerId,
       notes: "",
       raw_text: "",
+      arrived_at: "",
+      buyer_role: "unknown",
+      project_use: "unknown",
+      work_type: "unknown",
+      glc_involvement: "unknown",
+      glc_party_role: null,
     },
   });
+
+  const [buyerRole, projectUse, workType, glcInvolvement, glcPartyRole] = useWatch({ control: form.control, name: ["buyer_role", "project_use", "work_type", "glc_involvement", "glc_party_role"] });
 
   function proposeFromPaste() {
     const ex = extractFromText(pasted);
@@ -223,6 +232,30 @@ export function NewInquiryDialog({
             <Field label="Internal notes" error={err.notes?.message}>
               <Textarea rows={2} aria-label="Internal notes" {...form.register("notes")} />
             </Field>
+
+            <Field
+              label="Arrived earlier"
+              htmlFor="inquiry-arrived-at"
+              error={err.arrived_at?.message}
+              hint="Malaysia time. Leave empty when the customer got in touch just now; an earlier time is saved as backdated and response times are measured from it."
+            >
+              <Input id="inquiry-arrived-at" type="datetime-local" className="h-8 w-56" {...form.register("arrived_at")} />
+            </Field>
+            <fieldset className="space-y-2 rounded-md border p-3">
+              <legend className="px-1 text-xs font-medium">Classification, if already known</legend>
+              <p className="text-[11px] text-muted-foreground">Leave Unknown for anything the customer has not said. Qualification asks again.</p>
+              <ClassificationFields
+                idPrefix="inquiry"
+                value={{ buyer_role: buyerRole, project_use: projectUse, work_type: workType, glc_involvement: glcInvolvement, glc_party_role: glcPartyRole ?? null }}
+                onChange={(v) => {
+                  form.setValue("buyer_role", v.buyer_role, { shouldDirty: true });
+                  form.setValue("project_use", v.project_use, { shouldDirty: true });
+                  form.setValue("work_type", v.work_type, { shouldDirty: true });
+                  form.setValue("glc_involvement", v.glc_involvement, { shouldDirty: true });
+                  form.setValue("glc_party_role", v.glc_party_role, { shouldDirty: true });
+                }}
+              />
+            </fieldset>
 
             <DialogFooter>
               <Button type="button" variant="ghost" disabled={pending} onClick={() => close(false)}>Cancel</Button>

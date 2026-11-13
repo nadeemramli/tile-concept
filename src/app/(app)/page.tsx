@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { requireSession } from "@/server/session";
 import { getCommandCentreSummary, getMyWork, getRecentActivity, getSalesScorecard } from "@/server/queries/command-centre";
@@ -14,9 +15,17 @@ import { PERMISSION_EXPLAINERS } from "@/lib/rbac/matrix";
 import { formatDateTime, formatMoney, formatRelative, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/patterns/states";
+import { resolveLanding } from "@/lib/workspace/areas";
 
 export default async function CommandCentrePage() {
   const session = await requireSession();
+  // The Command Centre is the Operating System's home. Admin System roles
+  // (driver, warehouse, admin employee) are sent to their own start instead of
+  // an empty sales dashboard; roles with no area at all keep the page below.
+  if (!session.permissions.includes("workspace.operating")) {
+    const landing = resolveLanding(session.permissions, session.defaultArea);
+    if (landing.kind === "redirect") redirect(landing.href);
+  }
   const canSales = session.permissions.includes("sales.read");
   const [summary, work, activity, scorecard] = await Promise.all([
     canSales ? getCommandCentreSummary() : Promise.resolve(null),

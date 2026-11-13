@@ -6,11 +6,12 @@ insert into identity.accounts(id,workspace_id,name,telephone) values
  ('aaaaaaaa-3431-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Helix Build','03-7777 8877'),
  ('aaaaaaaa-3431-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','Synthetic Helix Design',null),
  ('aaaaaaaa-3431-0000-0000-000000000099','99999999-3431-0000-0000-000000000099','Synthetic Helix Foreign','03-7777 8877');
-insert into identity.contacts(id,workspace_id,display_name) values
- ('bbbbbbbb-3431-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Aina'),
- ('bbbbbbbb-3431-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','Synthetic Ben'),
- ('bbbbbbbb-3431-0000-0000-000000000003','11111111-1111-1111-1111-111111111111','Synthetic Unlinked'),
- ('bbbbbbbb-3431-0000-0000-000000000099','99999999-3431-0000-0000-000000000099','Synthetic Foreign PIC');
+-- The acting rep is the card PIC of the contacts whose relationships it edits.
+insert into identity.contacts(id,workspace_id,display_name,owner_id) values
+ ('bbbbbbbb-3431-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','Synthetic Aina','aaaaaaaa-0000-0000-0000-000000000003'),
+ ('bbbbbbbb-3431-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','Synthetic Ben','aaaaaaaa-0000-0000-0000-000000000003'),
+ ('bbbbbbbb-3431-0000-0000-000000000003','11111111-1111-1111-1111-111111111111','Synthetic Unlinked','aaaaaaaa-0000-0000-0000-000000000003'),
+ ('bbbbbbbb-3431-0000-0000-000000000099','99999999-3431-0000-0000-000000000099','Synthetic Foreign PIC',null);
 insert into identity.contact_points(workspace_id,contact_id,kind,raw_value,normalized_value,is_primary) values
  ('11111111-1111-1111-1111-111111111111','bbbbbbbb-3431-0000-0000-000000000001','phone','0128877001','+60128877001',true),
  ('11111111-1111-1111-1111-111111111111','bbbbbbbb-3431-0000-0000-000000000002','phone','0128877002','+60128877002',true),
@@ -56,7 +57,7 @@ select is((select count(*) from api.project_sites s join created c on s.project_
 select throws_ok($$select api.opportunity_command('create',pg_temp.project_input('{"follow_up_contact_id":"bbbbbbbb-3431-0000-0000-000000000003"}'),gen_random_uuid())$$,'23514','Link the follow-up PIC to this company first','unlinked company PIC rejected');
 select throws_ok($$select api.opportunity_command('create',pg_temp.project_input('{"follow_up_contact_id":"bbbbbbbb-3431-0000-0000-000000000099"}'),gen_random_uuid())$$,'23514','Choose an active customer PIC in this workspace','foreign PIC rejected');
 select is((select count(*) from api.projects where name='Synthetic registered project'),1::bigint,'failed registration leaves no partial projects');
-select throws_ok($$update api.projects set follow_up_contact_id='bbbbbbbb-3431-0000-0000-000000000003' where id=(select (result->>'project_id')::uuid from created)$$,'23514','Link the follow-up PIC to this company first','project edits enforce the same PIC relationship');
+select throws_ok($$update api.projects set follow_up_contact_id='bbbbbbbb-3431-0000-0000-000000000003' where id=(select (result->>'project_id')::uuid from created)$$,'42501',null,'direct project edits are blocked; the versioned project command is required');
 select lives_ok($$select api.opportunity_command('create',pg_temp.project_input('{"account_id":null,"create_opportunity":false,"follow_up_contact_id":"bbbbbbbb-3431-0000-0000-000000000003"}'),gen_random_uuid())$$,'personal project can have customer PIC without a company');
 select set_config('request.jwt.claims','{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated"}',true);
 select lives_ok($$select api.merge_contacts('bbbbbbbb-3431-0000-0000-000000000001','bbbbbbbb-3431-0000-0000-000000000002','Synthetic duplicate PIC test')$$,'approved contact merge preserves project registration');

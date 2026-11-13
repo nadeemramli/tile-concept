@@ -21,6 +21,7 @@ import { DisabledHint, Gated, gateReason } from "@/components/patterns/explain";
 import { PURCHASE_STATUS, SOURCE_CHANNEL } from "@/lib/domain/status-maps";
 import { formatDateTime, formatMoney, formatRelative, titleCase } from "@/lib/format";
 import { VisitQuotationFiles } from "./visit-quotation-files";
+import { QuotePanel } from "@/features/quotes/components/quote-panel";
 import { useSession } from "@/components/shell/session-context";
 import { correctPurchaseAction } from "@/server/commands/walkins";
 import type { PurchaseRow, VisitRow } from "@/features/walkins/types";
@@ -273,6 +274,9 @@ export function WalkinsClient({ tab, visits, purchases, counts, selectedVisit, l
                 ]}
               />
               {visit.notes && <p className="whitespace-pre-wrap rounded-md bg-muted/40 px-3 py-2 text-sm">{visit.notes}</p>}
+            </DrawerSection>
+            <DrawerSection title="Quotations">
+              <QuotePanel key={visit.id} anchor={{ visit_id: visit.id }} defaultAmount={visit.quotation_amount} />
             </DrawerSection>
             <DrawerSection title="Quotation files">
               <VisitQuotationFiles key={visit.id} visitId={visit.id} canWrite={can("sales.write")} />
